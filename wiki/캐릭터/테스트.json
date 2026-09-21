@@ -7,6 +7,14 @@
   "categorySlug": "캐릭터",
   "content": {
     "type": "wiki-sections",
+    "intro": {
+      "type": "doc",
+      "content": [
+        {
+          "type": "paragraph"
+        }
+      ]
+    },
     "sections": [
       {
         "id": "d3d8c67c-6c41-404a-ac39-e5042e6d32d4",
@@ -97,5 +105,5 @@
     ]
   },
   "createdAt": "2026-09-21T05:57:39.197Z",
-  "updatedAt": "2026-09-21T05:57:39.197Z"
+  "updatedAt": "2026-09-21T06:57:44.646Z"
 }
