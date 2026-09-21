@@ -13,12 +13,5 @@
     "slug": "캐릭터",
     "deletable": true,
     "hasInfo": true
-  },
-  {
-    "id": "cat_2d62d5ee-b899-419b-837f-7c117f984367",
-    "name": "시스템",
-    "slug": "시스템",
-    "deletable": true,
-    "hasInfo": true
   }
 ]

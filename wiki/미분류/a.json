@@ -3,8 +3,8 @@
   "kind": "document",
   "title": "a",
   "slug": "a",
-  "categoryId": "cat_2d62d5ee-b899-419b-837f-7c117f984367",
-  "categorySlug": "시스템",
+  "categoryId": "uncategorized",
+  "categorySlug": "미분류",
   "content": {
     "type": "wiki-sections",
     "intro": {
@@ -50,5 +50,5 @@
     ]
   },
   "createdAt": "2026-09-21T08:26:37.784Z",
-  "updatedAt": "2026-09-21T08:26:37.784Z"
+  "updatedAt": "2026-09-21T08:27:03.762Z"
 }
