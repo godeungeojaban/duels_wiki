@@ -82,7 +82,9 @@
             {
               "type": "table",
               "attrs": {
-                "align": "left"
+                "align": "left",
+                "fitWidth": false,
+                "width": 854
               },
               "content": [
                 {
@@ -91,90 +93,16 @@
                     {
                       "type": "tableCell",
                       "attrs": {
-                        "colspan": 5,
-                        "rowspan": 1,
-                        "colwidth": [
-                          100,
-                          100,
-                          100,
-                          100,
-                          100
-                        ],
-                        "align": null,
-                        "backgroundColor": "#7c97d5",
-                        "borderColor": "#634b5a",
-                        "cellHeight": 100,
-                        "verticalAlign": "middle"
-                      },
-                      "content": [
-                        {
-                          "type": "paragraph",
-                          "attrs": {
-                            "textAlign": "center"
-                          },
-                          "content": [
-                            {
-                              "type": "text",
-                              "text": "Tau"
-                            }
-                          ]
-                        }
-                      ]
-                    }
-                  ]
-                },
-                {
-                  "type": "tableRow",
-                  "content": [
-                    {
-                      "type": "tableCell",
-                      "attrs": {
-                        "colspan": 5,
-                        "rowspan": 1,
-                        "colwidth": [
-                          100,
-                          100,
-                          100,
-                          100,
-                          100
-                        ],
-                        "align": null,
-                        "backgroundColor": "#ffffff00",
-                        "borderColor": "#4a5262",
-                        "cellHeight": 100,
-                        "verticalAlign": "middle"
-                      },
-                      "content": [
-                        {
-                          "type": "image",
-                          "attrs": {
-                            "src": "https://github.com/LyangNem/Duels/blob/main/character/tau.png?raw=true",
-                            "alt": null,
-                            "title": null,
-                            "width": null,
-                            "height": null,
-                            "rotation": 0,
-                            "align": "left"
-                          }
-                        }
-                      ]
-                    }
-                  ]
-                },
-                {
-                  "type": "tableRow",
-                  "content": [
-                    {
-                      "type": "tableCell",
-                      "attrs": {
                         "colspan": 1,
                         "rowspan": 1,
                         "colwidth": [
-                          100
+                          417
                         ],
                         "align": null,
-                        "backgroundColor": "#ffffff00",
+                        "backgroundColor": "transparent",
                         "borderColor": "#4a5262",
+                        "borderWidth": 1,
+                        "borderVisible": true,
                         "cellHeight": 100,
                         "verticalAlign": "middle"
                       },
@@ -193,140 +121,13 @@
                         "colspan": 1,
                         "rowspan": 1,
                         "colwidth": [
-                          100
+                          436
                         ],
                         "align": null,
-                        "backgroundColor": "#ffffff00",
+                        "backgroundColor": "transparent",
                         "borderColor": "#4a5262",
-                        "cellHeight": 100,
-                        "verticalAlign": "middle"
-                      },
-                      "content": [
-                        {
-                          "type": "paragraph",
-                          "attrs": {
-                            "textAlign": "left"
-                          }
-                        }
-                      ]
-                    },
-                    {
-                      "type": "tableCell",
-                      "attrs": {
-                        "colspan": 1,
-                        "rowspan": 1,
-                        "colwidth": [
-                          100
-                        ],
-                        "align": null,
-                        "backgroundColor": "#ffffff00",
-                        "borderColor": "#4a5262",
-                        "cellHeight": 100,
-                        "verticalAlign": "middle"
-                      },
-                      "content": [
-                        {
-                          "type": "paragraph",
-                          "attrs": {
-                            "textAlign": "left"
-                          }
-                        }
-                      ]
-                    },
-                    {
-                      "type": "tableCell",
-                      "attrs": {
-                        "colspan": 1,
-                        "rowspan": 1,
-                        "colwidth": [
-                          100
-                        ],
-                        "align": null,
-                        "backgroundColor": "#ffffff00",
-                        "borderColor": "#4a5262",
-                        "cellHeight": 100,
-                        "verticalAlign": "middle"
-                      },
-                      "content": [
-                        {
-                          "type": "paragraph",
-                          "attrs": {
-                            "textAlign": "left"
-                          }
-                        }
-                      ]
-                    },
-                    {
-                      "type": "tableCell",
-                      "attrs": {
-                        "colspan": 1,
-                        "rowspan": 1,
-                        "colwidth": [
-                          100
-                        ],
-                        "align": null,
-                        "backgroundColor": "#ffffff00",
-                        "borderColor": "#4a5262",
-                        "cellHeight": 100,
-                        "verticalAlign": "middle"
-                      },
-                      "content": [
-                        {
-                          "type": "paragraph",
-                          "attrs": {
-                            "textAlign": "left"
-                          }
-                        }
-                      ]
-                    }
-                  ]
-                },
-                {
-                  "type": "tableRow",
-                  "content": [
-                    {
-                      "type": "tableCell",
-                      "attrs": {
-                        "colspan": 2,
-                        "rowspan": 1,
-                        "colwidth": [
-                          100,
-                          100
-                        ],
-                        "align": null,
-                        "backgroundColor": "#ffffff00",
-                        "borderColor": "#4a5262",
-                        "cellHeight": 100,
-                        "verticalAlign": "middle"
-                      },
-                      "content": [
-                        {
-                          "type": "paragraph",
-                          "attrs": {
-                            "textAlign": "left"
-                          },
-                          "content": [
-                            {
-                              "type": "text",
-                              "text": "dfdfdfd"
-                            }
-                          ]
-                        }
-                      ]
-                    },
-                    {
-                      "type": "tableCell",
-                      "attrs": {
-                        "colspan": 3,
-                        "rowspan": 1,
-                        "colwidth": [
-                          100,
-                          100,
-                          100
-                        ],
-                        "align": null,
-                        "backgroundColor": "#ffffff00",
-                        "borderColor": "#4a5262",
+                        "borderWidth": 1,
+                        "borderVisible": true,
                         "cellHeight": 100,
                         "verticalAlign": "middle"
                       },
@@ -350,11 +151,13 @@
                         "colspan": 1,
                         "rowspan": 1,
                         "colwidth": [
-                          100
+                          417
                         ],
                         "align": null,
-                        "backgroundColor": "#ffffff00",
+                        "backgroundColor": "transparent",
                         "borderColor": "#4a5262",
+                        "borderWidth": 1,
+                        "borderVisible": true,
                         "cellHeight": 100,
                         "verticalAlign": "middle"
                       },
@@ -373,80 +176,13 @@
                         "colspan": 1,
                         "rowspan": 1,
                         "colwidth": [
-                          100
+                          436
                         ],
                         "align": null,
-                        "backgroundColor": "#ffffff00",
+                        "backgroundColor": "transparent",
                         "borderColor": "#4a5262",
-                        "cellHeight": 100,
-                        "verticalAlign": "middle"
-                      },
-                      "content": [
-                        {
-                          "type": "paragraph",
-                          "attrs": {
-                            "textAlign": "left"
-                          }
-                        }
-                      ]
-                    },
-                    {
-                      "type": "tableCell",
-                      "attrs": {
-                        "colspan": 1,
-                        "rowspan": 1,
-                        "colwidth": [
-                          100
-                        ],
-                        "align": null,
-                        "backgroundColor": "#ffffff00",
-                        "borderColor": "#4a5262",
-                        "cellHeight": 100,
-                        "verticalAlign": "middle"
-                      },
-                      "content": [
-                        {
-                          "type": "paragraph",
-                          "attrs": {
-                            "textAlign": "left"
-                          }
-                        }
-                      ]
-                    },
-                    {
-                      "type": "tableCell",
-                      "attrs": {
-                        "colspan": 1,
-                        "rowspan": 1,
-                        "colwidth": [
-                          100
-                        ],
-                        "align": null,
-                        "backgroundColor": "#ffffff00",
-                        "borderColor": "#4a5262",
-                        "cellHeight": 100,
-                        "verticalAlign": "middle"
-                      },
-                      "content": [
-                        {
-                          "type": "paragraph",
-                          "attrs": {
-                            "textAlign": "left"
-                          }
-                        }
-                      ]
-                    },
-                    {
-                      "type": "tableCell",
-                      "attrs": {
-                        "colspan": 1,
-                        "rowspan": 1,
-                        "colwidth": [
-                          100
-                        ],
-                        "align": null,
-                        "backgroundColor": "#ffffff00",
-                        "borderColor": "#4a5262",
+                        "borderWidth": 1,
+                        "borderVisible": true,
                         "cellHeight": 100,
                         "verticalAlign": "middle"
                       },
@@ -543,5 +279,5 @@
     ]
   },
   "createdAt": "2026-09-21T05:57:39.197Z",
-  "updatedAt": "2026-09-21T15:19:55.051Z"
+  "updatedAt": "2026-09-21T17:08:54.774Z"
 }
