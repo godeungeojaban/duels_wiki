@@ -46,7 +46,7 @@
                 {
                   "type": "link",
                   "attrs": {
-                    "href": "https://namu.wiki/w/%EC%9B%90%EC%8B%A0",
+                    "href": "http://localhost:3000/%EC%BA%90%EB%A6%AD%ED%84%B0/",
                     "target": "_blank",
                     "rel": "noopener noreferrer nofollow",
                     "class": null,
@@ -150,5 +150,5 @@
     ]
   },
   "createdAt": "2026-09-21T05:57:39.197Z",
-  "updatedAt": "2026-09-21T07:32:04.279Z"
+  "updatedAt": "2026-09-21T07:32:55.352Z"
 }
