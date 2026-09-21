@@ -19,9 +19,18 @@
             "text": "개요"
           }
         ]
+      },
+      {
+        "type": "paragraph",
+        "content": [
+          {
+            "type": "text",
+            "text": "캐릭터의 개요다."
+          }
+        ]
       }
     ]
   },
   "createdAt": "2026-09-21T05:32:01.989Z",
-  "updatedAt": "2026-09-21T05:32:01.989Z"
+  "updatedAt": "2026-09-21T05:32:51.424Z"
 }
