@@ -11,7 +11,13 @@
       "type": "doc",
       "content": [
         {
-          "type": "paragraph"
+          "type": "paragraph",
+          "content": [
+            {
+              "type": "text",
+              "text": "테스트의 모든 것을 보여준다."
+            }
+          ]
         }
       ]
     },
@@ -105,5 +111,5 @@
     ]
   },
   "createdAt": "2026-09-21T05:57:39.197Z",
-  "updatedAt": "2026-09-21T06:57:44.646Z"
+  "updatedAt": "2026-09-21T06:59:04.206Z"
 }
