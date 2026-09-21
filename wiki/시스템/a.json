@@ -1,0 +1,54 @@
+{
+  "id": "doc_d1212e9c-74cf-4a2e-af48-359caa1054ba",
+  "kind": "document",
+  "title": "a",
+  "slug": "a",
+  "categoryId": "cat_2d62d5ee-b899-419b-837f-7c117f984367",
+  "categorySlug": "시스템",
+  "content": {
+    "type": "wiki-sections",
+    "intro": {
+      "type": "doc",
+      "content": [
+        {
+          "type": "paragraph",
+          "attrs": {
+            "textAlign": "left"
+          },
+          "content": [
+            {
+              "type": "text",
+              "text": "a"
+            }
+          ]
+        }
+      ]
+    },
+    "sections": [
+      {
+        "id": "ba001ae4-e320-425a-ba44-19f244e2ea5d",
+        "title": "개요",
+        "content": {
+          "type": "doc",
+          "content": [
+            {
+              "type": "paragraph",
+              "attrs": {
+                "textAlign": "left"
+              },
+              "content": [
+                {
+                  "type": "text",
+                  "text": "ㅁ?ㄹ"
+                }
+              ]
+            }
+          ]
+        },
+        "children": []
+      }
+    ]
+  },
+  "createdAt": "2026-09-21T08:26:37.784Z",
+  "updatedAt": "2026-09-21T08:26:37.784Z"
+}
