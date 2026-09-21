@@ -84,7 +84,7 @@
               "attrs": {
                 "align": "left",
                 "fitWidth": false,
-                "width": 854
+                "width": 1143
               },
               "content": [
                 {
@@ -96,7 +96,7 @@
                         "colspan": 1,
                         "rowspan": 1,
                         "colwidth": [
-                          417
+                          570
                         ],
                         "align": null,
                         "backgroundColor": "transparent",
@@ -121,7 +121,7 @@
                         "colspan": 1,
                         "rowspan": 1,
                         "colwidth": [
-                          436
+                          570
                         ],
                         "align": null,
                         "backgroundColor": "transparent",
@@ -151,7 +151,7 @@
                         "colspan": 1,
                         "rowspan": 1,
                         "colwidth": [
-                          417
+                          570
                         ],
                         "align": null,
                         "backgroundColor": "transparent",
@@ -176,7 +176,7 @@
                         "colspan": 1,
                         "rowspan": 1,
                         "colwidth": [
-                          436
+                          570
                         ],
                         "align": null,
                         "backgroundColor": "transparent",
@@ -279,5 +279,5 @@
     ]
   },
   "createdAt": "2026-09-21T05:57:39.197Z",
-  "updatedAt": "2026-09-21T17:08:54.774Z"
+  "updatedAt": "2026-09-21T17:09:29.032Z"
 }
