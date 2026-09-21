@@ -12,6 +12,9 @@
       "content": [
         {
           "type": "paragraph",
+          "attrs": {
+            "textAlign": "left"
+          },
           "content": [
             {
               "type": "text",
@@ -22,15 +25,20 @@
         {
           "type": "image",
           "attrs": {
-            "src": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcT248O1Gz7okSRFYry6zoDBx-_Fb5n7Vy8QaTwvosslyQ&s=10",
-            "alt": null,
+            "src": "/api/media?path=media%2Fimages%2F1789975753630-fa791584-keqing.jpg",
+            "alt": "keqing.jpg",
             "title": null,
-            "width": null,
-            "height": null
+            "width": 211,
+            "height": null,
+            "rotation": 0,
+            "align": "left"
           }
         },
         {
           "type": "paragraph",
+          "attrs": {
+            "textAlign": "left"
+          },
           "content": [
             {
               "type": "text",
@@ -142,5 +150,5 @@
     ]
   },
   "createdAt": "2026-09-21T05:57:39.197Z",
-  "updatedAt": "2026-09-21T07:02:08.542Z"
+  "updatedAt": "2026-09-21T07:32:04.279Z"
 }
