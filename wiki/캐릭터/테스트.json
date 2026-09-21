@@ -28,7 +28,7 @@
             "src": "/api/media?path=media%2Fimages%2F1789975753630-fa791584-keqing.jpg",
             "alt": "keqing.jpg",
             "title": null,
-            "width": 80,
+            "width": 200,
             "height": null,
             "rotation": 0,
             "align": "left"
@@ -150,5 +150,5 @@
     ]
   },
   "createdAt": "2026-09-21T05:57:39.197Z",
-  "updatedAt": "2026-09-21T07:48:05.075Z"
+  "updatedAt": "2026-09-21T08:08:58.680Z"
 }
