@@ -1,0 +1,28 @@
+{
+  "id": "doc_353ab54b-f613-4d48-ab87-63294c26f75c",
+  "kind": "category-info",
+  "title": "시스템",
+  "slug": "_info",
+  "categoryId": "cat_2d62d5ee-b899-419b-837f-7c117f984367",
+  "categorySlug": "시스템",
+  "content": {
+    "type": "wiki-sections",
+    "sections": [
+      {
+        "id": "sec_21ad9064-8a29-453d-9bb7-b41169ada9a5",
+        "title": "개요",
+        "content": {
+          "type": "doc",
+          "content": [
+            {
+              "type": "paragraph"
+            }
+          ]
+        },
+        "children": []
+      }
+    ]
+  },
+  "createdAt": "2026-09-21T05:55:53.570Z",
+  "updatedAt": "2026-09-21T05:55:53.570Z"
+}
