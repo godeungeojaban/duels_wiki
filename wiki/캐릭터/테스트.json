@@ -18,6 +18,37 @@
               "text": "테스트의 모든 것을 보여준다."
             }
           ]
+        },
+        {
+          "type": "image",
+          "attrs": {
+            "src": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcT248O1Gz7okSRFYry6zoDBx-_Fb5n7Vy8QaTwvosslyQ&s=10",
+            "alt": null,
+            "title": null,
+            "width": null,
+            "height": null
+          }
+        },
+        {
+          "type": "paragraph",
+          "content": [
+            {
+              "type": "text",
+              "marks": [
+                {
+                  "type": "link",
+                  "attrs": {
+                    "href": "https://namu.wiki/w/%EC%9B%90%EC%8B%A0",
+                    "target": "_blank",
+                    "rel": "noopener noreferrer nofollow",
+                    "class": null,
+                    "title": null
+                  }
+                }
+              ],
+              "text": "ㅁㄴㄹㅇ"
+            }
+          ]
         }
       ]
     },
@@ -111,5 +142,5 @@
     ]
   },
   "createdAt": "2026-09-21T05:57:39.197Z",
-  "updatedAt": "2026-09-21T06:59:04.206Z"
+  "updatedAt": "2026-09-21T07:02:08.542Z"
 }
