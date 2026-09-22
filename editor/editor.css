@@ -126,4 +126,4 @@
 .duels-table td:last-child{border-right:0}
 @media(max-width:720px){.table-edit-toolbar{top:-20px}.modal:has(.table-editor-shell){width:calc(100vw - 18px)}}
 
-.inline-linked-image{display:inline-block;height:1.55em;width:auto;max-width:8em;margin:0 .14em;vertical-align:-.34em;object-fit:contain;border:0!important;border-radius:2px;background:transparent;box-shadow:none!important}
+.inline-linked-image{display:inline-block!important;width:auto!important;height:1.55em!important;max-width:8em!important;max-height:1.55em!important;margin:0 .14em;vertical-align:-.34em;object-fit:contain!important;border:0!important;border-radius:2px;background:transparent;box-shadow:none!important}
