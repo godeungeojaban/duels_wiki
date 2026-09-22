@@ -6,5 +6,12 @@
     "system": true,
     "deletable": false,
     "hasInfo": false
+  },
+  {
+    "id": "cat_447abe05a6a749578094a588528a879f",
+    "name": "캐릭터",
+    "slug": "캐릭터",
+    "deletable": true,
+    "hasInfo": true
   }
 ]
