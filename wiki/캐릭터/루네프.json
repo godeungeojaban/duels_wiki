@@ -7,7 +7,7 @@
   "categorySlug": "캐릭터",
   "content": {
     "type": "wiki-sections-v3",
-    "introHtml": "<p></p>",
+    "introHtml": "<table class=\"wiki-table\" style=\"width: 805px; margin-left: 0px; margin-right: 0px; table-layout: fixed; max-width: none;\" data-word-resize=\"1\"><colgroup data-editor-cols=\"1\"><col style=\"width: 805.333px;\"></colgroup><tbody><tr data-fixed-height=\"1\" style=\"height: 173px;\"><td class=\"\" colspan=\"4\" rowspan=\"1\" style=\"height: 173px; max-height: 173px; overflow: hidden; vertical-align: middle; text-align: center; background-color: rgb(68, 62, 152);\"><p style=\"text-align: center;\"><span style=\"font-size: 30px;\"><font color=\"#f8a0f1\">루네프</font></span></p><p style=\"text-align: center;\"><span style=\"font-size: 15px;\"><font color=\"#f8a0f1\">마법사</font></span></p></td></tr><tr><td class=\"\" colspan=\"4\" rowspan=\"1\" style=\"height: 40px; background-color: rgb(198, 194, 255);\"><p><img alt=\"\" src=\"https://raw.githubusercontent.com/LyangNem/Duels/main/character/runef.png\" data-aspect-ratio=\"1\" class=\"\" style=\"text-align: center; display: block; max-width: 100%; width: 100%; height: auto;\"><br></p></td></tr><tr><td style=\"height: 48.1667px; text-align: center;\" class=\"\"><p><i><font color=\"#616161\">4원소를 다루는 마법사 마을의 소녀.</font></i></p></td><td style=\"height: 48.1667px;\"><p><br></p></td><td class=\"\" style=\"height: 48.1667px;\"><p><br></p></td><td style=\"height: 48.1667px;\"><p><br></p></td></tr></tbody></table><p><br></p><p></p>",
     "sections": [
       {
         "id": "sec_32aadad30ec242d9a6b78801ed80cc84",
@@ -18,5 +18,5 @@
     ]
   },
   "createdAt": "2026-09-22T16:55:33+0900",
-  "updatedAt": "2026-09-22T16:55:33+0900"
+  "updatedAt": "2026-09-22T17:10:52+0900"
 }
