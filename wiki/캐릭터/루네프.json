@@ -1,0 +1,22 @@
+{
+  "id": "doc_3039a44c8d4248b59766df7b3e1d4843",
+  "kind": "document",
+  "title": "루네프",
+  "slug": "루네프",
+  "categoryId": "cat_f33bae51045a4526b302caa871e89d0b",
+  "categorySlug": "캐릭터",
+  "content": {
+    "type": "wiki-sections-v3",
+    "introHtml": "<p></p>",
+    "sections": [
+      {
+        "id": "sec_2dc27152f49e4c1aa28038cbbf2cc4c2",
+        "title": "개요",
+        "contentHtml": "<p></p>",
+        "children": []
+      }
+    ]
+  },
+  "createdAt": "2026-09-23T03:25:34+0900",
+  "updatedAt": "2026-09-23T03:25:34+0900"
+}
