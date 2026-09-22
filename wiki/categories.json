@@ -1,0 +1,10 @@
+[
+  {
+    "id": "uncategorized",
+    "name": "미분류",
+    "slug": "미분류",
+    "system": true,
+    "deletable": false,
+    "hasInfo": false
+  }
+]

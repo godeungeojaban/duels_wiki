@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Duels Wiki Editor</title>
+  <link rel="stylesheet" href="editor.css">
+</head>
+<body>
+<div id="app">
+  <header class="appbar">
+    <button id="sidebarToggle" class="icon-btn mobile-only" aria-label="문서 목록">☰</button>
+    <a class="brand" href="#/">Duels Wiki</a>
+    <span class="version">Editor 3.2</span>
+    <div class="spacer"></div>
+    <button id="settingsBtn" class="ghost-btn">GitHub 설정</button>
+  </header>
+
+<div id="toolbar" class="toolbar hidden">
+  <div class="tool-group"><span class="group-label">텍스트</span>
+    <button data-cmd="bold"><b>B</b></button>
+    <button data-cmd="italic"><i>I</i></button>
+    <button data-cmd="strikeThrough"><s>S</s></button>
+    <label class="compact">크기 <input id="fontSizeInput" type="number" min="8" max="96" value="16"></label>
+    <input id="textColor" type="color" value="#222222" title="글자색">
+    <button id="resetFontBtn">기본</button>
+  </div>
+  <div class="tool-group"><span class="group-label">배치</span>
+    <button data-align="left">왼쪽</button><button data-align="center">가운데</button><button data-align="right">오른쪽</button>
+  </div>
+  <div class="tool-group"><span class="group-label">삽입</span>
+    <button id="internalLinkBtn">내부 링크</button>
+    <button id="unlinkBtn">링크 해제</button>
+    <button id="imageUrlBtn">이미지 링크</button>
+    <button id="imageUploadBtn">이미지 업로드</button>
+    <input id="imageFile" type="file" accept="image/png,image/jpeg" hidden>
+  </div>
+  <div id="imageTools" class="tool-group hidden"><span class="group-label">이미지</span>
+    <label class="compact">W <input id="imageWidth" type="number" min="20" max="3000"></label>
+    <label class="compact">H <input id="imageHeight" type="number" min="20" max="3000"></label>
+    <label class="compact">° <input id="imageRotation" type="number" min="-360" max="360"></label>
+    <button id="rotateLeftBtn">↶90°</button><button id="rotateRightBtn">↷90°</button>
+    <button id="imageFitBtn">너비 자동</button>
+  </div>
+</div>
+
+  <div class="workspace">
+    <aside id="sidebar" class="sidebar">
+      <div class="side-actions">
+        <button id="newCategoryBtn">카테고리 생성</button>
+        <button id="newDocumentBtn">문서 생성</button>
+      </div>
+      <div id="tree" class="tree"><div class="loading">불러오는 중…</div></div>
+    </aside>
+
+    <main class="main">
+      <div id="status" class="status hidden"></div>
+      <section id="viewPage" class="page"></section>
+      <section id="editPage" class="page hidden"></section>
+    </main>
+  </div>
+</div>
+
+<div id="imageOverlay" class="image-overlay hidden"><i data-h="nw"></i><i data-h="n"></i><i data-h="ne"></i><i data-h="e"></i><i data-h="se"></i><i data-h="s"></i><i data-h="sw"></i><i data-h="w"></i></div>
+
+<div id="modalBackdrop" class="modal-backdrop hidden">
+  <div id="modal" class="modal"></div>
+</div>
+<script src="editor.js"></script>
+</body>
+</html>
