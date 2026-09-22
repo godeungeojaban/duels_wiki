@@ -593,7 +593,8 @@ function upgradeDuelsComponents(root){
 
 function tableInt(v,fallback,min,max){const n=Math.round(Number(v));return Number.isFinite(n)?Math.max(min,Math.min(max,n)):fallback}
 function tableColor(v,fallback='#2a4a6a'){return /^#[0-9a-f]{6}$/i.test(String(v||''))?String(v):fallback}
-function freshTableCell(){return{text:'',color:'#0d1520',rowSpan:1,colSpan:1}}
+function tableAlign(v){return ['left','center','right'].includes(String(v||''))?String(v):'left'}
+function freshTableCell(){return{text:'',color:'#0d1520',align:'left',rowSpan:1,colSpan:1}}
 function cloneTableData(data){return JSON.parse(JSON.stringify(data))}
 function normalizeTableData(raw={}){
   const rows=tableInt(raw.rows,2,1,20),cols=tableInt(raw.cols,2,1,20);
@@ -605,7 +606,7 @@ function normalizeTableData(raw={}){
   const cells=Array.from({length:rows},(_,r)=>Array.from({length:cols},(_,c)=>{
     const x=src?.[r]?.[c];
     if(x===null)return null;
-    return{text:String(x?.text||''),color:tableColor(x?.color,'#0d1520'),rowSpan:tableInt(x?.rowSpan,1,1,rows-r),colSpan:tableInt(x?.colSpan,1,1,cols-c)};
+    return{text:String(x?.text||''),color:tableColor(x?.color,'#0d1520'),align:tableAlign(x?.align),rowSpan:tableInt(x?.rowSpan,1,1,rows-r),colSpan:tableInt(x?.colSpan,1,1,cols-c)};
   }));
   const out={rows,cols,baseWidth,borderColor:tableColor(raw.borderColor),colWidths:widths,cells};
   rebuildTableCoverage(out);
@@ -639,7 +640,7 @@ function renderTableElement(el,raw){
       const cell=data.cells[r][c];if(cell===null)continue;
       const rs=cell.rowSpan>1?` rowspan="${cell.rowSpan}"`:'';const cs=cell.colSpan>1?` colspan="${cell.colSpan}"`:'';
       const mw=tableCellMinWidth(data,c,cell.colSpan);
-      html+=`<td${rs}${cs} style="background:${cell.color};min-width:${mw}px">${textLinesHtml(cell.text)||'<br>'}</td>`;
+      html+=`<td${rs}${cs} style="background:${cell.color};min-width:${mw}px;text-align:${tableAlign(cell.align)}">${textLinesHtml(cell.text)||'<br>'}</td>`;
     }
     html+='</tr>';
   }
@@ -712,13 +713,30 @@ function syncTableFormToData(data){
   const bc=$('#tableBorderColor');if(bc)data.borderColor=tableColor(bc.value);
   $$('[data-table-text]').forEach(x=>{const r=Number(x.dataset.r),c=Number(x.dataset.c);if(data.cells[r]?.[c])data.cells[r][c].text=x.value});
   $$('[data-table-color]').forEach(x=>{const r=Number(x.dataset.r),c=Number(x.dataset.c);if(data.cells[r]?.[c])data.cells[r][c].color=tableColor(x.value,'#0d1520')});
+  $$('[data-table-align]').forEach(x=>{const r=Number(x.dataset.r),c=Number(x.dataset.c);if(data.cells[r]?.[c])data.cells[r][c].align=tableAlign(x.value)});
   $$('[data-col-width]').forEach(x=>{const c=Number(x.dataset.c);if(c<data.cols)data.colWidths[c]=tableInt(x.value,data.colWidths[c],40,2000)});
   data.baseWidth=data.colWidths.reduce((a,b)=>a+b,0);
 }
 function tableEditorHtml(data,existing){
-  let cells='';for(let r=0;r<data.rows;r++){for(let c=0;c<data.cols;c++){const x=data.cells[r][c];if(x===null)continue;cells+=`<div class="table-cell-editor" style="grid-column:span ${x.colSpan};grid-row:span ${x.rowSpan}"><div class="table-cell-head"><label><input type="checkbox" data-table-select data-r="${r}" data-c="${c}"> 셀 ${r+1}-${c+1}${x.rowSpan>1||x.colSpan>1?` · ${x.rowSpan}×${x.colSpan}`:''}</label><input type="color" data-table-color data-r="${r}" data-c="${c}" value="${tableColor(x.color,'#0d1520')}" title="셀 색상"></div><textarea data-table-text data-r="${r}" data-c="${c}" rows="2">${escapeHtml(x.text)}</textarea></div>`}}
+  let cells='';for(let r=0;r<data.rows;r++){for(let c=0;c<data.cols;c++){const x=data.cells[r][c];if(x===null)continue;cells+=`<div class="table-cell-editor" style="grid-column:span ${x.colSpan};grid-row:span ${x.rowSpan}"><div class="table-cell-head"><label><input type="checkbox" data-table-select data-r="${r}" data-c="${c}"> 셀 ${r+1}-${c+1}${x.rowSpan>1||x.colSpan>1?` · ${x.rowSpan}×${x.colSpan}`:''}</label><div class="table-cell-options"><select data-table-align data-r="${r}" data-c="${c}" title="셀 정렬"><option value="left" ${tableAlign(x.align)==='left'?'selected':''}>좌측</option><option value="center" ${tableAlign(x.align)==='center'?'selected':''}>중앙</option><option value="right" ${tableAlign(x.align)==='right'?'selected':''}>우측</option></select><input type="color" data-table-color data-r="${r}" data-c="${c}" value="${tableColor(x.color,'#0d1520')}" title="셀 배경색"></div></div><textarea data-table-text data-r="${r}" data-c="${c}" rows="2">${escapeHtml(x.text)}</textarea></div>`}}
   const widths=data.colWidths.map((w,c)=>`<label class="table-col-width">열 ${c+1}<input type="number" min="40" max="2000" data-col-width data-c="${c}" value="${w}"></label>`).join('');
   return `<h2>${existing?'표 수정':'표 삽입'}</h2><div class="component-form-grid"><div class="form-row"><label>기본 가로 너비</label><div class="inline-field"><select id="tableWidthPreset"><option value="400" ${data.baseWidth===400?'selected':''}>기본 · 400px</option><option value="custom" ${data.baseWidth!==400?'selected':''}>직접 입력</option></select><input id="tableBaseWidth" type="number" min="120" max="4000" value="${data.baseWidth}"></div></div><div class="form-row"><label>테두리 색상</label><input id="tableBorderColor" type="color" value="${data.borderColor}"></div><div class="form-row"><label>행 개수</label><input id="tableRows" type="number" min="1" max="20" value="${data.rows}"></div><div class="form-row"><label>열 개수</label><input id="tableCols" type="number" min="1" max="20" value="${data.cols}"></div></div>${existing?`<div class="table-size-status">기본 크기 <b id="tableBaseWidthLabel">${data.baseWidth}px</b> · 현재 실제 크기 <b id="tableActualWidth">${Math.max(data.baseWidth,Number(existing.dataset.actualWidth)||Math.ceil(existing.getBoundingClientRect().width)||data.baseWidth)}px</b> <button id="syncTableActual" type="button">실제 크기를 기본 크기로 동기화</button></div>`:''}<div class="table-structure-tools"><label>기준 행 <input id="tableRowIndex" type="number" min="1" max="${data.rows}" value="1"></label><button id="rowBefore" type="button">위에 행 추가</button><button id="rowAfter" type="button">아래에 행 추가</button><button id="rowRemove" type="button">행 제거</button><span class="tool-divider"></span><label>기준 열 <input id="tableColIndex" type="number" min="1" max="${data.cols}" value="1"></label><button id="colBefore" type="button">왼쪽 열 추가</button><button id="colAfter" type="button">오른쪽 열 추가</button><button id="colRemove" type="button">열 제거</button></div><div class="table-column-widths">${widths}</div><div class="table-merge-tools"><button id="mergeTableCells" type="button">선택 셀 병합</button><button id="unmergeTableCell" type="button">병합 해제</button><span class="muted">셀 왼쪽 위의 체크박스로 병합할 셀을 선택합니다.</span></div><div id="tableEditGrid" class="table-edit-grid" style="grid-template-columns:repeat(${data.cols},minmax(130px,1fr))">${cells}</div><div class="modal-actions"><button id="cancelComponent">취소</button>${existing?'<button id="deleteComponent" class="danger">삭제</button>':''}<button id="saveComponent" class="primary">${existing?'수정':'삽입'}</button></div>`;
+}
+function measureTableActualColumns(data){
+  const probe=makeTableComponent(normalizeTableData(data));
+  probe.style.position='fixed';probe.style.left='-10000px';probe.style.top='0';probe.style.visibility='hidden';probe.style.pointerEvents='none';probe.style.zIndex='-1';
+  document.body.appendChild(probe);
+  const table=$('.duels-table',probe);
+  const cols=[...probe.querySelectorAll('col')].map((col,i)=>Math.max(40,Math.ceil(col.getBoundingClientRect().width||data.colWidths[i]||40)));
+  const width=Math.ceil(table?.getBoundingClientRect().width||cols.reduce((a,b)=>a+b,0));
+  probe.remove();
+  return{width,cols};
+}
+function syncTableActualToBase(data){
+  const measured=measureTableActualColumns(data);
+  if(measured.cols.length===data.cols){data.colWidths=measured.cols;data.baseWidth=measured.cols.reduce((a,b)=>a+b,0)}
+  else data.baseWidth=Math.max(data.baseWidth,measured.width);
+  return data;
 }
 function tableModal(existing=null){
   if(!existing)captureComponentInsertionPoint();else rememberSelection();let data=normalizeTableData(existing?componentPayload(existing):{rows:2,cols:2,baseWidth:400,borderColor:'#2a4a6a'});
@@ -736,7 +754,7 @@ function tableModal(existing=null){
     $('#colBefore').onclick=()=>{flush();tableInsertCol(data,colIndex());redraw()};$('#colAfter').onclick=()=>{flush();tableInsertCol(data,colIndex()+1);redraw()};$('#colRemove').onclick=()=>{flush();if(tableRemoveCol(data,colIndex()))redraw()};
     $('#mergeTableCells').onclick=()=>{flush();if(tableMergeSelection(data))redraw()};$('#unmergeTableCell').onclick=()=>{flush();if(tableUnmergeSelection(data))redraw()};
     $$('[data-col-width]').forEach(x=>x.onchange=()=>{flush();redraw()});
-    if(existing){$('#syncTableActual').onclick=()=>{flush();const actual=Math.max(data.baseWidth,Math.ceil($('.duels-table',existing)?.getBoundingClientRect().width||existing.getBoundingClientRect().width||data.baseWidth));applyTableBaseWidth(data,actual);redraw()};$('#deleteComponent').onclick=()=>{if(confirm('이 표를 삭제할까요?')){const host=existing.closest('.editable');existing.remove();host?.dispatchEvent(new Event('input',{bubbles:true}));closeModal()}}}
+    if(existing){$('#syncTableActual').onclick=()=>{flush();syncTableActualToBase(data);redraw()};$('#deleteComponent').onclick=()=>{if(confirm('이 표를 삭제할까요?')){const host=existing.closest('.editable');existing.remove();host?.dispatchEvent(new Event('input',{bubbles:true}));closeModal()}}}
     $('#saveComponent').onclick=()=>{flush();data=normalizeTableData(data);if(existing){renderTableElement(existing,data);existing.closest('.editable')?.dispatchEvent(new Event('input',{bubbles:true}));closeModal()}else{const node=makeTableComponent(data);if(insertBlockComponent(node))closeModal()}};
   };
   redraw();
