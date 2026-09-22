@@ -5,96 +5,123 @@ const $$ = (s, r=document) => [...r.querySelectorAll(s)];
 const state = { index:null, current:null, currentPath:'', editing:false, savedRange:null, componentInsertionRange:null, lastEditable:null, selectedImage:null, activeRibbon:'home', config:null };
 const escapeHtml = s => String(s??'').replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
 const uid = p => `${p}_${crypto.randomUUID().replaceAll('-','')}`;
-const DUELS_CHARACTER_COLORS=Object.freeze([
-  Object.freeze({name:'슈비',color:'#ff4500'}),
-  Object.freeze({name:'루뷰',color:'#00aaff'}),
-  Object.freeze({name:'미아루키',color:'#ff1493'}),
-  Object.freeze({name:'메인마드',color:'#795548'}),
-  Object.freeze({name:'메후구',color:'#00e676'}),
-  Object.freeze({name:'리안',color:'#ffa500'}),
-  Object.freeze({name:'타우',color:'#00ffff'}),
-  Object.freeze({name:'베르',color:'#ff2244'}),
-  Object.freeze({name:'엘린',color:'#c8d8f0'}),
-  Object.freeze({name:'엔소냐',color:'#ee00ff'}),
-  Object.freeze({name:'메이실',color:'#ffd700'}),
-  Object.freeze({name:'에라 파비',color:'#38bdf8'}),
-  Object.freeze({name:'레이카',color:'#ff7a00'}),
-  Object.freeze({name:'샤이라즈',color:'#78909c'}),
-  Object.freeze({name:'페이즈',color:'#8855ff'}),
-  Object.freeze({name:'칸',color:'#1a6b35'}),
-  Object.freeze({name:'체리티',color:'#6b0f1a'}),
-  Object.freeze({name:'코녕',color:'#f5e6c8'}),
-  Object.freeze({name:'헤르쟝',color:'#00c897'}),
-  Object.freeze({name:'하츠하츠',color:'#aaff00'}),
-  Object.freeze({name:'프릴',color:'#ff69b4'}),
-  Object.freeze({name:'다즈빈',color:'#3355ff'}),
-  Object.freeze({name:'유이',color:'#6e97ff'}),
-  Object.freeze({name:'펠루나',color:'#555555'}),
-  Object.freeze({name:'셰리나 비아',color:'#6a36c9'}),
-  Object.freeze({name:'스야',color:'#0000ad'}),
-  Object.freeze({name:'루네프',color:'#4c10c4'}),
-  Object.freeze({name:'로온',color:'#a5f9a6'}),
-  Object.freeze({name:'인투',color:'#a18a8a'}),
-  Object.freeze({name:'메라 모나',color:'#ff21da'}),
-  Object.freeze({name:'타다타',color:'#2f7a40'}),
-  Object.freeze({name:'나남낭',color:'#fbc7ff'}),
-  Object.freeze({name:'레이즈',color:'#bfa136'}),
-  Object.freeze({name:'레비나',color:'#a63b46'}),
-  Object.freeze({name:'키',color:'#c3c9de'}),
-  Object.freeze({name:'소르',color:'#4d4d8f'}),
-  Object.freeze({name:'제리',color:'#59c980'}),
-  Object.freeze({name:'룰리',color:'#e6dd85'}),
-  Object.freeze({name:'레테',color:'#a7b0a4'}),
-  Object.freeze({name:'클레아',color:'#213b5a'}),
-  Object.freeze({name:'셸로',color:'#522a50'}),
-  Object.freeze({name:'티냐',color:'#92cbd6'}),
-  Object.freeze({name:'라임',color:'#c1fab1'}),
-  Object.freeze({name:'큐리',color:'#8b6cd9'}),
-  Object.freeze({name:'하푸푸',color:'#ffe6f7'}),
-  Object.freeze({name:'아츠테오',color:'#735800'}),
-  Object.freeze({name:'나레',color:'#b8dcff'}),
-  Object.freeze({name:'키네스',color:'#910101'}),
-  Object.freeze({name:'에즈레일',color:'#6f82a8'}),
-  Object.freeze({name:'뉴',color:'#c64a73'}),
-  Object.freeze({name:'가에',color:'#7f8992'}),
-  Object.freeze({name:'사이엔',color:'#4f79aa'}),
-  Object.freeze({name:'카논',color:'#c94141'}),
-  Object.freeze({name:'델트루브',color:'#b5652b'}),
-  Object.freeze({name:'시아넬리',color:'#8b1223'})
+const DUELS_CHARACTER_PROFILES=Object.freeze([
+  Object.freeze({id:'shubi',name:'슈비',color:'#ff4500'}),
+  Object.freeze({id:'ruvu',name:'루뷰',color:'#00aaff'}),
+  Object.freeze({id:'miaruky',name:'미아루키',color:'#ff1493'}),
+  Object.freeze({id:'mainmad',name:'메인마드',color:'#795548'}),
+  Object.freeze({id:'mehugu',name:'메후구',color:'#00e676'}),
+  Object.freeze({id:'lian',name:'리안',color:'#ffa500'}),
+  Object.freeze({id:'tau',name:'타우',color:'#00ffff'}),
+  Object.freeze({id:'veleu',name:'베르',color:'#ff2244'}),
+  Object.freeze({id:'elin',name:'엘린',color:'#c8d8f0'}),
+  Object.freeze({id:'nsonya',name:'엔소냐',color:'#ee00ff'}),
+  Object.freeze({id:'maisil',name:'메이실',color:'#ffd700'}),
+  Object.freeze({id:'erapabi',name:'에라 파비',color:'#38bdf8'}),
+  Object.freeze({id:'reika',name:'레이카',color:'#ff7a00'}),
+  Object.freeze({id:'shairaz',name:'샤이라즈',color:'#78909c'}),
+  Object.freeze({id:'phase',name:'페이즈',color:'#8855ff'}),
+  Object.freeze({id:'kan',name:'칸',color:'#1a6b35'}),
+  Object.freeze({id:'cherity',name:'체리티',color:'#6b0f1a'}),
+  Object.freeze({id:'konyeong',name:'코녕',color:'#f5e6c8'}),
+  Object.freeze({id:'herjang',name:'헤르쟝',color:'#00c897'}),
+  Object.freeze({id:'hatsuhats',name:'하츠하츠',color:'#aaff00'}),
+  Object.freeze({id:'prill',name:'프릴',color:'#ff69b4'}),
+  Object.freeze({id:'dazbin',name:'다즈빈',color:'#3355ff'}),
+  Object.freeze({id:'yui',name:'유이',color:'#6e97ff'}),
+  Object.freeze({id:'peluna',name:'펠루나',color:'#555555'}),
+  Object.freeze({id:'sherina',name:'셰리나 비아',color:'#6a36c9'}),
+  Object.freeze({id:'sya',name:'스야',color:'#0000ad'}),
+  Object.freeze({id:'runef',name:'루네프',color:'#4c10c4'}),
+  Object.freeze({id:'roon',name:'로온',color:'#a5f9a6'}),
+  Object.freeze({id:'intu',name:'인투',color:'#a18a8a'}),
+  Object.freeze({id:'meramona',name:'메라 모나',color:'#ff21da'}),
+  Object.freeze({id:'tadta',name:'타다타',color:'#2f7a40'}),
+  Object.freeze({id:'nanamnang',name:'나남낭',color:'#fbc7ff'}),
+  Object.freeze({id:'raise',name:'레이즈',color:'#bfa136'}),
+  Object.freeze({id:'levina',name:'레비나',color:'#a63b46'}),
+  Object.freeze({id:'ki',name:'키',color:'#c3c9de'}),
+  Object.freeze({id:'sor',name:'소르',color:'#4d4d8f'}),
+  Object.freeze({id:'jerry',name:'제리',color:'#59c980'}),
+  Object.freeze({id:'ruli',name:'룰리',color:'#e6dd85'}),
+  Object.freeze({id:'lete',name:'레테',color:'#a7b0a4'}),
+  Object.freeze({id:'clea',name:'클레아',color:'#213b5a'}),
+  Object.freeze({id:'shello',name:'셸로',color:'#522a50'}),
+  Object.freeze({id:'tinya',name:'티냐',color:'#92cbd6'}),
+  Object.freeze({id:'lime',name:'라임',color:'#c1fab1'}),
+  Object.freeze({id:'quri',name:'큐리',color:'#8b6cd9'}),
+  Object.freeze({id:'hapupu',name:'하푸푸',color:'#ffe6f7'}),
+  Object.freeze({id:'atsuteo',name:'아츠테오',color:'#735800'}),
+  Object.freeze({id:'nare',name:'나레',color:'#b8dcff'}),
+  Object.freeze({id:'kines',name:'키네스',color:'#910101'}),
+  Object.freeze({id:'ezrail',name:'에즈레일',color:'#6f82a8'}),
+  Object.freeze({id:'nyu',name:'뉴',color:'#c64a73'}),
+  Object.freeze({id:'gae',name:'가에',color:'#7f8992'}),
+  Object.freeze({id:'cyien',name:'사이엔',color:'#4f79aa'}),
+  Object.freeze({id:'kanon',name:'카논',color:'#c94141'}),
+  Object.freeze({id:'deltroove',name:'델트루브',color:'#b5652b'}),
+  Object.freeze({id:'xianelli',name:'시아넬리',color:'#8b1223'}),
 ]);
+const DUELS_CHARACTER_COLORS=DUELS_CHARACTER_PROFILES;
+const DUELS_CHARACTER_IMAGE_BASE='https://raw.githubusercontent.com/LyangNem/Duels/main/character/';
+
 function characterColorButtons(){return DUELS_CHARACTER_COLORS.map(x=>`<button type="button" class="character-color-swatch" data-color="${x.color}" title="${escapeHtml(x.name)} · ${x.color}"><i style="background:${x.color}"></i><span>${escapeHtml(x.name)}</span></button>`).join('')}
-function closeFloatingCharacterColors(){document.querySelectorAll('.character-color-floating-grid').forEach(x=>x.remove())}
-function openFloatingCharacterColors(summary,input){
-  closeFloatingCharacterColors();
-  const grid=document.createElement('div');grid.className='character-color-grid character-color-floating-grid';grid.innerHTML=characterColorButtons();document.body.appendChild(grid);
-  const r=summary.getBoundingClientRect(),pad=8;let left=r.left,top=r.bottom+6;
-  const w=Math.min(430,window.innerWidth-16);grid.style.width=`${Math.max(220,w)}px`;
+function characterImageButtons(){return DUELS_CHARACTER_PROFILES.map(x=>{const url=`${DUELS_CHARACTER_IMAGE_BASE}${x.id}.png`;return `<button type="button" class="character-image-swatch" data-image-url="${url}" title="${escapeHtml(x.name)}"><img src="${url}" alt=""><span>${escapeHtml(x.name)}</span></button>`}).join('')}
+function closeFloatingPresetGrids(){document.querySelectorAll('.character-color-floating-grid,.character-image-floating-grid').forEach(x=>x.remove())}
+function positionFloatingGrid(grid,summary,maxWidth=430){
+  const r=summary.getBoundingClientRect(),pad=8;
+  const w=Math.min(maxWidth,window.innerWidth-pad*2);
+  let left=r.left,top=r.bottom+6;
+  grid.style.width=`${Math.max(220,w)}px`;
   if(left+w>window.innerWidth-pad)left=Math.max(pad,window.innerWidth-pad-w);
   grid.style.left=`${Math.max(pad,left)}px`;grid.style.top=`${Math.max(pad,top)}px`;
   requestAnimationFrame(()=>{const gr=grid.getBoundingClientRect();if(gr.bottom>window.innerHeight-pad)grid.style.top=`${Math.max(pad,r.top-gr.height-6)}px`});
+}
+function openFloatingCharacterColors(summary,input){
+  closeFloatingPresetGrids();
+  const grid=document.createElement('div');grid.className='character-color-grid character-color-floating-grid';grid.innerHTML=characterColorButtons();document.body.appendChild(grid);
+  positionFloatingGrid(grid,summary,430);
   grid.addEventListener('mousedown',e=>e.preventDefault());
-  grid.addEventListener('click',e=>{const button=e.target.closest('[data-color]');if(!button)return;input.value=button.dataset.color;input.dispatchEvent(new Event('input',{bubbles:true}));input.dispatchEvent(new Event('change',{bubbles:true}));closeFloatingCharacterColors()});
+  grid.addEventListener('click',e=>{const button=e.target.closest('[data-color]');if(!button)return;input.value=button.dataset.color;input.dispatchEvent(new Event('input',{bubbles:true}));input.dispatchEvent(new Event('change',{bubbles:true}));closeFloatingPresetGrids()});
+}
+function openFloatingCharacterImages(summary,input){
+  closeFloatingPresetGrids();
+  const grid=document.createElement('div');grid.className='character-image-grid character-image-floating-grid';grid.innerHTML=characterImageButtons();document.body.appendChild(grid);
+  positionFloatingGrid(grid,summary,500);
+  grid.addEventListener('mousedown',e=>e.preventDefault());
+  grid.addEventListener('click',e=>{const button=e.target.closest('[data-image-url]');if(!button)return;input.value=button.dataset.imageUrl;input.dispatchEvent(new Event('input',{bubbles:true}));input.dispatchEvent(new Event('change',{bubbles:true}));closeFloatingPresetGrids()});
+}
+function bindFloatingPresetDetails(details,input,kind){
+  const summary=details.querySelector('summary');
+  summary.addEventListener('click',e=>{
+    e.preventDefault();e.stopPropagation();
+    const selector=kind==='color'?'.character-color-floating-grid':'.character-image-floating-grid';
+    const already=!!document.querySelector(selector);
+    if(already){closeFloatingPresetGrids();details.open=false;return}
+    details.open=true;
+    if(kind==='color')openFloatingCharacterColors(summary,input);else openFloatingCharacterImages(summary,input);
+  });
 }
 function enhanceColorInputs(root=document){
   $$('input[type="color"]',root).forEach(input=>{
     if(input.dataset.duelsCharacterColors==='1')return;
     input.dataset.duelsCharacterColors='1';
-    const inRibbon=!!input.closest('.ribbon');
-    const details=document.createElement('details');
-    details.className='character-color-presets'+(inRibbon?' ribbon-color-presets':'');
-    details.innerHTML=inRibbon?'<summary>캐릭터 색</summary>':`<summary>캐릭터 색</summary><div class="character-color-grid">${characterColorButtons()}</div>`;
-    const host=input.closest('label.color-tool');
-    if(host)host.insertAdjacentElement('afterend',details);else input.insertAdjacentElement('afterend',details);
-    if(inRibbon){
-      const summary=details.querySelector('summary');
-      summary.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();const already=!!document.querySelector('.character-color-floating-grid');if(already){closeFloatingCharacterColors();details.open=false}else{details.open=true;openFloatingCharacterColors(summary,input)}});
-    }else{
-      details.addEventListener('click',e=>{const button=e.target.closest('[data-color]');if(!button)return;e.preventDefault();e.stopPropagation();input.value=button.dataset.color;input.dispatchEvent(new Event('input',{bubbles:true}));input.dispatchEvent(new Event('change',{bubbles:true}));details.open=false});
-    }
+    const details=document.createElement('details');details.className='character-color-presets';details.innerHTML='<summary>캐릭터 색</summary>';
+    const host=input.closest('label.color-tool');if(host)host.insertAdjacentElement('afterend',details);else input.insertAdjacentElement('afterend',details);
+    bindFloatingPresetDetails(details,input,'color');
   });
 }
-document.addEventListener('mousedown',e=>{if(!e.target.closest('.character-color-floating-grid,.ribbon-color-presets')){closeFloatingCharacterColors();document.querySelectorAll('.ribbon-color-presets[open]').forEach(x=>x.open=false)}});
-window.addEventListener('resize',closeFloatingCharacterColors);window.addEventListener('scroll',closeFloatingCharacterColors,true);
+function enhanceImageUrlInputs(root=document){
+  $$('input[data-character-image-presets],#imageUrl,#ccImage',root).forEach(input=>{
+    if(input.dataset.duelsCharacterImages==='1')return;
+    input.dataset.duelsCharacterImages='1';
+    const details=document.createElement('details');details.className='character-image-presets';details.innerHTML='<summary>캐릭터 이미지</summary>';
+    input.insertAdjacentElement('afterend',details);
+    bindFloatingPresetDetails(details,input,'image');
+  });
+}
+document.addEventListener('mousedown',e=>{if(!e.target.closest('.character-color-floating-grid,.character-image-floating-grid,.character-color-presets,.character-image-presets')){closeFloatingPresetGrids();document.querySelectorAll('.character-color-presets[open],.character-image-presets[open]').forEach(x=>x.open=false)}});
+window.addEventListener('resize',closeFloatingPresetGrids);window.addEventListener('scroll',closeFloatingPresetGrids,true);
 
 async function api(url, options={}) {
   const res = await fetch(url, {cache:'no-store', headers:{'Content-Type':'application/json', ...(options.headers||{})}, ...options});
@@ -103,8 +130,8 @@ async function api(url, options={}) {
   return data;
 }
 function showStatus(msg, error=false){ const el=$('#status'); el.textContent=msg; el.classList.toggle('error',error); el.classList.remove('hidden'); clearTimeout(showStatus.t); showStatus.t=setTimeout(()=>el.classList.add('hidden'),4500); }
-function openModal(html){ $('#modal').innerHTML=html; enhanceColorInputs($('#modal')); $('#modalBackdrop').classList.remove('hidden'); }
-function closeModal(){ $('#modalBackdrop').classList.add('hidden'); $('#modal').innerHTML=''; }
+function openModal(html){ $('#modal').innerHTML=html; enhanceColorInputs($('#modal')); enhanceImageUrlInputs($('#modal')); $('#modalBackdrop').classList.remove('hidden'); }
+function closeModal(){ closeFloatingPresetGrids(); $('#modalBackdrop').classList.add('hidden'); $('#modal').innerHTML=''; }
 $('#modalBackdrop').addEventListener('mousedown',e=>{if(e.target===e.currentTarget)closeModal()});
 
 function routeFor(cat, doc){ return doc ? `#/c/${encodeURIComponent(cat)}/d/${encodeURIComponent(doc)}` : `#/c/${encodeURIComponent(cat)}`; }
@@ -194,15 +221,27 @@ function placeCaretInNode(node,atEnd=true){
   const sel=getSelection(),r=document.createRange();
   r.selectNodeContents(node);r.collapse(!atEnd);sel.removeAllRanges();sel.addRange(r);state.savedRange=r.cloneRange();
 }
+function placeCaretAfterElement(editable,element){
+  if(!editable||!element||!editable.contains(element))return false;
+  clearComponentCaretAnchors(editable);
+  const r=document.createRange();r.setStartAfter(element);r.collapse(true);
+  const sel=getSelection();sel.removeAllRanges();sel.addRange(r);state.savedRange=r.cloneRange();return true;
+}
 function placeComponentSideCaret(editable,element){
+  // 3.30: 요소 자체와 같은 높이의 빈 여백은 동일한 입력 지점으로 취급한다.
+  // 저장되지 않는 편집 전용 caret을 요소의 오른쪽 아래에 띄우고, 실제 입력이 시작될 때만 아래 문단으로 개행한다.
   if(!editable||!element||!editable.contains(element))return false;
   clearComponentCaretAnchors(editable);
   const er=editable.getBoundingClientRect(),rr=element.getBoundingClientRect();
   const anchor=document.createElement('span');
-  anchor.dataset.componentCaretAnchor='1';anchor.dataset.editorOnly='1';anchor.setAttribute('contenteditable','true');anchor.textContent='\u200b';
+  anchor.dataset.componentCaretAnchor='1';
+  anchor.dataset.editorOnly='1';
+  anchor.setAttribute('contenteditable','true');
+  anchor.textContent='\u200b';
   const x=Math.max(2,Math.min(editable.clientWidth-4,rr.right-er.left+4));
   const y=Math.max(0,rr.bottom-er.top-20);
-  anchor.style.left=`${x}px`;anchor.style.top=`${y}px`;
+  anchor.style.left=`${x}px`;
+  anchor.style.top=`${y}px`;
   element.insertAdjacentElement('afterend',anchor);
   requestAnimationFrame(()=>placeCaretInNode(anchor,true));
   return true;
@@ -257,7 +296,7 @@ function handleProtectedDeletion(el,e){
     const protectedSibling=atBoundary?protectedEditorElement(sibling):null;
     if(protectedSibling){
       e.preventDefault();
-      if(isEmptyEditorParagraph(here)){here.remove();placeComponentSideCaret(el,protectedSibling);el.dispatchEvent(new Event('input',{bubbles:true}))}
+      if(isEmptyEditorParagraph(here)){here.remove();placeCaretAfterElement(el,protectedSibling);el.dispatchEvent(new Event('input',{bubbles:true}))}
       return true;
     }
   }
@@ -295,14 +334,19 @@ function bindEditable(el){
   });
   el.addEventListener('click',e=>{
     const whitespaceElement=componentAtWhitespaceClick(el,e);
-    if(whitespaceElement){e.preventDefault();clearObjectSelection(true);placeComponentSideCaret(el,whitespaceElement);return}
+    if(whitespaceElement){
+      e.preventDefault();
+      clearObjectSelection(true);
+      $$('.selected-duels-component').forEach(x=>x.classList.remove('selected-duels-component'));
+      placeComponentSideCaret(el,whitespaceElement);
+      return;
+    }
     const component=e.target.closest('[data-duels-component]');
     if(component&&el.contains(component)){
       e.preventDefault();
       clearObjectSelection(true);
       $$('.selected-duels-component').forEach(x=>x.classList.remove('selected-duels-component'));
-      component.classList.add('selected-duels-component');
-      if(component.dataset.duelsComponent==='character-card')openComponentEditor(component);
+      placeComponentSideCaret(el,component);
       return;
     }
     if(e.target.tagName==='IMG'){ selectImage(e.target); return; }
@@ -311,8 +355,13 @@ function bindEditable(el){
   });
   el.addEventListener('dblclick',e=>{
     const component=e.target.closest('[data-duels-component]');
-    if(component&&el.contains(component)&&component.dataset.duelsComponent!=='character-card'){
-      e.preventDefault();openComponentEditor(component);
+    if(component&&el.contains(component)){
+      e.preventDefault();
+      clearComponentCaretAnchors(el);
+      clearObjectSelection(true);
+      $$('.selected-duels-component').forEach(x=>x.classList.remove('selected-duels-component'));
+      component.classList.add('selected-duels-component');
+      openComponentEditor(component);
     }
   });
 }
@@ -348,7 +397,7 @@ function openInternalLink(){
 $('#internalLinkBtn').onclick=openInternalLink; $('#insertLinkBtn').onclick=openInternalLink;
 
 function normalizeImageUrl(url){try{const u=new URL(url);if(u.hostname==='github.com'){const p=u.pathname.split('/').filter(Boolean),bi=p.indexOf('blob');if(bi>=2&&p[bi+1])return `https://raw.githubusercontent.com/${p[0]}/${p[1]}/${p[bi+1]}/${p.slice(bi+2).join('/')}`;}return url}catch{return url}}
-$('#imageUrlBtn').onclick=()=>{openModal(`<h2>그림 링크 삽입</h2><div class="form-row"><label>PNG/JPG 이미지 URL</label><input id="imageUrl" placeholder="https://github.com/.../blob/.../image.png"></div><div class="modal-actions"><button id="cancelImage">취소</button><button id="insertImage" class="primary">삽입</button></div>`);$('#cancelImage').onclick=closeModal;$('#insertImage').onclick=()=>{const url=normalizeImageUrl($('#imageUrl').value.trim());if(!/\.(png|jpe?g)(\?|$)/i.test(url)){alert('PNG/JPG 링크만 사용할 수 있습니다.');return}insertImage(url);closeModal()}};
+$('#imageUrlBtn').onclick=()=>{openModal(`<h2>그림 링크 삽입</h2><div class="form-row"><label>PNG/JPG 이미지 URL</label><input id="imageUrl" data-character-image-presets="1" placeholder="https://github.com/.../blob/.../image.png"></div><div class="modal-actions"><button id="cancelImage">취소</button><button id="insertImage" class="primary">삽입</button></div>`);$('#cancelImage').onclick=closeModal;$('#insertImage').onclick=()=>{const url=normalizeImageUrl($('#imageUrl').value.trim());if(!/\.(png|jpe?g)(\?|$)/i.test(url)){alert('PNG/JPG 링크만 사용할 수 있습니다.');return}insertImage(url);closeModal()}};
 $('#imageUploadBtn').onclick=()=>$('#imageFile').click();
 $('#imageFile').onchange=async e=>{const f=e.target.files?.[0];if(!f)return;if(!['image/png','image/jpeg'].includes(f.type)){showStatus('PNG/JPG만 업로드할 수 있습니다.',true);return}const data=await fileDataUrl(f);try{const r=await api('/api/media',{method:'POST',body:JSON.stringify({filename:f.name,data})});insertImage(r.src);showStatus('그림을 GitHub 저장소에 업로드했습니다.')}catch(err){showStatus(err.message,true)}e.target.value=''};
 function fileDataUrl(f){return new Promise((res,rej)=>{const r=new FileReader;r.onload=()=>res(r.result);r.onerror=rej;r.readAsDataURL(f)})}
@@ -452,19 +501,26 @@ function insertBlockComponent(node){
   if(!editable?.isConnected){showStatus('구성요소를 삽입할 편집 위치를 먼저 선택하세요.',true);return false}
   const range=found?.range||(()=>{const r=document.createRange();r.selectNodeContents(editable);r.collapse(false);return r})();
   const base=range.commonAncestorContainer.nodeType===1?range.commonAncestorContainer:range.commonAncestorContainer.parentElement;
-  range.deleteContents();
-  const block=base?.closest?.('p');
-  if(block&&editable.contains(block)){
-    const empty=!block.textContent.trim()&&!block.querySelector('img,[data-duels-component],br:not(:only-child)');
-    if(empty)block.replaceWith(node);else block.insertAdjacentElement('afterend',node);
-  }else range.insertNode(node);
+  const caretAnchor=base?.closest?.('[data-component-caret-anchor]');
+  if(caretAnchor&&editable.contains(caretAnchor)){
+    const ref=caretAnchor.previousElementSibling;
+    if(ref){ref.insertAdjacentElement('afterend',node)}else{editable.appendChild(node)}
+    caretAnchor.remove();
+  }else{
+    range.deleteContents();
+    const block=base?.closest?.('p');
+    if(block&&editable.contains(block)){
+      const empty=!block.textContent.trim()&&!block.querySelector('img,[data-duels-component],br:not(:only-child)');
+      if(empty)block.replaceWith(node);else block.insertAdjacentElement('afterend',node);
+    }else range.insertNode(node);
+  }
   const next=document.createRange();next.setStartAfter(node);next.collapse(true);const sel=getSelection();sel.removeAllRanges();sel.addRange(next);state.savedRange=next.cloneRange();state.componentInsertionRange=null;state.lastEditable=editable;
   editable.dispatchEvent(new Event('input',{bubbles:true}));return true;
 }
 function characterCardModal(existing=null){
   if(!existing)captureComponentInsertionPoint();else rememberSelection();const d=existing?componentPayload(existing):{};
   const text=legacyCharacterCardText(d),width=cardDimension(d.width,138,80,1200),height=cardDimension(d.height,222,100,1200),fade=cardFade(d.fade),align=cardAlign(d.align);
-  openModal(`<h2>${existing?'캐릭터 카드 수정':'캐릭터 카드 삽입'}</h2><div class="form-row"><label>이미지 PNG/JPG URL 또는 /media/... 경로</label><input id="ccImage" value="${escapeHtml(d.image||'')}"></div><div class="form-row"><label>카드 글씨</label><textarea id="ccText" rows="7" placeholder="원하는 글씨를 자유롭게 입력하세요.">${escapeHtml(text)}</textarea></div><div class="form-row"><label>크기 / 비율 프리셋</label><select id="ccPreset"><option value="custom">직접 입력</option><option value="profile">프로필 · 400×400</option><option value="duels">듀얼즈 카드 비율 · 138:222</option><option value="portrait-3-4">세로 3:4</option><option value="square">1:1</option><option value="landscape-3-2">누운 카드 3:2</option><option value="landscape-16-9">누운 카드 16:9</option></select><div class="muted" style="margin-top:5px">비율 프리셋은 현재 높이를 기준으로 너비를 계산합니다. ‘프로필’은 400×400 고정 크기를 바로 적용합니다.</div></div><div class="component-form-grid"><div class="form-row"><label>너비</label><input id="ccWidth" type="number" min="80" max="1200" value="${width}"></div><div class="form-row"><label>높이</label><input id="ccHeight" type="number" min="100" max="1200" value="${height}"></div><div class="form-row"><label>배치</label><select id="ccAlign"><option value="left" ${align==='left'?'selected':''}>왼쪽</option><option value="center" ${align==='center'?'selected':''}>가운데</option><option value="right" ${align==='right'?'selected':''}>오른쪽</option></select></div><div class="form-row"><label>이미지 페이드</label><select id="ccFade"><option value="none" ${fade==='none'?'selected':''}>없음</option><option value="soft" ${fade==='soft'?'selected':''}>약하게</option><option value="normal" ${fade==='normal'?'selected':''}>기본</option><option value="strong" ${fade==='strong'?'selected':''}>강하게</option></select></div><div class="form-row"><label>테두리 강조색</label><input id="ccColor" type="color" value="${componentColor(d.color)}"></div></div><p class="muted">이미지는 카드 전체를 cover 방식으로 채우며 카드 중심과 이미지 중심이 일치합니다. 비율이 맞지 않는 부분은 자동으로 잘립니다.</p><div class="modal-actions"><button id="cancelComponent">취소</button>${existing?'<button id="deleteComponent" class="danger">삭제</button>':''}<button id="saveComponent" class="primary">${existing?'수정':'삽입'}</button></div>`);
+  openModal(`<h2>${existing?'캐릭터 카드 수정':'캐릭터 카드 삽입'}</h2><div class="form-row"><label>이미지 PNG/JPG URL 또는 /media/... 경로</label><input id="ccImage" data-character-image-presets="1" value="${escapeHtml(d.image||'')}"></div><div class="form-row"><label>카드 글씨</label><textarea id="ccText" rows="7" placeholder="원하는 글씨를 자유롭게 입력하세요.">${escapeHtml(text)}</textarea></div><div class="form-row"><label>크기 / 비율 프리셋</label><select id="ccPreset"><option value="custom">직접 입력</option><option value="profile">프로필 · 400×400</option><option value="duels">듀얼즈 카드 비율 · 138:222</option><option value="portrait-3-4">세로 3:4</option><option value="square">1:1</option><option value="landscape-3-2">누운 카드 3:2</option><option value="landscape-16-9">누운 카드 16:9</option></select><div class="muted" style="margin-top:5px">비율 프리셋은 현재 높이를 기준으로 너비를 계산합니다. ‘프로필’은 400×400 고정 크기를 바로 적용합니다.</div></div><div class="component-form-grid"><div class="form-row"><label>너비</label><input id="ccWidth" type="number" min="80" max="1200" value="${width}"></div><div class="form-row"><label>높이</label><input id="ccHeight" type="number" min="100" max="1200" value="${height}"></div><div class="form-row"><label>배치</label><select id="ccAlign"><option value="left" ${align==='left'?'selected':''}>왼쪽</option><option value="center" ${align==='center'?'selected':''}>가운데</option><option value="right" ${align==='right'?'selected':''}>오른쪽</option></select></div><div class="form-row"><label>이미지 페이드</label><select id="ccFade"><option value="none" ${fade==='none'?'selected':''}>없음</option><option value="soft" ${fade==='soft'?'selected':''}>약하게</option><option value="normal" ${fade==='normal'?'selected':''}>기본</option><option value="strong" ${fade==='strong'?'selected':''}>강하게</option></select></div><div class="form-row"><label>테두리 강조색</label><input id="ccColor" type="color" value="${componentColor(d.color)}"></div></div><p class="muted">이미지는 카드 전체를 cover 방식으로 채우며 카드 중심과 이미지 중심이 일치합니다. 비율이 맞지 않는 부분은 자동으로 잘립니다.</p><div class="modal-actions"><button id="cancelComponent">취소</button>${existing?'<button id="deleteComponent" class="danger">삭제</button>':''}<button id="saveComponent" class="primary">${existing?'수정':'삽입'}</button></div>`);
   $('#ccPreset').onchange=e=>applyCardRatioPreset(e.target.value);
   $('#cancelComponent').onclick=closeModal;
   if(existing)$('#deleteComponent').onclick=()=>{if(confirm('이 캐릭터 카드 블록을 삭제할까요?')){const host=existing.closest('.editable');existing.remove();host?.dispatchEvent(new Event('input',{bubbles:true}));closeModal()}};
