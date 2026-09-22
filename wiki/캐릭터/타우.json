@@ -1,0 +1,22 @@
+{
+  "id": "doc_2255e9baa70d44deb09e9e887be590d0",
+  "kind": "document",
+  "title": "타우",
+  "slug": "타우",
+  "categoryId": "cat_7a6627ce863c44af982bf51cc82c602f",
+  "categorySlug": "캐릭터",
+  "content": {
+    "type": "wiki-sections-v3",
+    "introHtml": "<p></p>",
+    "sections": [
+      {
+        "id": "sec_aced75e6a5624a6f926d2a9283cc628f",
+        "title": "개요",
+        "contentHtml": "<p></p>",
+        "children": []
+      }
+    ]
+  },
+  "createdAt": "2026-09-23T02:48:14+0900",
+  "updatedAt": "2026-09-23T02:48:14+0900"
+}
