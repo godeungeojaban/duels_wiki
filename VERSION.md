@@ -1,4 +1,10 @@
-# Duels Wiki 3.40
+# Duels Wiki 3.41
+
+## 3.41
+
+- GitHub 동기화 시 `VERSION.md`를 제품 파일과 별도로 명시적으로 stage하고, 커밋 전에 staging 상태에 포함되었는지 검증하도록 강화.
+- Windows `git_sync.bat`과 POSIX `git_sync.sh` 모두 동일하게 `VERSION.md`를 반드시 동기화 대상으로 취급.
+
 
 ## 3.40
 

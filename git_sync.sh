@@ -6,7 +6,7 @@ BRANCH="main"
 INITIAL_CONTENT=0
 
 echo "========================================"
-echo " Duels Wiki Git Sync 3.33"
+echo " Duels Wiki Git Sync 3.41"
 echo "========================================"
 echo "[POLICY] wiki/ and media/ are user content. Existing remote content is preserved."
 
@@ -62,13 +62,20 @@ fi
 
 # Product update paths only. Do not use plain `git add -A` here: an update ZIP does not
 # contain the user's complete wiki/media tree, so doing so would stage those records as deletions.
-git add -A -- editor site .github/workflows README.md VERSION.md git_sync.bat git_sync.sh .gitignore
+git add -A -- editor site .github/workflows README.md git_sync.bat git_sync.sh .gitignore
+# Stage VERSION.md explicitly so the packaged version marker is always part of the push.
+git add -- VERSION.md
 if [ "$INITIAL_CONTENT" -eq 1 ]; then
   git add -A -- wiki media
 fi
 
 git ls-files --error-unmatch README.md >/dev/null
 git ls-files --error-unmatch VERSION.md >/dev/null
+if git diff --cached --name-only -- VERSION.md | grep -qx "VERSION.md"; then
+  echo "[CHECK] VERSION.md staged for this update."
+else
+  echo "[INFO] VERSION.md has no content change; tracked remote copy is already current."
+fi
 echo "[CHECK] Product files staged; existing wiki/media records are protected."
 
 if ! git diff --cached --quiet; then
