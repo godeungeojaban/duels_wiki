@@ -110,3 +110,18 @@
 .table-cell-editor{min-width:0;padding:6px;border:1px solid #223c53;background:#0b131d}.table-cell-head{display:flex;align-items:center;justify-content:space-between;gap:7px;margin-bottom:5px;color:#93a7b8;font-size:10px}.table-cell-head label{display:flex;align-items:center;gap:4px}.table-cell-options{display:flex;align-items:center;gap:5px}.table-cell-options select{width:auto;min-width:62px;padding:4px 6px;border:1px solid #29435c;background:#09111a;color:#d7e6f2;font:inherit}.table-cell-head input[type=color]{width:30px;height:24px;padding:1px}.table-cell-editor textarea{width:100%;min-height:48px;padding:6px;border:1px solid #243f57;background:#081019;color:#d4e3ef;resize:vertical;font:inherit;line-height:1.35}.table-merge-tools .muted{margin-left:4px}
 .inline-field{display:flex;gap:6px}.inline-field>*{min-width:0;flex:1}
 @media(max-width:720px){.duels-table-component{max-width:100%}.duels-table-scroll{max-width:100%;overflow-x:auto}.table-edit-grid{grid-template-columns:1fr!important}.table-structure-tools .tool-divider{display:none}}
+
+/* 3.37 table rich-cell editor */
+.modal:has(.table-editor-shell){width:min(980px,calc(100vw - 28px))}
+.table-edit-toolbar{position:sticky;top:-20px;z-index:5;display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:-4px 0 12px;padding:9px 10px;border:1px solid #29435c;background:#0a131c;box-shadow:0 6px 18px #0008}
+.table-edit-toolbar .table-tool-title{margin-right:4px;color:#8eb3cc;font-size:11px;font-weight:700;letter-spacing:.08em}
+.table-edit-toolbar label{display:flex;align-items:center;gap:5px;color:#8195a7;font-size:10px}
+.table-edit-toolbar input[type=color]{width:31px;height:25px;padding:1px}
+.table-cell-editor.active{border-color:#4af;box-shadow:0 0 0 1px #4af4}
+.table-cell-rich{width:100%;min-height:32px;padding:6px 8px;border:1px solid #243f57;background:#081019;color:#d4e3ef;outline:none;font-family:var(--font-ui);font-size:12px;line-height:1.35;white-space:nowrap;overflow:visible}
+.table-cell-rich:focus{border-color:#4af;box-shadow:inset 0 0 0 1px #4af4}
+.table-cell-rich br{line-height:1.35}
+.duels-table td{border-right:1px solid #20384d;border-bottom:1px solid #20384d;text-align:center}
+.duels-table tr:last-child td{border-bottom:0}
+.duels-table td:last-child{border-right:0}
+@media(max-width:720px){.table-edit-toolbar{top:-20px}.modal:has(.table-editor-shell){width:calc(100vw - 18px)}}
