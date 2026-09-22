@@ -47,7 +47,7 @@ function oldNodeToHtml(node){ if(!node)return''; if(node.type==='text'){let t=es
 function normalizeContent(content){ if(content?.type==='wiki-sections-v3') return structuredClone(content); if(content?.type==='wiki-sections'){ const conv=s=>({id:s.id||uid('sec'),title:s.title||'제목 없음',contentHtml:oldNodeToHtml(s.content||{type:'doc'}),children:(s.children||[]).map(conv)}); return {type:'wiki-sections-v3',introHtml:oldNodeToHtml(content.intro||{type:'doc'}),sections:(content.sections||[]).map(conv)}; }
   return {type:'wiki-sections-v3',introHtml:oldNodeToHtml(content||{type:'doc'}),sections:[{id:uid('sec'),title:'개요',contentHtml:'<p></p>',children:[]}]}; }
 function mediaSrc(src){ if(!src)return''; if(src.startsWith('/media/'))return'/__media__/'+encodeURIComponent(src.slice(1)); return src; }
-function viewHtml(html){ const t=document.createElement('template'); t.innerHTML=html||''; $$('img',t.content).forEach(img=>{const src=img.getAttribute('src')||'';img.setAttribute('src',mediaSrc(src));}); $$('a',t.content).forEach(a=>{const h=a.getAttribute('href')||''; if(h.startsWith('wiki:/'))a.dataset.wikiLink=h;}); return t.innerHTML; }
+function viewHtml(html){ const t=document.createElement('template'); t.innerHTML=html||''; $$('img',t.content).forEach(img=>{const src=img.getAttribute('src')||'';img.setAttribute('src',mediaSrc(src));}); $$('a',t.content).forEach(a=>{const h=a.getAttribute('href')||''; if(h.startsWith('wiki:/'))a.dataset.wikiLink=h;}); upgradeDuelsComponents(t.content); return t.innerHTML; }
 function storageHtml(el){ const clone=el.cloneNode(true); $$('img',clone).forEach(img=>{let src=img.getAttribute('src')||''; if(src.startsWith('/__media__/')){src='/'+decodeURIComponent(src.slice('/__media__/'.length));img.setAttribute('src',src);} img.classList.remove('selected-image');}); $$('[data-editor-only]',clone).forEach(x=>x.remove()); return clone.innerHTML; }
 
 function sectionAnchor(id){return 'section-'+String(id).replace(/[^a-zA-Z0-9_-]/g,'-')}
@@ -168,10 +168,23 @@ function componentPayload(el){
 }
 function setComponentPayload(el,data){el.dataset.duelsData=encodeURIComponent(JSON.stringify(data))}
 function componentColor(v){return /^#[0-9a-f]{6}$/i.test(String(v||''))?v:'#44aaff'}
+function legacyCharacterCardText(data){
+  if(data.text!==undefined)return String(data.text||'');
+  return [data.name,data.title,data.description,data.skills]
+    .map(v=>String(v||'').trim()).filter(Boolean).join('\n');
+}
+function characterCardTextHtml(value){
+  const lines=String(value||'').split(/\r?\n/);
+  return lines.map(line=>`<div>${line.trim()?escapeHtml(line):'<br>'}</div>`).join('');
+}
 function renderCharacterCardElement(el,data){
-  const color=componentColor(data.color),name=String(data.name||'캐릭터'),english=String(data.english||''),title=String(data.title||''),desc=String(data.description||''),health=String(data.health||'-'),move=String(data.move||'-'),skills=String(data.skills||''),image=String(data.image||'').trim();
-  el.className='duels-character-card';el.setAttribute('contenteditable','false');el.tabIndex=0;el.style.setProperty('--duels-card-color',color);setComponentPayload(el,{name,english,title,color,image,description:desc,health,move,skills});
-  el.innerHTML=`<div class="duels-character-portrait">${image?`<img src="${escapeHtml(mediaSrc(image))}" alt="${escapeHtml(name)}">`:`<span>${escapeHtml(name.slice(0,1)||'?')}</span>`}</div><div class="duels-character-name">${escapeHtml(name)}</div>${title?`<div class="duels-character-title">${escapeHtml(title)}</div>`:''}<div class="duels-character-mini-stats"><div><b>HEALTH</b><span>${escapeHtml(health)}</span></div><div><b>MOVE</b><span>${escapeHtml(move)}</span></div></div><div class="duels-character-tooltip" role="tooltip"><div class="duels-character-tooltip-title">${escapeHtml(name)}${english?` : ${escapeHtml(english)}`:''}</div>${desc?`<div class="duels-character-tooltip-desc">${textLinesHtml(desc)}</div>`:''}<div class="duels-character-tooltip-stats"><b>[HEALTH]</b> ${escapeHtml(health)}<span></span><b>[MOVE SPEED]</b> ${escapeHtml(move)}</div>${skills?`<div class="duels-character-tooltip-skills">${textLinesHtml(skills)}</div>`:''}</div>`;
+  const color=componentColor(data.color),image=String(data.image||'').trim(),text=legacyCharacterCardText(data);
+  el.className='duels-character-card';
+  el.setAttribute('contenteditable','false');
+  el.removeAttribute('tabindex');
+  el.style.setProperty('--duels-card-color',color);
+  setComponentPayload(el,{color,image,text});
+  el.innerHTML=`${image?`<div class="duels-character-card-image" style="background-image:url(&quot;${escapeHtml(mediaSrc(image))}&quot;)"></div>`:'<div class="duels-character-card-image empty"></div>'}<div class="duels-character-card-shade"></div><div class="duels-character-card-copy">${characterCardTextHtml(text)}</div>`;
 }
 function makeCharacterCard(data){const el=document.createElement('div');el.dataset.duelsComponent='character-card';renderCharacterCardElement(el,data);return el}
 function renderDescriptionBoxElement(el,data){
@@ -180,6 +193,10 @@ function renderDescriptionBoxElement(el,data){
   el.innerHTML=`<div class="duels-description-box-title">${escapeHtml(title)}</div><div class="duels-description-box-body">${textLinesHtml(body)}</div>`;
 }
 function makeDescriptionBox(data){const el=document.createElement('div');el.dataset.duelsComponent='description-box';renderDescriptionBoxElement(el,data);return el}
+function upgradeDuelsComponents(root){
+  $$('[data-duels-component="character-card"]',root).forEach(el=>renderCharacterCardElement(el,componentPayload(el)));
+  $$('[data-duels-component="description-box"]',root).forEach(el=>renderDescriptionBoxElement(el,componentPayload(el)));
+}
 function insertBlockComponent(node){
   restoreSelection();const sel=getSelection();const range=sel?.rangeCount?sel.getRangeAt(0):null;
   const base=range&&(range.commonAncestorContainer.nodeType===1?range.commonAncestorContainer:range.commonAncestorContainer.parentElement);
@@ -195,10 +212,11 @@ function insertBlockComponent(node){
 }
 function characterCardModal(existing=null){
   rememberSelection();const d=existing?componentPayload(existing):{};
-  openModal(`<h2>${existing?'캐릭터 카드 수정':'캐릭터 카드 삽입'}</h2><div class="component-form-grid"><div class="form-row"><label>캐릭터명</label><input id="ccName" value="${escapeHtml(d.name||'')}"></div><div class="form-row"><label>영문명</label><input id="ccEnglish" value="${escapeHtml(d.english||'')}"></div><div class="form-row"><label>대표색</label><input id="ccColor" type="color" value="${componentColor(d.color)}"></div><div class="form-row"><label>칭호 / 부제</label><input id="ccTitle" value="${escapeHtml(d.title||'')}"></div><div class="form-row span-2"><label>초상화 PNG/JPG URL 또는 /media/... 경로</label><input id="ccImage" value="${escapeHtml(d.image||'')}"></div><div class="form-row"><label>체력</label><input id="ccHealth" value="${escapeHtml(d.health||'')}"></div><div class="form-row"><label>이동속도</label><input id="ccMove" value="${escapeHtml(d.move||'')}"></div><div class="form-row span-2"><label>캐릭터 설명</label><textarea id="ccDescription" rows="4">${escapeHtml(d.description||'')}</textarea></div><div class="form-row span-2"><label>스킬 설명 · 한 줄씩 입력</label><textarea id="ccSkills" rows="6" placeholder="[LMB] 기술명 — 설명\n[RMB] 기술명 — 설명">${escapeHtml(d.skills||'')}</textarea></div></div><p class="muted">카드에 마우스를 올리거나 포커스하면 듀얼즈식 설명 상자가 표시됩니다. 편집 화면에서는 카드를 더블클릭해 다시 수정할 수 있습니다.</p><div class="modal-actions"><button id="cancelComponent">취소</button>${existing?'<button id="deleteComponent" class="danger">삭제</button>':''}<button id="saveComponent" class="primary">${existing?'수정':'삽입'}</button></div>`);
+  const text=legacyCharacterCardText(d);
+  openModal(`<h2>${existing?'캐릭터 카드 수정':'캐릭터 카드 삽입'}</h2><div class="form-row"><label>이미지 PNG/JPG URL 또는 /media/... 경로</label><input id="ccImage" value="${escapeHtml(d.image||'')}"></div><div class="form-row"><label>카드 글씨</label><textarea id="ccText" rows="7" placeholder="원하는 글씨를 자유롭게 입력하세요.">${escapeHtml(text)}</textarea></div><div class="form-row"><label>테두리 강조색</label><input id="ccColor" type="color" value="${componentColor(d.color)}"></div><p class="muted">이미지는 듀얼즈 캐릭터 카드처럼 카드 배경을 채우고 아래로 어둡게 페이드됩니다. 글씨의 용도나 형식은 제한하지 않습니다.</p><div class="modal-actions"><button id="cancelComponent">취소</button>${existing?'<button id="deleteComponent" class="danger">삭제</button>':''}<button id="saveComponent" class="primary">${existing?'수정':'삽입'}</button></div>`);
   $('#cancelComponent').onclick=closeModal;
-  if(existing)$('#deleteComponent').onclick=()=>{if(confirm('이 캐릭터 카드를 삭제할까요?')){const host=existing.closest('.editable');existing.remove();host?.dispatchEvent(new Event('input',{bubbles:true}));closeModal()}};
-  $('#saveComponent').onclick=()=>{const data={name:$('#ccName').value.trim()||'캐릭터',english:$('#ccEnglish').value.trim(),color:$('#ccColor').value,title:$('#ccTitle').value.trim(),image:normalizeImageUrl($('#ccImage').value.trim()),health:$('#ccHealth').value.trim(),move:$('#ccMove').value.trim(),description:$('#ccDescription').value,skills:$('#ccSkills').value};if(existing){renderCharacterCardElement(existing,data);existing.closest('.editable')?.dispatchEvent(new Event('input',{bubbles:true}));closeModal()}else{const node=makeCharacterCard(data);if(insertBlockComponent(node))closeModal()}};
+  if(existing)$('#deleteComponent').onclick=()=>{if(confirm('이 캐릭터 카드 블록을 삭제할까요?')){const host=existing.closest('.editable');existing.remove();host?.dispatchEvent(new Event('input',{bubbles:true}));closeModal()}};
+  $('#saveComponent').onclick=()=>{const data={image:normalizeImageUrl($('#ccImage').value.trim()),text:$('#ccText').value,color:$('#ccColor').value};if(existing){renderCharacterCardElement(existing,data);existing.closest('.editable')?.dispatchEvent(new Event('input',{bubbles:true}));closeModal()}else{const node=makeCharacterCard(data);if(insertBlockComponent(node))closeModal()}};
 }
 function descriptionBoxModal(existing=null){
   rememberSelection();const d=existing?componentPayload(existing):{};
