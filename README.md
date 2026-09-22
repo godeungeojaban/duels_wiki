@@ -1,6 +1,6 @@
-# Duels Wiki 3.30
+# Duels Wiki 3.31
 
-Duels Wiki 3.30은 Python 표준 라이브러리 기반 로컬 편집기 + GitHub 저장소 + GitHub Pages 정적 열람 사이트 구조다. Node.js/Next.js/npm은 사용하지 않는다.
+Duels Wiki 3.31은 Python 표준 라이브러리 기반 로컬 편집기 + GitHub 저장소 + GitHub Pages 정적 열람 사이트 구조다. Node.js/Next.js/npm은 사용하지 않는다.
 
 ## 실행
 

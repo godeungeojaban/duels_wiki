@@ -55,13 +55,13 @@
 
 
 /* 3.30 preset popovers + unclipped editing ribbon */
-:root{--editor-ribbon-height:118px}
+:root{--editor-ribbon-height:136px}
 .editing-mode .workspace{min-height:calc(100vh - 58px - var(--editor-ribbon-height))}
 .editing-mode .sidebar{top:calc(58px + var(--editor-ribbon-height));height:calc(100vh - 58px - var(--editor-ribbon-height))}
 .ribbon{height:var(--editor-ribbon-height);overflow:visible}
 .ribbon-panels{height:calc(var(--editor-ribbon-height) - 31px);overflow-x:auto;overflow-y:visible}
 .ribbon-panel{min-height:100%;height:auto;box-sizing:border-box;overflow:visible}
-.ribbon-group{box-sizing:border-box;min-height:76px}
+.ribbon-group{box-sizing:border-box;min-height:92px}
 .character-color-presets,.character-image-presets{position:relative;display:inline-block;margin-top:6px;vertical-align:middle}
 .character-color-presets>summary,.character-image-presets>summary{list-style:none;display:inline-flex;align-items:center;min-height:26px;padding:4px 8px;border:1px solid #29435c;border-radius:2px;background:#09111a;color:#8fa9bd;font-size:10px;letter-spacing:.04em;cursor:pointer;user-select:none}
 .character-color-presets>summary::-webkit-details-marker,.character-image-presets>summary::-webkit-details-marker{display:none}
@@ -76,9 +76,13 @@
 .modal-backdrop{z-index:200000}
 .modal{overflow:auto;overscroll-behavior:contain}
 @media(max-width:720px){
-  :root{--editor-ribbon-height:126px}
+  :root{--editor-ribbon-height:146px}
   .ribbon{overflow:visible!important}
   .ribbon-panels{overflow-x:auto;overflow-y:visible}
   .editing-mode .sidebar{top:calc(58px + var(--editor-ribbon-height));height:auto}
   .character-image-grid{grid-template-columns:repeat(3,minmax(0,1fr));max-height:280px}
 }
+
+/* 3.31 top bar/input preset interaction fixes */
+.appbar{overscroll-behavior:contain;touch-action:pan-x}
+.character-color-floating-grid,.character-image-floating-grid{overscroll-behavior:contain;scrollbar-gutter:stable}

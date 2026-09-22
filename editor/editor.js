@@ -64,6 +64,18 @@ const DUELS_CHARACTER_PROFILES=Object.freeze([
 ]);
 const DUELS_CHARACTER_COLORS=DUELS_CHARACTER_PROFILES;
 const DUELS_CHARACTER_IMAGE_BASE='https://raw.githubusercontent.com/LyangNem/Duels/main/character/';
+const DUELS_CHARACTER_IMAGE_PRELOADS=[];
+function preloadDuelsCharacterImages(){
+  if(DUELS_CHARACTER_IMAGE_PRELOADS.length)return;
+  for(const character of DUELS_CHARACTER_PROFILES){
+    const image=new Image();
+    image.decoding='async';
+    image.loading='eager';
+    image.src=`${DUELS_CHARACTER_IMAGE_BASE}${character.id}.png`;
+    DUELS_CHARACTER_IMAGE_PRELOADS.push(image);
+  }
+}
+preloadDuelsCharacterImages();
 
 function characterColorButtons(){return DUELS_CHARACTER_COLORS.map(x=>`<button type="button" class="character-color-swatch" data-color="${x.color}" title="${escapeHtml(x.name)} · ${x.color}"><i style="background:${x.color}"></i><span>${escapeHtml(x.name)}</span></button>`).join('')}
 function characterImageButtons(){return DUELS_CHARACTER_PROFILES.map(x=>{const url=`${DUELS_CHARACTER_IMAGE_BASE}${x.id}.png`;return `<button type="button" class="character-image-swatch" data-image-url="${url}" title="${escapeHtml(x.name)}"><img src="${url}" alt=""><span>${escapeHtml(x.name)}</span></button>`}).join('')}
@@ -121,7 +133,12 @@ function enhanceImageUrlInputs(root=document){
   });
 }
 document.addEventListener('mousedown',e=>{if(!e.target.closest('.character-color-floating-grid,.character-image-floating-grid,.character-color-presets,.character-image-presets')){closeFloatingPresetGrids();document.querySelectorAll('.character-color-presets[open],.character-image-presets[open]').forEach(x=>x.open=false)}});
-window.addEventListener('resize',closeFloatingPresetGrids);window.addEventListener('scroll',closeFloatingPresetGrids,true);
+window.addEventListener('resize',closeFloatingPresetGrids);
+window.addEventListener('scroll',e=>{
+  const target=e.target;
+  if(target instanceof Element&&target.closest('.character-color-floating-grid,.character-image-floating-grid'))return;
+  closeFloatingPresetGrids();
+},true);
 
 async function api(url, options={}) {
   const res = await fetch(url, {cache:'no-store', headers:{'Content-Type':'application/json', ...(options.headers||{})}, ...options});
@@ -203,6 +220,7 @@ function switchRibbon(name){
 $$('.ribbon-tab').forEach(b=>b.addEventListener('click',()=>switchRibbon(b.dataset.ribbonTab)));
 $('#ribbon').addEventListener('mousedown',e=>{ if(e.target.closest('button'))e.preventDefault(); });
 $('.ribbon-panels').addEventListener('wheel',e=>{const t=e.currentTarget;if(t.scrollWidth>t.clientWidth){e.preventDefault();e.stopPropagation();t.scrollLeft+=Math.abs(e.deltaX)>Math.abs(e.deltaY)?e.deltaX:e.deltaY;}},{passive:false});
+$('.appbar').addEventListener('wheel',e=>{e.preventDefault();e.stopPropagation();},{passive:false});
 
 function protectedEditorElement(node){
   if(!node)return null;
