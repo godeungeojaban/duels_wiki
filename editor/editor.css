@@ -101,7 +101,7 @@
 .duels-table-component{--duels-table-base-width:400px;--duels-table-border:#2a4a6a;display:block;position:relative;width:max-content;min-width:min(var(--duels-table-base-width),100%);max-width:none;margin:6px 0;user-select:none;cursor:default}
 .duels-table-component.selected-duels-component{outline:2px solid #8ed1ff;outline-offset:2px}
 .duels-table-scroll{display:block;overflow:visible;max-width:none}
-.duels-table{border-collapse:separate;border-spacing:0;table-layout:auto;width:max-content;min-width:var(--duels-table-base-width);background:#091019;color:#b8c7d3;font-family:var(--font-ui);font-size:12px;line-height:1.35;border:2px solid var(--duels-table-border)}
+.duels-table{border-collapse:separate;border-spacing:0;table-layout:auto;width:max-content;min-width:var(--duels-table-base-width);background:#091019;color:#b8c7d3;font-family:var(--font-ui);font-size:12px;line-height:1.35;border:1px solid var(--duels-table-border)}
 .duels-table td{box-sizing:border-box;height:29px;padding:5px 8px;border:0;vertical-align:middle;white-space:nowrap;overflow:visible;font-family:inherit}
 .table-size-status{display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin:4px 0 10px;padding:7px 9px;border:1px solid #20384d;background:#09111a;color:#8193a3;font-size:11px}.table-size-status b{color:#cde7f8}.table-size-status button{margin-left:auto}
 .table-structure-tools,.table-merge-tools{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin:8px 0}.table-structure-tools label{display:flex;gap:5px;align-items:center;color:#8297a9;font-size:11px}.table-structure-tools input{width:62px}.tool-divider{width:1px;height:24px;background:#29435c;margin:0 4px}
@@ -125,3 +125,5 @@
 .duels-table tr:last-child td{border-bottom:0}
 .duels-table td:last-child{border-right:0}
 @media(max-width:720px){.table-edit-toolbar{top:-20px}.modal:has(.table-editor-shell){width:calc(100vw - 18px)}}
+
+.inline-linked-image{display:inline-block;height:1.55em;width:auto;max-width:8em;margin:0 .14em;vertical-align:-.34em;object-fit:contain;border:0!important;border-radius:2px;background:transparent;box-shadow:none!important}
