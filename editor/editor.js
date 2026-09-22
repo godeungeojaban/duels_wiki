@@ -159,7 +159,34 @@ function initializeInsertedImage(img){
   };
   if(img.complete&&img.naturalWidth>0)apply();else img.addEventListener('load',apply,{once:true});
 }
-function insertImage(src){restoreSelection();const img=document.createElement('img');img.style.display='block';img.style.maxWidth='100%';img.style.width='1px';img.style.height='1px';img.alt='';const range=getSelection()?.rangeCount?getSelection().getRangeAt(0):null;if(range){range.deleteContents();range.insertNode(img);range.setStartAfter(img);range.collapse(true)}img.src=src;initializeInsertedImage(img);selectImage(img);rememberSelection()}
+function rangeInsideNode(range,node){if(!range||!node)return false;const c=range.commonAncestorContainer;return c===node||node.contains(c.nodeType===1?c:c.parentElement)}
+function insertImageIntoCell(img,cell){
+  let range=(state.savedRange&&rangeInsideNode(state.savedRange,cell))?state.savedRange.cloneRange():null;
+  if(range){
+    range.deleteContents();range.insertNode(img);range.setStartAfter(img);range.collapse(true);
+  }else{
+    let p=[...cell.children].reverse().find(x=>x.tagName==='P');
+    if(!p){p=document.createElement('p');cell.appendChild(p)}
+    if(p.innerHTML.trim().toLowerCase()==='<br>')p.innerHTML='';
+    p.appendChild(img);
+    if(!p.lastChild||p.lastChild===img)p.appendChild(document.createElement('br'));
+    range=document.createRange();range.setStartAfter(img);range.collapse(true);
+  }
+  const sel=getSelection();sel.removeAllRanges();sel.addRange(range);state.savedRange=range.cloneRange();
+}
+function insertImage(src){
+  const img=document.createElement('img');img.style.display='block';img.style.maxWidth='100%';img.style.width='1px';img.style.height='1px';img.alt='';
+  const cell=state.selectedCell&&document.body.contains(state.selectedCell)?state.selectedCell:null;
+  if(cell){
+    insertImageIntoCell(img,cell);
+  }else{
+    restoreSelection();const range=getSelection()?.rangeCount?getSelection().getRangeAt(0):null;
+    const editable=range&&(range.commonAncestorContainer.nodeType===1?range.commonAncestorContainer:range.commonAncestorContainer.parentElement)?.closest?.('.editable');
+    if(range&&editable){range.deleteContents();range.insertNode(img);range.setStartAfter(img);range.collapse(true)}
+    else {showStatus('그림을 삽입할 편집 위치를 먼저 선택하세요.',true);return}
+  }
+  img.src=src;initializeInsertedImage(img);selectImage(img);rememberSelection();
+}
 function selectImage(img){ clearTableSelection(); state.selectedImage=img; $$('.selected-image').forEach(x=>x.classList.remove('selected-image')); img.classList.add('selected-image'); const cell=img.closest('td,th'); const table=tableOfCell(cell); if(cell&&table){state.selectedTable=table;state.selectedCell=cell;state.tableCells=[cell];cell.classList.add('table-cell-selected');$('#tableTabBtn').classList.remove('hidden');refreshTableTools();updateTableResizeOverlay();} $('#pictureTabBtn').classList.remove('hidden'); updateImageTools(); updateOverlay(); switchRibbon('picture'); }
 function updateImageTools(){const img=state.selectedImage;if(!img)return;const r=img.getBoundingClientRect();$('#imageWidth').value=Math.round(r.width);$('#imageHeight').value=Math.round(r.height);$('#imageRotation').value=getRotation(img);$('#pictureBorderWidth').value=parseFloat(img.style.borderWidth)||0;const bc=rgbToHex(img.style.borderColor);if(bc)$('#pictureBorderColor').value=bc;$('#imageWrapSelect').value=getImageWrap(img)}
 function rgbToHex(v){if(!v)return null;if(/^#/.test(v))return v;const m=v.match(/\d+/g);if(!m||m.length<3)return null;return '#'+m.slice(0,3).map(x=>(+x).toString(16).padStart(2,'0')).join('')}
@@ -247,7 +274,7 @@ function mergeSelectedCells(){const t=state.selectedTable,cells=selectedTableCel
 function splitSelectedCell(){const cell=state.selectedCell;if(!cell)return;const cs=cell.colSpan||1,rs=cell.rowSpan||1;if(cs===1&&rs===1)return;const table=tableOfCell(cell),rows=[...table.rows],r0=rows.indexOf(cell.parentElement),c0=cell.cellIndex;cell.colSpan=1;cell.rowSpan=1;for(let r=0;r<rs;r++){const row=rows[r0+r];if(!row)continue;const count=r===0?cs-1:cs;for(let i=0;i<count;i++){const td=blankCell();const at=r===0?c0+1+i:c0+i;row.insertBefore(td,row.cells[at]||null)}}selectSingleTableCell(cell)}
 
 
-/* 3.10 Word-like draggable table sizing */
+/* 3.11 Word-like draggable table sizing */
 function hideTableResizeOverlay(){const ov=$('#tableResizeOverlay');if(ov)ov.classList.add('hidden')}
 function updateTableResizeOverlay(){
   const ov=$('#tableResizeOverlay'),cell=state.selectedCell,table=state.selectedTable;
