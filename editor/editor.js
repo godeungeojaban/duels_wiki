@@ -185,7 +185,7 @@ function viewHtml(html){ const t=document.createElement('template'); t.innerHTML
 function storageHtml(el){ clearComponentCaretAnchors(el); const clone=el.cloneNode(true); $$('img',clone).forEach(img=>{let src=img.getAttribute('src')||''; if(src.startsWith('/__media__/')){src='/'+decodeURIComponent(src.slice('/__media__/'.length));img.setAttribute('src',src);} img.classList.remove('selected-image');}); $$('.selected-duels-component',clone).forEach(x=>x.classList.remove('selected-duels-component')); $$('[data-editor-only]',clone).forEach(x=>x.remove()); return clone.innerHTML; }
 
 function sectionAnchor(id){return 'section-'+String(id).replace(/[^a-zA-Z0-9_-]/g,'-')}
-function renderToc(sections,prefix='',depth=0){return sections.map((s,i)=>{const n=prefix?`${prefix}.${i+1}`:`${i+1}`;return `<div class="toc-line" style="padding-left:${depth*16}px"><a class="toc-number" href="#" data-section-anchor="${sectionAnchor(s.id)}">${n}.</a> <span class="toc-text">${escapeHtml(s.title||'제목 없음')}</span></div>${renderToc(s.children||[],n,depth+1)}`}).join('')}
+function renderToc(sections,prefix='',depth=0){return sections.map((s,i)=>{const n=prefix?`${prefix}.${i+1}`:`${i+1}`;return `<div class="toc-line" style="--toc-depth:${depth}"><a class="toc-number" href="#" data-section-anchor="${sectionAnchor(s.id)}">${n}.</a><span class="toc-text">${escapeHtml(s.title||'제목 없음')}</span></div>${renderToc(s.children||[],n,depth+1)}`}).join('')}
 function renderSections(sections,selfHash,prefix='',depth=1){return sections.map((s,i)=>{const n=prefix?`${prefix}.${i+1}`:`${i+1}`;return `<section class="section depth-${Math.min(depth,3)}"><h2 id="${sectionAnchor(s.id)}" class="section-title"><a class="number" href="${selfHash}">${n}.</a>${escapeHtml(s.title||'제목 없음')}</h2><div class="section-body wiki-body">${viewHtml(s.contentHtml)}</div>${renderSections(s.children||[],selfHash,n,depth+1)}</section>`}).join('')}
 function bindWikiLinks(root){ $$('a[data-wiki-link]',root).forEach(a=>a.addEventListener('click',e=>{e.preventDefault(); const x=a.dataset.wikiLink.slice(6); if(!x||x==='/'){location.hash='#/';return} const p=x.replace(/^\//,'').split('/').map(decodeURIComponent); navigate(p[0],p[1]||null);})); $$('[data-section-anchor]',root).forEach(a=>a.addEventListener('click',e=>{e.preventDefault();document.getElementById(a.dataset.sectionAnchor)?.scrollIntoView({behavior:'smooth',block:'start'});})); }
 
@@ -385,7 +385,68 @@ function bindEditable(el){
 }
 function rememberSelection(){ const sel=getSelection(); if(sel.rangeCount&&state.editing){ const r=sel.getRangeAt(0); if($('#editPage')?.contains(r.commonAncestorContainer))state.savedRange=r.cloneRange(); } }
 function restoreSelection(){ if(!state.savedRange)return; const sel=getSelection(); sel.removeAllRanges(); sel.addRange(state.savedRange); }
-function exec(cmd,value=null){ restoreSelection(); document.execCommand(cmd,false,value); rememberSelection(); }
+function lineBlock(node,editable){
+  let el=node?.nodeType===1?node:node?.parentElement;
+  if(!el||!editable?.contains(el))return null;
+  const li=el.closest('li');
+  if(li&&editable.contains(li))return li;
+  let block=el.closest('p,blockquote,div');
+  while(block&&block!==editable&&block.parentElement!==editable){
+    if(block.parentElement?.matches?.('li'))return block.parentElement;
+    block=block.parentElement?.closest?.('p,blockquote,div');
+  }
+  return block&&block!==editable?block:null;
+}
+function execLineList(cmd){
+  restoreSelection();
+  const sel=getSelection();
+  if(!sel?.rangeCount)return;
+  const original=sel.getRangeAt(0);
+  const anchorEl=(sel.anchorNode?.nodeType===1?sel.anchorNode:sel.anchorNode?.parentElement);
+  const editable=anchorEl?.closest?.('.editable');
+  if(!editable)return;
+  editable.focus({preventScroll:true});
+
+  const start=lineBlock(original.startContainer,editable);
+  const end=lineBlock(original.endContainer,editable)||start;
+  if(!start)return;
+
+  // Word처럼 목록 명령은 문자 선택 범위가 아니라 현재 줄(선택 시 선택된 줄들) 전체에 적용한다.
+  // 따라서 단어 몇 글자만 선택한 상태에서도 그 줄만 목록 항목이 된다.
+  const expanded=document.createRange();
+  try{
+    expanded.setStartBefore(start);
+    expanded.setEndAfter(end);
+  }catch{
+    expanded.selectNodeContents(start);
+  }
+  sel.removeAllRanges();
+  sel.addRange(expanded);
+  document.execCommand(cmd,false,null);
+  editable.dispatchEvent(new Event('input',{bubbles:true}));
+
+  // 명령 뒤에는 현재 항목 끝에 커서를 두어 바로 입력을 이어갈 수 있게 한다.
+  const focusNode=lineBlock(sel.focusNode,editable)||lineBlock(start,editable)||start;
+  try{
+    const caret=document.createRange();
+    caret.selectNodeContents(focusNode);
+    caret.collapse(false);
+    sel.removeAllRanges();
+    sel.addRange(caret);
+  }catch{}
+  rememberSelection();
+}
+function exec(cmd,value=null){
+  if(cmd==='insertUnorderedList'||cmd==='insertOrderedList'){
+    execLineList(cmd);
+    return;
+  }
+  restoreSelection();
+  const editable=(getSelection()?.anchorNode?.nodeType===1?getSelection()?.anchorNode:getSelection()?.anchorNode?.parentElement)?.closest?.('.editable');
+  if(editable)editable.focus({preventScroll:true});
+  document.execCommand(cmd,false,value);
+  rememberSelection();
+}
 $$('[data-cmd]').forEach(b=>b.onclick=()=>exec(b.dataset.cmd));
 function selectedCharacterCard(){return $('.selected-duels-component[data-duels-component="character-card"]',$('#editPage'))}
 function setCharacterCardAlign(value){const card=selectedCharacterCard();if(!card)return false;const data=componentPayload(card);data.align=cardAlign(value);renderCharacterCardElement(card,data);card.classList.add('selected-duels-component');card.closest('.editable')?.dispatchEvent(new Event('input',{bubbles:true}));return true}

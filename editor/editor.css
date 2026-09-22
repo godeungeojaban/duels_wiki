@@ -28,7 +28,7 @@
 @media(max-width:720px){.duels-character-card{margin:5px 6px 5px 0}.component-form-grid{grid-template-columns:1fr}.component-form-grid .span-2{grid-column:auto}.duels-description-box{max-width:100%}}
 @media(max-width:420px){.duels-character-card{max-width:100%}}
 
-.toc-number{display:inline-block;min-width:2.2em}.toc-text{color:#b7c2cc}
+.toc-line{display:flex;align-items:baseline;gap:9px;padding-left:calc(var(--toc-depth,0) * 18px);margin:5px 0}.toc-number{display:inline-block;flex:0 0 auto;min-width:0;white-space:nowrap}.toc-text{min-width:0;color:#b7c2cc}
 
 /* 3.27 character color presets */
 .character-color-presets{position:relative;display:inline-block;margin-top:6px;vertical-align:middle}.character-color-presets>summary{list-style:none;display:inline-flex;align-items:center;min-height:26px;padding:4px 8px;border:1px solid #29435c;border-radius:2px;background:#09111a;color:#8fa9bd;font-size:10px;letter-spacing:.04em;cursor:pointer;user-select:none}.character-color-presets>summary::-webkit-details-marker{display:none}.character-color-presets>summary::before{content:'▸';margin-right:5px;color:#58bfff}.character-color-presets[open]>summary::before{content:'▾'}.character-color-grid{position:absolute;left:0;top:calc(100% + 5px);z-index:140;width:min(430px,calc(100vw - 36px));max-height:310px;overflow:auto;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;padding:8px;border:1px solid #29435c;background:linear-gradient(180deg,#0d1520,#091019);box-shadow:0 12px 32px #000b,0 0 16px #249cff22}.character-color-swatch{min-width:0;display:flex;align-items:center;gap:5px;padding:5px 6px!important;margin:0!important;border-color:#20384c!important;background:#09121a!important;color:#8196a8!important;font-size:9px!important;letter-spacing:0!important;text-align:left}.character-color-swatch:hover{border-color:#4af!important;color:#dff!important;background:#102130!important}.character-color-swatch i{width:14px;height:14px;flex:0 0 14px;border:1px solid #ffffff55;border-radius:2px;box-shadow:0 0 5px #000}.character-color-swatch span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.ribbon-color-presets{margin:0}.ribbon-color-presets .character-color-grid{top:calc(100% + 7px)}
@@ -86,3 +86,13 @@
 /* 3.31 top bar/input preset interaction fixes */
 .appbar{overscroll-behavior:contain;touch-action:pan-x}
 .character-color-floating-grid,.character-image-floating-grid{overscroll-behavior:contain;scrollbar-gutter:stable}
+
+
+/* 3.32 Word-like paragraph lists + stable TOC spacing */
+.editable ul,.rich ul,.section-body ul{list-style:none!important;padding-left:1.55em!important;margin:.45em 0}
+.editable ul>li,.rich ul>li,.section-body ul>li{position:relative}
+.editable ul>li::before,.rich ul>li::before,.section-body ul>li::before{content:'·';position:absolute;left:-1.05em;top:0;color:#c9dbe9;font-weight:800}
+.editable ol,.rich ol,.section-body ol{list-style-type:decimal!important;padding-left:2.05em!important;margin:.45em 0}
+.editable ol>li::marker,.rich ol>li::marker,.section-body ol>li::marker{color:#c9dbe9;font-variant-numeric:tabular-nums}
+.editable li,.rich li,.section-body li{padding-left:.12em;margin:.12em 0}
+.editable li>ul,.editable li>ol,.rich li>ul,.rich li>ol,.section-body li>ul,.section-body li>ol{margin:.14em 0}

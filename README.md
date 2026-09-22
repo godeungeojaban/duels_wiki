@@ -94,31 +94,27 @@ repository/
 
 GitHub에 올릴 때는 `repository/` 폴더 자체가 아니라 **그 안의 내용**을 저장소 루트에 둔다.
 
-## Git 자동화
+## Git 자동화 / 버전 업데이트
 
-저장소 루트의 `git_sync.bat`을 실행하면 다음 순서로 동작한다.
+저장소 루트의 `git_sync.bat`(Windows) 또는 `git_sync.sh`를 실행하면 기존 GitHub `main` 이력을 먼저 연결한 뒤 **제품 파일만 업데이트**한다.
 
-1. Git 초기화 여부 확인
-2. `origin`이 없으면 `godeungeojaban/duels_wiki` 연결
-3. `git add -A`
-4. 변경사항이 있으면 커밋 메시지를 입력받아 commit
-5. `git pull --rebase origin main`
-6. `git push -u origin main`
+- 업데이트 대상: `editor/`, `site/`, `.github/workflows/`, `README.md`, `VERSION.md`, 동기화 스크립트와 `.gitignore`
+- 사용자 데이터: `wiki/`, `media/`는 기존 원격 저장소 내용을 그대로 유지
+- 새 버전 ZIP을 새 폴더에 풀어 실행해도 원격의 `wiki/`와 `media/`를 먼저 복원하므로, 패키지에 없는 기존 문서/이미지가 삭제 대상으로 잡히지 않는다.
+- 완전히 새 저장소일 때만 패키지의 기본 `wiki/_root.json`, `wiki/categories.json`, `media/images/.gitkeep`을 초기 데이터로 올린다.
 
-충돌이 발생하면 자동으로 강제 push하지 않고 중단한다.
+즉 버전 업데이트 시 기존 문서/미디어/커밋 이력은 유지하고 에디터와 열람 사이트 코드만 교체한다. 충돌이 발생하면 강제 push하지 않고 중단한다.
 
 ## 정적 열람
 
 `wiki/`, `media/`, `site/` 변경이 main에 push되면 GitHub Actions가 `site/build.py`를 실행하고 GitHub Pages용 정적 HTML을 배포한다.
 
 
-## 3.8 Git 동기화 변경
+## 3.33 업데이트 안전성 변경
 
-- 처음 압축을 푼 폴더처럼 local commit이 하나도 없는 저장소를 자동 감지한다.
-- 원격 `main`이 이미 있으면 로컬 패키지 파일을 임시 백업하고 원격 이력을 연결한 뒤 패키지 파일을 다시 덮어쓴다.
-- 첫 commit이 없어 `git stash`가 실패하던 문제를 제거했다.
-- `README.md`, `VERSION.md`가 Git 추적 대상인지 동기화 도중 직접 검사한다.
-- 두 문서는 `repository/` 내부에만 존재하며 바깥 중복본은 제거했다.
+- 과거의 전체 `git add -A` 업데이트 방식을 제거해, 새 ZIP에 존재하지 않는 기존 `wiki/` 문서와 `media/` 파일이 삭제로 기록되는 문제를 차단했다.
+- 기존 원격 저장소가 있으면 `wiki/`와 `media/`는 원격 `main`을 진실 원천으로 복원한다.
+- 제품 파일만 stage/commit/push하므로 버전 업데이트가 사용자 문서 데이터를 건드리지 않는다.
 
 ## 3.11 table resizing
 표 편집 중 셀을 선택하면 선택 열의 오른쪽 경계, 선택 행의 아래 경계, 표 우하단에 크기 조절 핸들이 표시됩니다. 드래그로 열 너비, 행 높이, 표 전체 크기를 조절할 수 있습니다.
