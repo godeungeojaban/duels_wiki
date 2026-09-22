@@ -5,29 +5,14 @@
   "slug": "_root",
   "content": {
     "type": "wiki-sections-v3",
-    "introHtml": "듀얼즈 위키임<p></p>",
+    "introHtml": "<p></p>",
     "sections": [
       {
         "id": "root-overview",
         "title": "개요",
-        "contentHtml": "Lyan___이 개발한 html 기반 2D 탑뷰 클래스 액션 PVP 게임.<p></p>",
-        "children": []
-      },
-      {
-        "id": "sec_78fbf5e6d11b4243ab404e41010e6fef",
-        "title": "시스템",
         "contentHtml": "<p></p>",
-        "children": [
-          {
-            "id": "sec_5514fda2a39a4e74b9bd020f70fef1b1",
-            "title": "캐릭터",
-            "contentHtml": "자세한 설명은 <a href=\"wiki:/%EC%BA%90%EB%A6%AD%ED%84%B0\">캐릭터</a> 참조.",
-            "children": []
-          }
-        ]
+        "children": []
       }
     ]
-  },
-  "updatedAt": "2026-09-22T16:00:25+0900",
-  "createdAt": "2026-09-22T15:51:52+0900"
+  }
 }

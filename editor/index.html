@@ -11,38 +11,173 @@
   <header class="appbar">
     <button id="sidebarToggle" class="icon-btn mobile-only" aria-label="문서 목록">☰</button>
     <a class="brand" href="#/">Duels Wiki</a>
-    <span class="version">Editor 3.2</span>
+    <span class="version">Editor 3.8</span>
     <div class="spacer"></div>
     <button id="settingsBtn" class="ghost-btn">GitHub 설정</button>
   </header>
 
-<div id="toolbar" class="toolbar hidden">
-  <div class="tool-group"><span class="group-label">텍스트</span>
-    <button data-cmd="bold"><b>B</b></button>
-    <button data-cmd="italic"><i>I</i></button>
-    <button data-cmd="strikeThrough"><s>S</s></button>
-    <label class="compact">크기 <input id="fontSizeInput" type="number" min="8" max="96" value="16"></label>
-    <input id="textColor" type="color" value="#222222" title="글자색">
-    <button id="resetFontBtn">기본</button>
-  </div>
-  <div class="tool-group"><span class="group-label">배치</span>
-    <button data-align="left">왼쪽</button><button data-align="center">가운데</button><button data-align="right">오른쪽</button>
-  </div>
-  <div class="tool-group"><span class="group-label">삽입</span>
-    <button id="internalLinkBtn">내부 링크</button>
-    <button id="unlinkBtn">링크 해제</button>
-    <button id="imageUrlBtn">이미지 링크</button>
-    <button id="imageUploadBtn">이미지 업로드</button>
-    <input id="imageFile" type="file" accept="image/png,image/jpeg" hidden>
-  </div>
-  <div id="imageTools" class="tool-group hidden"><span class="group-label">이미지</span>
-    <label class="compact">W <input id="imageWidth" type="number" min="20" max="3000"></label>
-    <label class="compact">H <input id="imageHeight" type="number" min="20" max="3000"></label>
-    <label class="compact">° <input id="imageRotation" type="number" min="-360" max="360"></label>
-    <button id="rotateLeftBtn">↶90°</button><button id="rotateRightBtn">↷90°</button>
-    <button id="imageFitBtn">너비 자동</button>
-  </div>
-</div>
+  <section id="ribbon" class="ribbon hidden" aria-label="편집 리본">
+    <div class="ribbon-tabs" role="tablist">
+      <button class="ribbon-tab active" data-ribbon-tab="home">홈</button>
+      <button class="ribbon-tab" data-ribbon-tab="insert">삽입</button>
+      <button id="pictureTabBtn" class="ribbon-tab contextual picture-context hidden" data-ribbon-tab="picture">그림</button>
+      <button id="tableTabBtn" class="ribbon-tab contextual table-context hidden" data-ribbon-tab="table">표</button>
+    </div>
+
+    <div class="ribbon-panels">
+      <div class="ribbon-panel active" data-ribbon-panel="home">
+        <div class="ribbon-group compact-group">
+          <div class="ribbon-buttons two-row">
+            <button data-cmd="undo" title="실행 취소">↶</button>
+            <button data-cmd="redo" title="다시 실행">↷</button>
+            <button id="clearFormatBtn" title="모든 직접 서식 지우기">서식 지우기</button>
+          </div>
+          <span class="ribbon-group-title">편집</span>
+        </div>
+
+        <div class="ribbon-group">
+          <div class="ribbon-buttons wrap-buttons">
+            <button data-cmd="bold" title="굵게"><b>B</b></button>
+            <button data-cmd="italic" title="기울임"><i>I</i></button>
+            <button data-cmd="underline" title="밑줄"><u>U</u></button>
+            <button data-cmd="strikeThrough" title="취소선"><s>S</s></button>
+            <button data-cmd="subscript" title="아래 첨자">X₂</button>
+            <button data-cmd="superscript" title="위 첨자">X²</button>
+            <label class="ribbon-field">크기 <input id="fontSizeInput" type="number" min="8" max="96" value="16"></label>
+            <label class="color-tool" title="글자색"><span>A</span><input id="textColor" type="color" value="#202124"></label>
+            <label class="color-tool highlight-tool" title="텍스트 강조색"><span>형광</span><input id="highlightColor" type="color" value="#fff59d"></label>
+          </div>
+          <span class="ribbon-group-title">글자</span>
+        </div>
+
+        <div class="ribbon-group">
+          <div class="ribbon-buttons wrap-buttons">
+            <button data-cmd="insertUnorderedList" title="글머리 기호">• 목록</button>
+            <button data-cmd="insertOrderedList" title="번호 매기기">1. 목록</button>
+            <button data-cmd="outdent" title="내어쓰기">⇤</button>
+            <button data-cmd="indent" title="들여쓰기">⇥</button>
+            <button data-align="left" title="왼쪽 정렬">≡←</button>
+            <button data-align="center" title="가운데 정렬">≡↔</button>
+            <button data-align="right" title="오른쪽 정렬">→≡</button>
+            <button data-align="justify" title="양쪽 맞춤">☰</button>
+            <label class="ribbon-field">줄 간격
+              <select id="lineHeightSelect">
+                <option value="1">1.0</option><option value="1.15">1.15</option><option value="1.5" selected>1.5</option><option value="2">2.0</option>
+              </select>
+            </label>
+            <label class="ribbon-field">문단 뒤 <input id="paragraphSpacingInput" type="number" min="0" max="80" value="6">px</label>
+          </div>
+          <span class="ribbon-group-title">단락</span>
+        </div>
+
+        <div class="ribbon-group compact-group">
+          <div class="ribbon-buttons two-row">
+            <button id="internalLinkBtn">내부 링크</button>
+            <button id="unlinkBtn">링크 해제</button>
+          </div>
+          <span class="ribbon-group-title">링크</span>
+        </div>
+      </div>
+
+      <div class="ribbon-panel" data-ribbon-panel="insert">
+        <div class="ribbon-group">
+          <div class="ribbon-buttons big-buttons">
+            <button id="insertTableBtn" class="big-tool"><span class="big-icon">▦</span><span>표</span></button>
+            <button id="imageUrlBtn" class="big-tool"><span class="big-icon">🖼</span><span>그림 링크</span></button>
+            <button id="imageUploadBtn" class="big-tool"><span class="big-icon">↑</span><span>그림 업로드</span></button>
+            <input id="imageFile" type="file" accept="image/png,image/jpeg" hidden>
+            <button id="insertLinkBtn" class="big-tool"><span class="big-icon">🔗</span><span>내부 링크</span></button>
+          </div>
+          <span class="ribbon-group-title">삽입</span>
+        </div>
+      </div>
+
+      <div class="ribbon-panel" data-ribbon-panel="picture">
+        <div class="ribbon-group">
+          <div class="ribbon-buttons wrap-buttons">
+            <button id="pictureResetBtn">원본 비율</button>
+            <button id="pictureAltBtn">대체 텍스트</button>
+            <label class="color-tool" title="그림 테두리 색"><span>선</span><input id="pictureBorderColor" type="color" value="#000000"></label>
+            <label class="ribbon-field">선 <input id="pictureBorderWidth" type="number" min="0" max="20" value="0">px</label>
+          </div>
+          <span class="ribbon-group-title">조정</span>
+        </div>
+        <div class="ribbon-group">
+          <div class="ribbon-buttons wrap-buttons">
+            <button data-image-align="left">왼쪽</button>
+            <button data-image-align="center">가운데</button>
+            <button data-image-align="right">오른쪽</button>
+            <label class="ribbon-field">텍스트 배치
+              <select id="imageWrapSelect">
+                <option value="block">위아래</option>
+                <option value="inline">텍스트 줄 안</option>
+                <option value="float-left">사각형-왼쪽</option>
+                <option value="float-right">사각형-오른쪽</option>
+              </select>
+            </label>
+          </div>
+          <span class="ribbon-group-title">정렬</span>
+        </div>
+        <div class="ribbon-group">
+          <div class="ribbon-buttons wrap-buttons">
+            <button id="rotateLeftBtn">↶ 90°</button><button id="rotateRightBtn">↷ 90°</button>
+            <label class="ribbon-field">너비 <input id="imageWidth" type="number" min="20" max="6000">px</label>
+            <label class="ribbon-field">높이 <input id="imageHeight" type="number" min="20" max="6000">px</label>
+            <label class="ribbon-field">회전 <input id="imageRotation" type="number" min="-360" max="360">°</label>
+            <button id="imageFitBtn">문서 너비 맞춤</button>
+          </div>
+          <span class="ribbon-group-title">크기</span>
+        </div>
+      </div>
+
+      <div class="ribbon-panel" data-ribbon-panel="table">
+        <div class="ribbon-group">
+          <div class="ribbon-buttons wrap-buttons">
+            <button id="tableSelectBtn">표 전체 선택</button>
+            <button id="tableDeleteBtn" class="danger-soft">표 삭제</button>
+            <button id="rowAboveBtn">위에 행</button><button id="rowBelowBtn">아래에 행</button>
+            <button id="colLeftBtn">왼쪽 열</button><button id="colRightBtn">오른쪽 열</button>
+            <button id="rowDeleteBtn">행 삭제</button><button id="colDeleteBtn">열 삭제</button>
+          </div>
+          <span class="ribbon-group-title">행 및 열</span>
+        </div>
+        <div class="ribbon-group">
+          <div class="ribbon-buttons wrap-buttons">
+            <button id="mergeCellsBtn">셀 병합</button><button id="splitCellBtn">셀 분할</button>
+            <button id="distributeColsBtn">열 균등 분배</button><button id="distributeRowsBtn">행 균등 분배</button>
+          </div>
+          <span class="ribbon-group-title">병합</span>
+        </div>
+        <div class="ribbon-group">
+          <div class="ribbon-buttons wrap-buttons">
+            <label class="ribbon-field">열 너비 <input id="cellWidthInput" type="number" min="36" max="1200">px</label>
+            <label class="ribbon-field">행 높이 <input id="cellHeightInput" type="number" min="24" max="1000">px</label>
+            <button id="tableFitBtn">창 너비 맞춤</button><button data-table-align="left">표 왼쪽</button><button data-table-align="center">표 가운데</button><button data-table-align="right">표 오른쪽</button>
+          </div>
+          <span class="ribbon-group-title">셀 크기</span>
+        </div>
+        <div class="ribbon-group">
+          <div class="ribbon-buttons wrap-buttons">
+            <button data-cell-align="left">왼쪽</button><button data-cell-align="center">가운데</button><button data-cell-align="right">오른쪽</button>
+            <button data-cell-valign="top">상단</button><button data-cell-valign="middle">중앙</button><button data-cell-valign="bottom">하단</button>
+            <label class="color-tool"><span>배경</span><input id="cellBackgroundColor" type="color" value="#ffffff"></label>
+            <button id="cellBackgroundNoneBtn">배경 없음</button>
+          </div>
+          <span class="ribbon-group-title">맞춤</span>
+        </div>
+        <div class="ribbon-group">
+          <div class="ribbon-buttons wrap-buttons">
+            <label class="color-tool"><span>테두리</span><input id="cellBorderColor" type="color" value="#bfc5cc"></label>
+            <label class="ribbon-field">두께 <input id="cellBorderWidth" type="number" min="0" max="12" value="1">px</label>
+            <label class="ribbon-field">스타일
+              <select id="cellBorderStyle"><option value="solid">실선</option><option value="dashed">점선</option><option value="dotted">도트</option><option value="none">없음</option></select>
+            </label>
+          </div>
+          <span class="ribbon-group-title">테두리</span>
+        </div>
+      </div>
+    </div>
+  </section>
 
   <div class="workspace">
     <aside id="sidebar" class="sidebar">
@@ -62,10 +197,7 @@
 </div>
 
 <div id="imageOverlay" class="image-overlay hidden"><i data-h="nw"></i><i data-h="n"></i><i data-h="ne"></i><i data-h="e"></i><i data-h="se"></i><i data-h="s"></i><i data-h="sw"></i><i data-h="w"></i></div>
-
-<div id="modalBackdrop" class="modal-backdrop hidden">
-  <div id="modal" class="modal"></div>
-</div>
+<div id="modalBackdrop" class="modal-backdrop hidden"><div id="modal" class="modal"></div></div>
 <script src="editor.js"></script>
 </body>
 </html>

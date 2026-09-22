@@ -9,7 +9,9 @@ WIKI=ROOT/'wiki'; MEDIA=ROOT/'media'; OUT=ROOT/'site'/'dist'
 UNCAT='미분류'
 
 CSS='''
-*{box-sizing:border-box}html,body{margin:0;font-family:Arial,"Noto Sans KR",sans-serif;color:#202124;background:#f6f7f8}body{line-height:1.5}.top{height:56px;background:#fff;border-bottom:1px solid #d9dde3;display:flex;align-items:center;padding:0 20px}.top a{color:#202124;text-decoration:none;font-weight:700;font-size:19px}.page{max-width:920px;margin:30px auto 80px;background:#fff;border:1px solid #d9dde3;border-radius:8px;padding:30px 38px;box-shadow:0 1px 3px rgba(0,0,0,.12)}h1{font-size:32px;margin:0 0 14px}.intro{margin-bottom:20px}.toc{border:1px solid #d9dde3;background:#fafbfc;border-radius:6px;padding:14px 18px;margin:22px 0}.toc-title{font-weight:700;margin-bottom:8px}.toc-line{margin:4px 0}.toc a,.body a,.section-title a,.index a{color:#1f8b4c;text-decoration:none}.toc a:hover,.body a:hover,.index a:hover{text-decoration:underline}.section{margin:25px 0}.section-title{border-bottom:1px solid #bfc5cc;padding-bottom:7px;margin:0 0 10px;line-height:1.35}.depth-1>.section-title{font-size:25px}.depth-2>.section-title{font-size:21px}.depth-3>.section-title{font-size:18px}.num{margin-right:6px}.body p{margin:.35em 0}.body img{max-width:100%;height:auto}.index h2{margin-top:26px}.muted{color:#69707a}@media(max-width:800px){.page{margin:12px 8px 50px;padding:20px 16px}h1{font-size:27px}}
+*{box-sizing:border-box}html,body{margin:0;font-family:Arial,"Noto Sans KR",sans-serif;color:#202124;background:#f6f7f8}body{line-height:1.5}.top{height:56px;background:#fff;border-bottom:1px solid #d9dde3;display:flex;align-items:center;padding:0 20px;position:sticky;top:0;z-index:50}.top a{color:#202124;text-decoration:none;font-weight:700;font-size:19px}.nav-toggle{display:none;margin-right:10px;border:1px solid #c8cdd4;background:#fff;border-radius:6px;padding:6px 9px;font-size:18px;cursor:pointer}.layout{display:grid;grid-template-columns:280px minmax(0,1fr);min-height:calc(100vh - 56px)}.sidebar{background:#fff;border-right:1px solid #d9dde3;padding:18px 14px 40px;position:sticky;top:56px;height:calc(100vh - 56px);overflow:auto}.side-root{display:block;padding:9px 10px;border-radius:6px;color:#202124;text-decoration:none;font-weight:700;margin-bottom:8px}.side-root:hover,.side-link:hover{background:#f1f3f4}.side-category{margin:9px 0 3px}.side-category>a,.side-category>span{display:block;padding:7px 10px;color:#202124;text-decoration:none;font-weight:700;border-radius:6px}.side-category>a:hover{background:#f1f3f4}.side-docs{margin:1px 0 8px;padding-left:10px;border-left:1px solid #e3e6ea}.side-link{display:block;padding:6px 10px;color:#4b535d;text-decoration:none;border-radius:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.side-link.active,.side-root.active,.side-category>a.active{background:#e8f0fe;color:#174ea6}.content{min-width:0}.page{max-width:920px;margin:30px auto 80px;background:#fff;border:1px solid #d9dde3;border-radius:8px;padding:30px 38px;box-shadow:0 1px 3px rgba(0,0,0,.12)}h1{font-size:32px;margin:0 0 14px}.intro{margin-bottom:20px}.toc{border:1px solid #d9dde3;background:#fafbfc;border-radius:6px;padding:14px 18px;margin:22px 0}.toc-title{font-weight:700;margin-bottom:8px}.toc-line{margin:4px 0}.toc a,.body a,.section-title a{color:#1f8b4c;text-decoration:none}.toc a:hover,.body a:hover{text-decoration:underline}.section{margin:25px 0}.section-title{border-bottom:1px solid #bfc5cc;padding-bottom:7px;margin:0 0 10px;line-height:1.35}.depth-1>.section-title{font-size:25px}.depth-2>.section-title{font-size:21px}.depth-3>.section-title{font-size:18px}.num{margin-right:6px}.body p{margin:.35em 0}.body img{max-width:100%;height:auto}.body table{border-collapse:collapse;max-width:100%;margin:8px 0}.body td,.body th{border:1px solid #bfc5cc;padding:6px 8px;vertical-align:top;overflow-wrap:anywhere}.body ul,.body ol{padding-left:2em}.body blockquote{border-left:3px solid #b7bdc6;margin:.55em 0;padding:.2em .8em;color:#5f6368}.muted{color:#69707a}
+@media(max-width:900px){.layout{grid-template-columns:240px minmax(0,1fr)}.page{margin:18px 14px 60px}}
+@media(max-width:720px){.nav-toggle{display:inline-block}.layout{display:block}.sidebar{position:fixed;left:0;top:56px;bottom:0;width:min(86vw,300px);height:auto;z-index:45;transform:translateX(-102%);transition:transform .18s ease;box-shadow:4px 0 16px rgba(0,0,0,.16)}.sidebar.open{transform:translateX(0)}.page{margin:12px 8px 50px;padding:20px 16px}h1{font-size:27px}}
 '''
 
 def esc(s): return html.escape(str(s or ''))
@@ -90,7 +92,33 @@ def sections_html(sections,cur_parts,self_href,prefix='',depth=1):
         body=rewrite_html(s.get('contentHtml',''),cur_parts)
         out.append(f'<section class="section depth-{d}"><h2 id="{anchor(s.get("id"))}" class="section-title"><a class="num" href="{self_href}">{n}.</a>{esc(s.get("title","제목 없음"))}</h2><div class="body">{body}</div>{sections_html(s.get("children",[]),cur_parts,self_href,n,depth+1)}</section>')
     return ''.join(out)
-def shell(title,body,root_href):return f'<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{esc(title)} - Duels Wiki</title><style>{CSS}</style></head><body><header class="top"><a href="{root_href}">Duels Wiki</a></header>{body}</body></html>'
+def sidebar_html(allcats,cur_parts):
+    root_href=internal_href(cur_parts,'wiki:/')
+    current='/'.join(cur_parts)
+    out=[f'<a class="side-root {"active" if not cur_parts else ""}" href="{root_href}">Duels Wiki</a>']
+    for c,docs in allcats:
+        slug=c.get('slug',''); name=c.get('name',slug)
+        cat_parts=[slug]
+        active_cat=(cur_parts==cat_parts)
+        out.append('<div class="side-category">')
+        if c.get('hasInfo'):
+            href=internal_href(cur_parts,'wiki:/'+slug)
+            out.append(f'<a class="{"active" if active_cat else ""}" href="{href}">{esc(name)}</a>')
+        else:
+            out.append(f'<span>{esc(name)}</span>')
+        if docs:
+            out.append('<div class="side-docs">')
+            for x in docs:
+                dslug=x.get('slug',''); title=x.get('title',dslug)
+                href=internal_href(cur_parts,'wiki:/'+slug+'/'+dslug)
+                active=(cur_parts==[slug,dslug])
+                out.append(f'<a class="side-link {"active" if active else ""}" href="{href}">{esc(title)}</a>')
+            out.append('</div>')
+        out.append('</div>')
+    return ''.join(out)
+
+def shell(title,body,root_href,sidebar):
+    return f'''<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{esc(title)} - Duels Wiki</title><style>{CSS}</style></head><body><header class="top"><button class="nav-toggle" id="navToggle" aria-label="문서 목록">☰</button><a href="{root_href}">Duels Wiki</a></header><div class="layout"><aside class="sidebar" id="wikiSidebar">{sidebar}</aside><div class="content">{body}</div></div><script>(function(){{var b=document.getElementById('navToggle'),s=document.getElementById('wikiSidebar');if(b&&s)b.addEventListener('click',function(){{s.classList.toggle('open')}});document.addEventListener('click',function(e){{if(window.innerWidth>720||!s.classList.contains('open'))return;if(e.target.closest('#wikiSidebar')||e.target.closest('#navToggle'))return;s.classList.remove('open')}})}})();</script></body></html>'''
 
 def build():
     if OUT.exists():shutil.rmtree(OUT)
@@ -111,22 +139,22 @@ def build():
         'id':'root','kind':'root','title':'Duels Wiki','slug':'_root',
         'content':{'type':'wiki-sections-v3','introHtml':'<p></p>','sections':[{'id':'root-overview','title':'개요','contentHtml':'<p></p>','children':[]}]}
     }
-    write_doc(root_doc,[])
+    write_doc(root_doc,[],allcats)
     for c,docs in allcats:
         if c.get('hasInfo'):
             p=WIKI/c['slug']/'_info.json';d=load_json(p)
-            if d:write_doc(d,[c['slug']])
-        for x in docs:write_doc(x['doc'],[c['slug'],x['slug']])
-    (OUT/'404.html').write_text(shell('404','<main class="page"><h1>404</h1><p>문서를 찾을 수 없습니다.</p></main>','index.html'),'utf-8')
+            if d:write_doc(d,[c['slug']],allcats)
+        for x in docs:write_doc(x['doc'],[c['slug'],x['slug']],allcats)
+    (OUT/'404.html').write_text(shell('404','<main class="page"><h1>404</h1><p>문서를 찾을 수 없습니다.</p></main>','index.html',sidebar_html(allcats,[])),'utf-8')
     print(f'Built static wiki: {OUT}')
 
-def write_doc(doc,parts):
+def write_doc(doc,parts,allcats):
     c=norm(doc.get('content'));dest=OUT.joinpath(*parts);dest.mkdir(parents=True,exist_ok=True)
     root='../'*(len(parts))+'index.html';self_href='index.html'
     intro=rewrite_html(c.get('introHtml',''),parts)
     body=f'<main class="page"><h1>{esc(doc.get("title"))}</h1><div class="intro body">{intro}</div>'
     if c.get('sections'):body+=f'<nav class="toc"><div class="toc-title">목차</div>{toc(c["sections"])}</nav>'
     body+=sections_html(c.get('sections',[]),parts,self_href)+'</main>'
-    (dest/'index.html').write_text(shell(doc.get('title','Duels Wiki'),body,root),'utf-8')
+    (dest/'index.html').write_text(shell(doc.get('title','Duels Wiki'),body,root,sidebar_html(allcats,parts)),'utf-8')
 
 if __name__=='__main__':build()

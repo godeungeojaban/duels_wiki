@@ -1,78 +1,103 @@
-# Duels Wiki 3.2
+# Duels Wiki 3.8
 
-3.0부터 편집기는 Next.js/Node.js를 사용하지 않습니다.
+Duels Wiki 3.8는 Python 표준 라이브러리 기반 로컬 편집기 + GitHub 저장소 + GitHub Pages 정적 열람 사이트 구조다. Node.js/Next.js/npm은 사용하지 않는다.
 
-## 구조
+## 실행
 
-- `DuelsWikiEditor.py` — **PC에 남겨둘 유일한 실행 파일**. Python 표준 라이브러리만 사용합니다.
-- `repository/` — `godeungeojaban/duels_wiki` 저장소 루트에 업로드할 파일들입니다.
-  - `editor/` — 런처가 실행할 때 GitHub에서 자동으로 내려받는 HTML/CSS/JS 편집기
-  - `wiki/` — 문서 JSON
-  - `media/` — PNG/JPG
-  - `site/build.py` — 정적 열람 사이트 생성기
-  - `.github/workflows/deploy-pages.yml` — GitHub Pages 자동 배포
+1. `DuelsWikiEditor.py`를 PC에 둔다.
+2. `python DuelsWikiEditor.py`로 실행한다.
+3. 첫 실행 시 우측 상단 `GitHub 설정`에서 Fine-grained PAT를 입력한다.
+   - Repository access: `godeungeojaban/duels_wiki`
+   - Contents: Read and write
+4. 편집기는 GitHub 저장소의 `editor/` 최신 파일을 내려받아 브라우저에서 연다.
 
-표 기능은 3.0에서 완전히 제거했습니다.
+토큰은 저장소에 올라가지 않고 로컬 설정에만 저장된다.
 
-## 최초 적용
+## 3.8 편집기
 
-1. GitHub의 `godeungeojaban/duels_wiki` 저장소에 `repository/` **안의 내용**을 저장소 루트로 업로드합니다.
-   기존 `wiki/`, `media/` 데이터가 있다면 그 데이터는 유지하고 `editor/`, `site/`, `.github/`를 추가하면 됩니다.
-2. GitHub 저장소 `Settings → Pages → Build and deployment → Source`를 **GitHub Actions**로 설정합니다.
-3. PC에는 `DuelsWikiEditor.py`만 원하는 위치에 둡니다.
-4. Python 3가 설치된 PC에서 `DuelsWikiEditor.py`를 실행합니다.
-5. 브라우저가 자동으로 열립니다. 우측 상단 `GitHub 설정`에서 Fine-grained PAT를 입력합니다.
-   - Repository access: `duels_wiki`
-   - Contents: `Read and write`
-   - Metadata: `Read-only`
+기존 옵션 바를 제거하고 Microsoft Word 방식에 가깝게 리본 UI로 재구성했다.
 
-토큰은 저장소에 들어가지 않습니다. Windows에서는 `%APPDATA%\DuelsWikiEditor\config.json`에만 저장됩니다.
+- 홈
+  - 실행 취소/다시 실행
+  - 굵게, 기울임, 밑줄, 취소선
+  - 위첨자/아래첨자
+  - 글자 크기
+  - 글자색 / 강조색
+  - 서식 지우기
+  - 글머리 기호 / 번호 매기기
+  - 들여쓰기 / 내어쓰기
+  - 좌/중앙/우/양쪽 정렬
+  - 줄 간격 / 문단 뒤 간격
+  - 내부 링크 / 링크 해제
+- 삽입
+  - 내부 링크
+  - PNG/JPG 그림 링크
+  - PNG/JPG 저장소 업로드
+  - 행/열 개수를 지정하는 표 삽입
+- 그림 컨텍스트 탭
+  - 그림을 선택한 경우에만 표시
+  - 너비/높이/회전
+  - 90도 회전
+  - 문서 너비 맞춤
+  - 좌/중앙/우 배치
+  - 텍스트 줄 안 / 위아래 / 좌우 감싸기
+  - 그림 테두리와 대체 텍스트
+  - 8방향 드래그 크기 조절
+- 표 컨텍스트 탭
+  - 표 셀을 선택한 경우에만 표시
+  - 행/열 추가 및 삭제
+  - 표 삭제/전체 선택
+  - 셀 드래그 다중 선택
+  - 셀 병합/분할
+  - 행/열 균등 분배
+  - 열 너비/행 높이
+  - 표 좌/중앙/우 배치와 창 너비 맞춤
+  - 셀 가로/세로 정렬
+  - 셀 배경색 제거/지정
+  - 테두리 색/두께/스타일
 
-## 이후 사용
+글꼴 종류 선택은 의도적으로 넣지 않았다.
 
-`DuelsWikiEditor.py` 실행 → GitHub의 최신 `editor/` 다운로드 → 브라우저 편집기 자동 실행 → 저장하면 GitHub에 바로 commit됩니다.
+## 저장소 구조
 
-`wiki/` 또는 `media/`가 바뀌면 GitHub Actions가 `site/build.py`를 실행하고 GitHub Pages를 자동 갱신합니다. 따라서 사용자가 `build.py`를 직접 실행할 필요가 없습니다.
+`repository/` 내부가 그대로 GitHub 저장소 루트가 된다. `README.md`와 `VERSION.md`도 이 안에 있으므로 함께 commit된다.
 
-편집기 HTML/CSS/JS를 수정해 GitHub `editor/`에 올리면, 런처를 다시 받을 필요 없이 다음 실행 시 새 UI가 자동으로 내려옵니다.
+```text
+repository/
+├─ README.md              저장소 설명
+├─ VERSION.md             버전 변경 내역
+├─ editor/                 GitHub에서 내려받는 편집기 UI
+├─ wiki/                   문서 JSON
+├─ media/images/           PNG/JPG
+├─ site/build.py           정적 위키 생성기
+├─ .github/workflows/      GitHub Pages 자동 배포
+└─ git_sync.bat            Git add/commit/pull --rebase/push 자동화
+```
 
-## URL 규칙
+GitHub에 올릴 때는 `repository/` 폴더 자체가 아니라 **그 안의 내용**을 저장소 루트에 둔다.
 
-- `/` → Duels Wiki 전체
-- `/카테고리/index.html` → 카테고리 정보
-- `/카테고리/문서/index.html` → 일반 문서
+## Git 자동화
 
-정적 사이트의 내부 링크는 실제 `index.html` 파일을 직접 가리킵니다.
+저장소 루트의 `git_sync.bat`을 실행하면 다음 순서로 동작한다.
 
-## 3.0 편집 기능
+1. Git 초기화 여부 확인
+2. `origin`이 없으면 `godeungeojaban/duels_wiki` 연결
+3. `git add -A`
+4. 변경사항이 있으면 커밋 메시지를 입력받아 commit
+5. `git pull --rebase origin main`
+6. `git push -u origin main`
 
-- 카테고리 생성/삭제
-- `정보` 문서 자동 생성 및 카테고리 삭제 시 하위 문서 `미분류` 이동
-- 일반 문서 생성/수정/삭제/카테고리 이동
-- 문서 제목 블록(제목 + 소개 본문)
-- 계층형 목차 블록 및 자동 번호
-- 블록 내부 `＋ 하위`, `＋ 다음`, `삭제`
-- 문서 제목 아래 자동 목차
-- 굵게 / 기울임 / 취소선 / 글자색 / 글자 크기
-- 좌/중앙/우 배치
-- 위키 내부 링크 전용 선택 UI (`Duels Wiki` 전체 포함)
-- PNG/JPG 외부 링크
-- public GitHub `blob` 이미지 URL → `raw.githubusercontent.com` 자동 변환
-- PNG/JPG 로컬 파일 → GitHub `media/images/` 업로드
-- 이미지 가로/세로/회전/너비 자동 맞춤/정렬
-- 이미지 선택 테두리와 8방향 크기 조절 핸들
-- GitHub commit 기반 문서 역사 열람
-- 모바일 기본 반응형 UI
+충돌이 발생하면 자동으로 강제 push하지 않고 중단한다.
 
-## 이전 문서 호환
+## 정적 열람
 
-2.x의 `wiki-sections`/Tiptap JSON 문서는 읽을 때 3.0 HTML 블록 구조로 변환합니다. 3.0에서 저장한 문서는 `wiki-sections-v3` 형식으로 저장됩니다.
+`wiki/`, `media/`, `site/` 변경이 main에 push되면 GitHub Actions가 `site/build.py`를 실행하고 GitHub Pages용 정적 HTML을 배포한다.
 
 
-## 3.2 변경 사항
+## 3.8 Git 동기화 변경
 
-- `/`는 `wiki/_root.json`을 사용하는 실제 Duels Wiki 문서입니다.
-- 카테고리와 문서 목록은 왼쪽 사이드바에서 탐색합니다.
-- 편집 옵션 툴바를 실제 DOM에서 상단 헤더 바로 아래로 이동했습니다. 편집 중에는 `Duels Wiki / Editor 3.2 / GitHub 설정` 줄과 사이드바의 `카테고리 생성 / 문서 생성` 사이에 고정됩니다.
-- `카테고리 생성`/`문서 생성` 버튼은 `white-space: nowrap`과 넓어진 사이드바 폭을 사용해 두 줄로 깨지지 않습니다.
-- 3.1 배포본에 3.0 편집기 파일이 잘못 포함되었던 패키징 문제를 수정했습니다.
+- 처음 압축을 푼 폴더처럼 local commit이 하나도 없는 저장소를 자동 감지한다.
+- 원격 `main`이 이미 있으면 로컬 패키지 파일을 임시 백업하고 원격 이력을 연결한 뒤 패키지 파일을 다시 덮어쓴다.
+- 첫 commit이 없어 `git stash`가 실패하던 문제를 제거했다.
+- `README.md`, `VERSION.md`가 Git 추적 대상인지 동기화 도중 직접 검사한다.
+- 두 문서는 `repository/` 내부에만 존재하며 바깥 중복본은 제거했다.
