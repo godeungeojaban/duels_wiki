@@ -2,7 +2,7 @@
 
 const $ = (s, r=document) => r.querySelector(s);
 const $$ = (s, r=document) => [...r.querySelectorAll(s)];
-const state = { index:null, current:null, currentPath:'', editing:false, savedRange:null, selectedImage:null, selectedTable:null, selectedCell:null, tableCells:[], tableDrag:null, activeRibbon:'home', config:null };
+const state = { index:null, current:null, currentPath:'', editing:false, savedRange:null, selectedImage:null, activeRibbon:'home', config:null };
 const escapeHtml = s => String(s??'').replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
 const uid = p => `${p}_${crypto.randomUUID().replaceAll('-','')}`;
 
@@ -40,7 +40,7 @@ function normalizeContent(content){ if(content?.type==='wiki-sections-v3') retur
   return {type:'wiki-sections-v3',introHtml:oldNodeToHtml(content||{type:'doc'}),sections:[{id:uid('sec'),title:'개요',contentHtml:'<p></p>',children:[]}]}; }
 function mediaSrc(src){ if(!src)return''; if(src.startsWith('/media/'))return'/__media__/'+encodeURIComponent(src.slice(1)); return src; }
 function viewHtml(html){ const t=document.createElement('template'); t.innerHTML=html||''; $$('img',t.content).forEach(img=>{const src=img.getAttribute('src')||'';img.setAttribute('src',mediaSrc(src));}); $$('a',t.content).forEach(a=>{const h=a.getAttribute('href')||''; if(h.startsWith('wiki:/'))a.dataset.wikiLink=h;}); return t.innerHTML; }
-function storageHtml(el){ const clone=el.cloneNode(true); $$('img',clone).forEach(img=>{let src=img.getAttribute('src')||''; if(src.startsWith('/__media__/')){src='/'+decodeURIComponent(src.slice('/__media__/'.length));img.setAttribute('src',src);} img.classList.remove('selected-image');}); $$('.table-cell-selected',clone).forEach(c=>c.classList.remove('table-cell-selected')); $$('.table-selected',clone).forEach(t=>t.classList.remove('table-selected')); $$('[data-editor-only]',clone).forEach(x=>x.remove()); return clone.innerHTML; }
+function storageHtml(el){ const clone=el.cloneNode(true); $$('img',clone).forEach(img=>{let src=img.getAttribute('src')||''; if(src.startsWith('/__media__/')){src='/'+decodeURIComponent(src.slice('/__media__/'.length));img.setAttribute('src',src);} img.classList.remove('selected-image');}); $$('[data-editor-only]',clone).forEach(x=>x.remove()); return clone.innerHTML; }
 
 function sectionAnchor(id){return 'section-'+String(id).replace(/[^a-zA-Z0-9_-]/g,'-')}
 function renderToc(sections,prefix='',depth=0){return sections.map((s,i)=>{const n=prefix?`${prefix}.${i+1}`:`${i+1}`;return `<div class="toc-line" style="padding-left:${depth*16}px"><a href="#" data-section-anchor="${sectionAnchor(s.id)}">${n}. ${escapeHtml(s.title||'제목 없음')}</a></div>${renderToc(s.children||[],n,depth+1)}`}).join('')}
@@ -84,19 +84,7 @@ function bindEditable(el){
   el.addEventListener('keyup',rememberSelection);
   el.addEventListener('click',e=>{
     if(e.target.tagName==='IMG'){ selectImage(e.target); return; }
-    const cell=e.target.closest('td,th');
-    if(cell&&el.contains(cell)){ selectSingleTableCell(cell); return; }
-    if(!e.target.closest('img,table')) clearObjectSelection(true);
-  });
-  el.addEventListener('pointerdown',e=>{
-    const cell=e.target.closest('td,th');
-    if(!cell||!el.contains(cell))return;
-    beginTableCellDrag(cell,e);
-  });
-  el.addEventListener('pointerover',e=>{
-    if(!state.tableDrag)return;
-    const cell=e.target.closest('td,th');
-    if(cell&&cell.closest('table')===state.tableDrag.table)extendTableCellDrag(cell);
+    if(!e.target.closest('img')) clearObjectSelection(true);
   });
 }
 function rememberSelection(){ const sel=getSelection(); if(sel.rangeCount&&state.editing){ const r=sel.getRangeAt(0); if($('#editPage')?.contains(r.commonAncestorContainer))state.savedRange=r.cloneRange(); } }
@@ -134,13 +122,6 @@ $('#imageUploadBtn').onclick=()=>$('#imageFile').click();
 $('#imageFile').onchange=async e=>{const f=e.target.files?.[0];if(!f)return;if(!['image/png','image/jpeg'].includes(f.type)){showStatus('PNG/JPG만 업로드할 수 있습니다.',true);return}const data=await fileDataUrl(f);try{const r=await api('/api/media',{method:'POST',body:JSON.stringify({filename:f.name,data})});insertImage(r.src);showStatus('그림을 GitHub 저장소에 업로드했습니다.')}catch(err){showStatus(err.message,true)}e.target.value=''};
 function fileDataUrl(f){return new Promise((res,rej)=>{const r=new FileReader;r.onload=()=>res(r.result);r.onerror=rej;r.readAsDataURL(f)})}
 function imageAvailableWidth(img){
-  const cell=img.closest('td,th');
-  if(cell){
-    const cs=getComputedStyle(cell);
-    const pad=(parseFloat(cs.paddingLeft)||0)+(parseFloat(cs.paddingRight)||0);
-    const w=cell.getBoundingClientRect().width-pad;
-    if(w>20)return w;
-  }
   const host=img.closest('.editable');
   if(host){const w=host.getBoundingClientRect().width;if(w>20)return w}
   return 480;
@@ -155,39 +136,19 @@ function initializeInsertedImage(img){
     img.style.height=`${Math.round(h)}px`;
     img.style.maxWidth='100%';
     img.dataset.aspectRatio=String(nw/Math.max(1,nh));
-    if(state.selectedImage===img){updateImageTools();updateOverlay();updateTableResizeOverlay()}
+    if(state.selectedImage===img){updateImageTools();updateOverlay()}
   };
   if(img.complete&&img.naturalWidth>0)apply();else img.addEventListener('load',apply,{once:true});
 }
-function rangeInsideNode(range,node){if(!range||!node)return false;const c=range.commonAncestorContainer;return c===node||node.contains(c.nodeType===1?c:c.parentElement)}
-function insertImageIntoCell(img,cell){
-  let range=(state.savedRange&&rangeInsideNode(state.savedRange,cell))?state.savedRange.cloneRange():null;
-  if(range){
-    range.deleteContents();range.insertNode(img);range.setStartAfter(img);range.collapse(true);
-  }else{
-    let p=[...cell.children].reverse().find(x=>x.tagName==='P');
-    if(!p){p=document.createElement('p');cell.appendChild(p)}
-    if(p.innerHTML.trim().toLowerCase()==='<br>')p.innerHTML='';
-    p.appendChild(img);
-    if(!p.lastChild||p.lastChild===img)p.appendChild(document.createElement('br'));
-    range=document.createRange();range.setStartAfter(img);range.collapse(true);
-  }
-  const sel=getSelection();sel.removeAllRanges();sel.addRange(range);state.savedRange=range.cloneRange();
-}
 function insertImage(src){
   const img=document.createElement('img');img.style.display='block';img.style.maxWidth='100%';img.style.width='1px';img.style.height='1px';img.alt='';
-  const cell=state.selectedCell&&document.body.contains(state.selectedCell)?state.selectedCell:null;
-  if(cell){
-    insertImageIntoCell(img,cell);
-  }else{
-    restoreSelection();const range=getSelection()?.rangeCount?getSelection().getRangeAt(0):null;
-    const editable=range&&(range.commonAncestorContainer.nodeType===1?range.commonAncestorContainer:range.commonAncestorContainer.parentElement)?.closest?.('.editable');
-    if(range&&editable){range.deleteContents();range.insertNode(img);range.setStartAfter(img);range.collapse(true)}
-    else {showStatus('그림을 삽입할 편집 위치를 먼저 선택하세요.',true);return}
-  }
+  restoreSelection();const range=getSelection()?.rangeCount?getSelection().getRangeAt(0):null;
+  const editable=range&&(range.commonAncestorContainer.nodeType===1?range.commonAncestorContainer:range.commonAncestorContainer.parentElement)?.closest?.('.editable');
+  if(range&&editable){range.deleteContents();range.insertNode(img);range.setStartAfter(img);range.collapse(true)}
+  else {showStatus('그림을 삽입할 편집 위치를 먼저 선택하세요.',true);return}
   img.src=src;initializeInsertedImage(img);selectImage(img);rememberSelection();
 }
-function selectImage(img){ clearTableSelection(); state.selectedImage=img; $$('.selected-image').forEach(x=>x.classList.remove('selected-image')); img.classList.add('selected-image'); const cell=img.closest('td,th'); const table=tableOfCell(cell); if(cell&&table){state.selectedTable=table;state.selectedCell=cell;state.tableCells=[cell];cell.classList.add('table-cell-selected');$('#tableTabBtn').classList.remove('hidden');refreshTableTools();updateTableResizeOverlay();} $('#pictureTabBtn').classList.remove('hidden'); updateImageTools(); updateOverlay(); switchRibbon('picture'); }
+function selectImage(img){ state.selectedImage=img; $$('.selected-image').forEach(x=>x.classList.remove('selected-image')); img.classList.add('selected-image'); $('#pictureTabBtn').classList.remove('hidden'); updateImageTools(); updateOverlay(); switchRibbon('picture'); }
 function updateImageTools(){const img=state.selectedImage;if(!img)return;const r=img.getBoundingClientRect();$('#imageWidth').value=Math.round(r.width);$('#imageHeight').value=Math.round(r.height);$('#imageRotation').value=getRotation(img);$('#pictureBorderWidth').value=parseFloat(img.style.borderWidth)||0;const bc=rgbToHex(img.style.borderColor);if(bc)$('#pictureBorderColor').value=bc;$('#imageWrapSelect').value=getImageWrap(img)}
 function rgbToHex(v){if(!v)return null;if(/^#/.test(v))return v;const m=v.match(/\d+/g);if(!m||m.length<3)return null;return '#'+m.slice(0,3).map(x=>(+x).toString(16).padStart(2,'0')).join('')}
 function getRotation(img){const m=(img.style.transform||'').match(/rotate\((-?[\d.]+)deg\)/);return m?Number(m[1]):0}
@@ -226,136 +187,14 @@ function startImageResize(e){
     w=Math.max(20,Math.min(w,maxW));h=Math.max(20,h);
     if(isCorner)h=w/ratio;
     img.style.width=`${Math.round(w)}px`;img.style.height=`${Math.round(h)}px`;img.style.maxWidth='100%';
-    updateImageTools();updateOverlay();updateTableResizeOverlay();
+    updateImageTools();updateOverlay();
   };
   const up=()=>{removeEventListener('pointermove',move);removeEventListener('pointerup',up)};
   addEventListener('pointermove',move);addEventListener('pointerup',up);
 }
 
-/* Word-like tables */
-$('#insertTableBtn').onclick=()=>{rememberSelection();openModal(`<h2>표 삽입</h2><div class="form-row"><label>행</label><input id="tableRows" type="number" min="1" max="30" value="3"></div><div class="form-row"><label>열</label><input id="tableCols" type="number" min="1" max="20" value="3"></div><div class="modal-actions"><button id="cancelTable">취소</button><button id="createTable" class="primary">삽입</button></div>`);$('#cancelTable').onclick=closeModal;$('#createTable').onclick=()=>{insertTable(Math.max(1,Math.min(30,+$('#tableRows').value||3)),Math.max(1,Math.min(20,+$('#tableCols').value||3)));closeModal()}};
-function insertTable(rows,cols){restoreSelection();const table=document.createElement('table');table.className='wiki-table';table.style.width='100%';table.style.marginLeft='0';table.style.marginRight='0';const tbody=document.createElement('tbody');for(let r=0;r<rows;r++){const tr=document.createElement('tr');for(let c=0;c<cols;c++){const td=document.createElement('td');td.innerHTML='<p><br></p>';td.style.width=`${100/cols}%`;td.style.height='40px';tr.appendChild(td)}tbody.appendChild(tr)}table.appendChild(tbody);const range=getSelection()?.rangeCount?getSelection().getRangeAt(0):null;if(range){range.deleteContents();range.insertNode(table);const p=document.createElement('p');p.innerHTML='<br>';table.after(p);range.setStart(table.rows[0].cells[0],0);range.collapse(true)}selectSingleTableCell(table.rows[0].cells[0]);rememberSelection()}
-function tableOfCell(cell){return cell?.closest('table.wiki-table,table')||null}
-function clearTableSelection(){ $$('.table-cell-selected').forEach(c=>c.classList.remove('table-cell-selected')); $$('.table-selected').forEach(t=>t.classList.remove('table-selected')); state.selectedTable=null;state.selectedCell=null;state.tableCells=[];state.tableDrag=null;$('#tableTabBtn').classList.add('hidden'); hideTableResizeOverlay(); }
 function clearImageSelection(){if(state.selectedImage)state.selectedImage.classList.remove('selected-image');state.selectedImage=null;$('#pictureTabBtn').classList.add('hidden');updateOverlay()}
-function clearObjectSelection(switchHome=true){clearImageSelection();clearTableSelection();if(switchHome&&state.editing)switchRibbon('home')}
-function selectSingleTableCell(cell){clearImageSelection();clearTableSelection();const table=tableOfCell(cell);if(!table)return;state.selectedTable=table;state.selectedCell=cell;state.tableCells=[cell];cell.classList.add('table-cell-selected');$('#tableTabBtn').classList.remove('hidden');refreshTableTools();updateTableResizeOverlay();switchRibbon('table')}
-function beginTableCellDrag(cell,e){if(e.button!==0)return;selectSingleTableCell(cell);state.tableDrag={table:tableOfCell(cell),anchor:cell};}
-function extendTableCellDrag(cell){const d=state.tableDrag;if(!d||tableOfCell(cell)!==d.table)return;const rows=[...d.table.rows],ar=rows.indexOf(d.anchor.parentElement),br=rows.indexOf(cell.parentElement),ac=d.anchor.cellIndex,bc=cell.cellIndex,minR=Math.min(ar,br),maxR=Math.max(ar,br),minC=Math.min(ac,bc),maxC=Math.max(ac,bc);$$('.table-cell-selected',d.table).forEach(x=>x.classList.remove('table-cell-selected'));state.tableCells=[];for(let r=minR;r<=maxR;r++){for(let c=minC;c<=maxC;c++){const x=rows[r].cells[c];if(x){x.classList.add('table-cell-selected');state.tableCells.push(x)}}}state.selectedCell=state.tableCells[0]||cell;refreshTableTools()}
-document.addEventListener('pointerup',()=>state.tableDrag=null);
-function selectedTableCells(){return state.tableCells.length?state.tableCells:(state.selectedCell?[state.selectedCell]:[])}
-function refreshTableTools(){const c=state.selectedCell;if(!c)return;$('#cellWidthInput').value=Math.round(c.getBoundingClientRect().width);$('#cellHeightInput').value=Math.round(c.getBoundingClientRect().height);const bg=rgbToHex(c.style.backgroundColor);if(bg)$('#cellBackgroundColor').value=bg;const bc=rgbToHex(c.style.borderColor);if(bc)$('#cellBorderColor').value=bc;$('#cellBorderWidth').value=parseFloat(c.style.borderWidth)||1;$('#cellBorderStyle').value=c.style.borderStyle||'solid'}
-$('#tableSelectBtn').onclick=()=>{const t=state.selectedTable;if(!t)return;$$('.table-cell-selected',t).forEach(x=>x.classList.remove('table-cell-selected'));state.tableCells=$$('td,th',t);state.tableCells.forEach(x=>x.classList.add('table-cell-selected'));t.classList.add('table-selected')};
-$('#tableDeleteBtn').onclick=()=>{const t=state.selectedTable;if(t&&confirm('표를 삭제할까요?')){t.remove();clearTableSelection();switchRibbon('home')}};
-function activeRow(){return state.selectedCell?.parentElement||null}
-function activeCol(){return state.selectedCell?.cellIndex??-1}
-function logicalColCount(t){return t?.rows?.[0]?.cells?.length||0}
-function blankCell(){const td=document.createElement('td');td.innerHTML='<p><br></p>';td.style.height='40px';return td}
-$('#rowAboveBtn').onclick=()=>insertRowAt(true);$('#rowBelowBtn').onclick=()=>insertRowAt(false);
-function insertRowAt(above){const t=state.selectedTable,row=activeRow();if(!t||!row)return;const idx=row.rowIndex+(above?0:1),tr=t.insertRow(idx),count=logicalColCount(t);for(let i=0;i<count;i++)tr.appendChild(blankCell());}
-$('#colLeftBtn').onclick=()=>insertColAt(true);$('#colRightBtn').onclick=()=>insertColAt(false);
-function insertColAt(left){const t=state.selectedTable,c=activeCol();if(!t||c<0)return;const idx=c+(left?0:1);[...t.rows].forEach(r=>{const td=r.insertCell(Math.min(idx,r.cells.length));td.innerHTML='<p><br></p>';td.style.height='40px'});distributeColumns(t)}
-$('#rowDeleteBtn').onclick=()=>{const t=state.selectedTable,row=activeRow();if(!t||!row)return;row.remove();if(!t.rows.length)t.remove();clearTableSelection();};
-$('#colDeleteBtn').onclick=()=>{const t=state.selectedTable,c=activeCol();if(!t||c<0)return;[...t.rows].forEach(r=>{if(r.cells[c])r.deleteCell(c)});if(!logicalColCount(t))t.remove();clearTableSelection();};
-function distributeColumns(t=state.selectedTable){if(!t)return;const n=logicalColCount(t);if(!n)return;[...t.rows].forEach(r=>[...r.cells].forEach(c=>c.style.width=`${100/n}%`));t.style.width='100%'}
-$('#distributeColsBtn').onclick=()=>distributeColumns();
-$('#distributeRowsBtn').onclick=()=>{const t=state.selectedTable;if(!t)return;const hs=[...t.rows].map(r=>r.getBoundingClientRect().height),h=Math.max(36,...hs);[...t.rows].forEach(r=>[...r.cells].forEach(c=>c.style.height=`${h}px`))};
-$('#cellWidthInput').onchange=e=>{const c=state.selectedCell,t=state.selectedTable;if(!c||!t)return;const w=Math.max(36,Number(e.target.value)||36);setColumnWidth(t,c,w);updateTableResizeOverlay();};
-$('#cellHeightInput').onchange=e=>{const row=activeRow();if(!row)return;const h=Math.max(24,Number(e.target.value)||24);setRowHeight(row,h);updateTableResizeOverlay();};
-$('#tableFitBtn').onclick=()=>distributeColumns();
-$$('[data-table-align]').forEach(b=>b.onclick=()=>{const t=state.selectedTable;if(!t)return;const a=b.dataset.tableAlign;t.style.marginLeft=a==='center'||a==='right'?'auto':'0';t.style.marginRight=a==='center'||a==='left'?'auto':'0'});
-$$('[data-cell-align]').forEach(b=>b.onclick=()=>selectedTableCells().forEach(c=>c.style.textAlign=b.dataset.cellAlign));
-$$('[data-cell-valign]').forEach(b=>b.onclick=()=>selectedTableCells().forEach(c=>c.style.verticalAlign=b.dataset.cellValign));
-$('#cellBackgroundColor').oninput=e=>selectedTableCells().forEach(c=>c.style.backgroundColor=e.target.value);$('#cellBackgroundNoneBtn').onclick=()=>selectedTableCells().forEach(c=>c.style.backgroundColor='transparent');
-function applyCellBorders(){const col=$('#cellBorderColor').value,w=Math.max(0,Number($('#cellBorderWidth').value)||0),st=$('#cellBorderStyle').value;selectedTableCells().forEach(c=>{c.style.borderColor=col;c.style.borderWidth=`${w}px`;c.style.borderStyle=st})}
-$('#cellBorderColor').oninput=applyCellBorders;$('#cellBorderWidth').onchange=applyCellBorders;$('#cellBorderStyle').onchange=applyCellBorders;
-$('#mergeCellsBtn').onclick=mergeSelectedCells;$('#splitCellBtn').onclick=splitSelectedCell;
-function mergeSelectedCells(){const t=state.selectedTable,cells=selectedTableCells();if(!t||cells.length<2)return alert('병합할 셀을 드래그로 선택하세요.');if(cells.some(c=>c.colSpan>1||c.rowSpan>1))return alert('이미 병합된 셀이 포함되어 있습니다. 먼저 분할해주세요.');const rows=[...t.rows],pos=cells.map(c=>({c,r:rows.indexOf(c.parentElement),x:c.cellIndex})),minR=Math.min(...pos.map(p=>p.r)),maxR=Math.max(...pos.map(p=>p.r)),minC=Math.min(...pos.map(p=>p.x)),maxC=Math.max(...pos.map(p=>p.x));if(cells.length!==(maxR-minR+1)*(maxC-minC+1))return alert('직사각형 영역만 병합할 수 있습니다.');const anchor=rows[minR].cells[minC],htmls=pos.filter(p=>p.c!==anchor).map(p=>p.c.innerHTML).filter(x=>x&&x!=='<p><br></p>');anchor.colSpan=maxC-minC+1;anchor.rowSpan=maxR-minR+1;if(htmls.length)anchor.innerHTML+=(anchor.innerHTML?'<br>':'')+htmls.join('<br>');pos.filter(p=>p.c!==anchor).sort((a,b)=>b.r-a.r||b.x-a.x).forEach(p=>p.c.remove());selectSingleTableCell(anchor)}
-function splitSelectedCell(){const cell=state.selectedCell;if(!cell)return;const cs=cell.colSpan||1,rs=cell.rowSpan||1;if(cs===1&&rs===1)return;const table=tableOfCell(cell),rows=[...table.rows],r0=rows.indexOf(cell.parentElement),c0=cell.cellIndex;cell.colSpan=1;cell.rowSpan=1;for(let r=0;r<rs;r++){const row=rows[r0+r];if(!row)continue;const count=r===0?cs-1:cs;for(let i=0;i<count;i++){const td=blankCell();const at=r===0?c0+1+i:c0+i;row.insertBefore(td,row.cells[at]||null)}}selectSingleTableCell(cell)}
-
-
-/* 3.11 Word-like draggable table sizing */
-function hideTableResizeOverlay(){const ov=$('#tableResizeOverlay');if(ov)ov.classList.add('hidden')}
-function updateTableResizeOverlay(){
-  const ov=$('#tableResizeOverlay'),cell=state.selectedCell,table=state.selectedTable;
-  if(!ov||!state.editing||!cell||!table||!document.body.contains(cell)){hideTableResizeOverlay();return}
-  const cr=cell.getBoundingClientRect(),tr=table.getBoundingClientRect(),rr=cell.parentElement.getBoundingClientRect();
-  const ch=$('.table-col-handle',ov),rh=$('.table-row-handle',ov),sh=$('.table-size-handle',ov);
-  ch.style.left=`${cr.right}px`;ch.style.top=`${tr.top}px`;ch.style.height=`${tr.height}px`;
-  rh.style.left=`${tr.left}px`;rh.style.top=`${rr.bottom}px`;rh.style.width=`${tr.width}px`;
-  sh.style.left=`${tr.right}px`;sh.style.top=`${tr.bottom}px`;
-  ov.classList.remove('hidden');
-}
-function cellVisualColumnIndex(cell){return cell?.cellIndex??0}
-function tableColumnCount(table){return table?.rows?.[0]?.cells?.length||0}
-function ensureColgroup(table){
-  const count=tableColumnCount(table);if(!count)return null;
-  let cg=table.querySelector(':scope > colgroup[data-editor-cols="1"]');
-  if(!cg){
-    const widths=[...table.rows[0].cells].map(c=>Math.max(36,c.getBoundingClientRect().width));
-    cg=document.createElement('colgroup');cg.dataset.editorCols='1';
-    widths.forEach(w=>{const col=document.createElement('col');col.style.width=`${w}px`;cg.appendChild(col)});
-    table.insertBefore(cg,table.firstChild);
-    table.style.tableLayout='fixed';table.dataset.wordResize='1';
-    table.style.width=`${Math.round(widths.reduce((a,b)=>a+b,0))}px`;table.style.maxWidth='none';
-    [...table.rows].forEach(r=>[...r.cells].forEach(c=>{c.style.width='';c.style.minWidth='';c.style.maxWidth=''}));
-  }
-  while(cg.children.length<count){const col=document.createElement('col');col.style.width='120px';cg.appendChild(col)}
-  return cg;
-}
-function currentColWidth(table,idx){const cg=ensureColgroup(table);const col=cg?.children?.[idx];const w=col?parseFloat(col.style.width):0;return w>0?w:(table.rows[0]?.cells[idx]?.getBoundingClientRect().width||36)}
-function fitImagesToCellWidth(cell,width){
-  const cs=getComputedStyle(cell),pad=(parseFloat(cs.paddingLeft)||0)+(parseFloat(cs.paddingRight)||0);const inner=Math.max(20,width-pad);
-  $$('img',cell).forEach(img=>{const r=img.getBoundingClientRect();if(r.width>inner){const ratio=Number(img.dataset.aspectRatio)||(r.width/Math.max(1,r.height));img.style.width=`${Math.round(inner)}px`;img.style.height=`${Math.round(inner/ratio)}px`;img.style.maxWidth='100%'}});
-}
-function fitImagesToRowHeight(row,height){
-  [...row.cells].forEach(cell=>{const cs=getComputedStyle(cell),pad=(parseFloat(cs.paddingTop)||0)+(parseFloat(cs.paddingBottom)||0);const inner=Math.max(20,height-pad);$$('img',cell).forEach(img=>{const r=img.getBoundingClientRect();if(r.height>inner){const ratio=Number(img.dataset.aspectRatio)||(r.width/Math.max(1,r.height));const h=inner;const w=Math.min(imageAvailableWidth(img),h*ratio);img.style.width=`${Math.round(w)}px`;img.style.height=`${Math.round(w/ratio)}px`;img.style.maxWidth='100%'}})})
-}
-function setColumnWidth(table,anchorCell,width){
-  const idx=cellVisualColumnIndex(anchorCell),cg=ensureColgroup(table);if(!cg||!cg.children[idx])return;
-  const old=currentColWidth(table,idx),target=Math.max(36,Math.round(width)),tr=table.getBoundingClientRect();
-  cg.children[idx].style.width=`${target}px`;
-  table.style.width=`${Math.max(36,Math.round(tr.width+(target-old)))}px`;table.style.maxWidth='none';
-  [...table.rows].forEach(row=>{const cell=row.cells[idx];if(cell)fitImagesToCellWidth(cell,target)});
-}
-function setRowHeight(row,height){
-  height=Math.max(24,Math.round(height));row.dataset.fixedHeight='1';row.style.height=`${height}px`;
-  [...row.cells].forEach(c=>{c.style.height=`${height}px`;c.style.maxHeight=`${height}px`;c.style.overflow='hidden'});fitImagesToRowHeight(row,height);
-}
-function startColumnDrag(e){
-  const table=state.selectedTable,cell=state.selectedCell;if(!table||!cell)return;e.preventDefault();e.stopPropagation();
-  const idx=cellVisualColumnIndex(cell),cg=ensureColgroup(table);if(!cg||!cg.children[idx])return;
-  const startX=e.clientX,startW=currentColWidth(table,idx),startTableW=table.getBoundingClientRect().width;
-  const move=ev=>{
-    const dx=ev.clientX-startX,target=Math.max(36,startW+dx);
-    cg.children[idx].style.width=`${target}px`;table.style.width=`${Math.max(36,startTableW+(target-startW))}px`;table.style.maxWidth='none';
-    [...table.rows].forEach(row=>{const c=row.cells[idx];if(c)fitImagesToCellWidth(c,target)});
-    refreshTableTools();updateTableResizeOverlay();
-  };
-  const up=()=>{removeEventListener('pointermove',move);removeEventListener('pointerup',up)};addEventListener('pointermove',move);addEventListener('pointerup',up);
-}
-function startRowDrag(e){
-  const row=activeRow();if(!row)return;e.preventDefault();e.stopPropagation();const startY=e.clientY,startH=row.getBoundingClientRect().height;
-  const move=ev=>{const target=Math.max(24,startH+(ev.clientY-startY));setRowHeight(row,target);refreshTableTools();updateTableResizeOverlay()};
-  const up=()=>{removeEventListener('pointermove',move);removeEventListener('pointerup',up)};addEventListener('pointermove',move);addEventListener('pointerup',up);
-}
-function startTableSizeDrag(e){
-  const table=state.selectedTable;if(!table)return;e.preventDefault();e.stopPropagation();
-  const cg=ensureColgroup(table),r=table.getBoundingClientRect(),sx=e.clientX,sy=e.clientY,startW=r.width,startH=r.height;
-  const colWidths=[...cg.children].map(c=>parseFloat(c.style.width)||36),rowHeights=[...table.rows].map(row=>row.getBoundingClientRect().height);
-  const move=ev=>{
-    const dx=ev.clientX-sx,dy=ev.clientY-sy,targetW=Math.max(80,startW+dx),targetH=Math.max(40,startH+dy);
-    const sxScale=targetW/startW,syScale=targetH/startH;
-    [...cg.children].forEach((c,i)=>c.style.width=`${Math.max(36,colWidths[i]*sxScale)}px`);
-    [...table.rows].forEach((row,ri)=>setRowHeight(row,Math.max(24,rowHeights[ri]*syScale)));
-    table.style.width=`${targetW}px`;table.style.maxWidth='none';refreshTableTools();updateTableResizeOverlay();
-  };
-  const up=()=>{removeEventListener('pointermove',move);removeEventListener('pointerup',up)};addEventListener('pointermove',move);addEventListener('pointerup',up);
-}
-$('.table-col-handle',$('#tableResizeOverlay')).addEventListener('pointerdown',startColumnDrag);
-$('.table-row-handle',$('#tableResizeOverlay')).addEventListener('pointerdown',startRowDrag);
-$('.table-size-handle',$('#tableResizeOverlay')).addEventListener('pointerdown',startTableSizeDrag);
-window.addEventListener('scroll',updateTableResizeOverlay,true);window.addEventListener('resize',updateTableResizeOverlay);
+function clearObjectSelection(switchHome=true){clearImageSelection();if(switchHome&&state.editing)switchRibbon('home')}
 
 function clearObjectSelectionOnOutside(e){if(e.target.closest('.editable')||e.target.closest('#ribbon')||e.target.closest('#imageOverlay')||e.target.closest('.modal'))return;clearObjectSelection();}
 document.addEventListener('mousedown',clearObjectSelectionOnOutside);
