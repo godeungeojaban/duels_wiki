@@ -397,43 +397,66 @@ function lineBlock(node,editable){
   }
   return block&&block!==editable?block:null;
 }
+function normalizeListCommandDom(editable){
+  // Chromium의 execCommand 목록 명령은 contenteditable 안의 <p> 내부에
+  // <ul>/<ol>을 중첩시키는 경우가 있다. 저장 전에 Word식 블록 구조로 정리한다.
+  $$('p > ul:only-child,p > ol:only-child,div > ul:only-child,div > ol:only-child',editable).forEach(list=>{
+    const parent=list.parentElement;
+    if(!parent||parent===editable)return;
+    const meaningful=[...parent.childNodes].filter(n=>{
+      if(n===list)return false;
+      if(n.nodeType===3)return !!n.textContent.trim();
+      return !(n.nodeType===1&&n.tagName==='BR');
+    });
+    if(!meaningful.length)parent.replaceWith(list);
+  });
+
+  // 목록 해제 시 브라우저가 editable 바로 아래에 텍스트+<br>를 남기는 경우를
+  // 다시 일반 문단으로 감싼다. 다른 블록/컴포넌트는 건드리지 않는다.
+  let node=editable.firstChild;
+  while(node){
+    const isLooseText=node.nodeType===3&&!!node.textContent.trim();
+    const isLooseBr=node.nodeType===1&&node.tagName==='BR';
+    if(isLooseText||isLooseBr){
+      const p=document.createElement('p');
+      editable.insertBefore(p,node);
+      let cur=node;
+      let afterGroup=null;
+      while(cur){
+        const after=cur.nextSibling;
+        if(cur.nodeType===3||cur.nodeType===1&&cur.tagName==='BR'){
+          p.appendChild(cur);
+          afterGroup=after;
+          if(cur.nodeType===1&&cur.tagName==='BR')break;
+          cur=after;
+          continue;
+        }
+        afterGroup=cur;
+        break;
+      }
+      if(!p.textContent.trim()&&!p.querySelector('br'))p.innerHTML='<br>';
+      node=afterGroup;
+      continue;
+    }
+    node=node.nextSibling;
+  }
+}
 function execLineList(cmd){
   restoreSelection();
   const sel=getSelection();
   if(!sel?.rangeCount)return;
-  const original=sel.getRangeAt(0);
   const anchorEl=(sel.anchorNode?.nodeType===1?sel.anchorNode:sel.anchorNode?.parentElement);
   const editable=anchorEl?.closest?.('.editable');
   if(!editable)return;
+
+  // insertUnorderedList / insertOrderedList 자체가 블록(줄) 단위 명령이다.
+  // 문자 선택 범위를 임의로 부모 노드 경계까지 확장하면 Chromium에서 명령이
+  // 무시되는 경우가 있으므로, 사용자의 실제 선택 범위를 그대로 복원해 실행한다.
   editable.focus({preventScroll:true});
-
-  const start=lineBlock(original.startContainer,editable);
-  const end=lineBlock(original.endContainer,editable)||start;
-  if(!start)return;
-
-  // Word처럼 목록 명령은 문자 선택 범위가 아니라 현재 줄(선택 시 선택된 줄들) 전체에 적용한다.
-  // 따라서 단어 몇 글자만 선택한 상태에서도 그 줄만 목록 항목이 된다.
-  const expanded=document.createRange();
-  try{
-    expanded.setStartBefore(start);
-    expanded.setEndAfter(end);
-  }catch{
-    expanded.selectNodeContents(start);
-  }
-  sel.removeAllRanges();
-  sel.addRange(expanded);
-  document.execCommand(cmd,false,null);
+  const ok=document.execCommand(cmd,false,null);
+  if(!ok)return;
+  normalizeListCommandDom(editable);
   editable.dispatchEvent(new Event('input',{bubbles:true}));
-
-  // 명령 뒤에는 현재 항목 끝에 커서를 두어 바로 입력을 이어갈 수 있게 한다.
-  const focusNode=lineBlock(sel.focusNode,editable)||lineBlock(start,editable)||start;
-  try{
-    const caret=document.createRange();
-    caret.selectNodeContents(focusNode);
-    caret.collapse(false);
-    sel.removeAllRanges();
-    sel.addRange(caret);
-  }catch{}
   rememberSelection();
 }
 function exec(cmd,value=null){
@@ -565,7 +588,160 @@ function makeDescriptionBox(data){const el=document.createElement('div');el.data
 function upgradeDuelsComponents(root){
   $$('[data-duels-component="character-card"]',root).forEach(el=>renderCharacterCardElement(el,componentPayload(el)));
   $$('[data-duels-component="description-box"]',root).forEach(el=>renderDescriptionBoxElement(el,componentPayload(el)));
+  $$('[data-duels-component="table"]',root).forEach(el=>renderTableElement(el,componentPayload(el)));
 }
+
+function tableInt(v,fallback,min,max){const n=Math.round(Number(v));return Number.isFinite(n)?Math.max(min,Math.min(max,n)):fallback}
+function tableColor(v,fallback='#2a4a6a'){return /^#[0-9a-f]{6}$/i.test(String(v||''))?String(v):fallback}
+function freshTableCell(){return{text:'',color:'#0d1520',rowSpan:1,colSpan:1}}
+function cloneTableData(data){return JSON.parse(JSON.stringify(data))}
+function normalizeTableData(raw={}){
+  const rows=tableInt(raw.rows,2,1,20),cols=tableInt(raw.cols,2,1,20);
+  const baseWidth=tableInt(raw.baseWidth??raw.width,400,120,4000);
+  let widths=Array.isArray(raw.colWidths)?raw.colWidths.slice(0,cols).map(x=>tableInt(x,Math.max(40,Math.round(baseWidth/cols)),40,2000)):[];
+  while(widths.length<cols)widths.push(Math.max(40,Math.round(baseWidth/cols)));
+  if(!raw.colWidths){const each=Math.floor(baseWidth/cols),rest=baseWidth-each*cols;widths=Array.from({length:cols},(_,i)=>Math.max(40,each+(i<rest?1:0)));}
+  const src=Array.isArray(raw.cells)?raw.cells:[];
+  const cells=Array.from({length:rows},(_,r)=>Array.from({length:cols},(_,c)=>{
+    const x=src?.[r]?.[c];
+    if(x===null)return null;
+    return{text:String(x?.text||''),color:tableColor(x?.color,'#0d1520'),rowSpan:tableInt(x?.rowSpan,1,1,rows-r),colSpan:tableInt(x?.colSpan,1,1,cols-c)};
+  }));
+  const out={rows,cols,baseWidth,borderColor:tableColor(raw.borderColor),colWidths:widths,cells};
+  rebuildTableCoverage(out);
+  return out;
+}
+function rebuildTableCoverage(data){
+  const rows=data.rows,cols=data.cols;
+  const origins=[];
+  for(let r=0;r<rows;r++)for(let c=0;c<cols;c++)if(data.cells?.[r]?.[c])origins.push([r,c,data.cells[r][c]]);
+  data.cells=Array.from({length:rows},()=>Array.from({length:cols},()=>undefined));
+  for(const [r,c,cell] of origins){
+    if(r>=rows||c>=cols||data.cells[r][c]!==undefined)continue;
+    cell.rowSpan=tableInt(cell.rowSpan,1,1,rows-r);cell.colSpan=tableInt(cell.colSpan,1,1,cols-c);
+    let rs=cell.rowSpan,cs=cell.colSpan;
+    outer:for(let rr=r;rr<r+rs;rr++)for(let cc=c;cc<c+cs;cc++)if(data.cells[rr][cc]!==undefined){rs=1;cs=1;break outer}
+    cell.rowSpan=rs;cell.colSpan=cs;data.cells[r][c]=cell;
+    for(let rr=r;rr<r+rs;rr++)for(let cc=c;cc<c+cs;cc++)if(rr!==r||cc!==c)data.cells[rr][cc]=null;
+  }
+  for(let r=0;r<rows;r++)for(let c=0;c<cols;c++)if(data.cells[r][c]===undefined)data.cells[r][c]=freshTableCell();
+  return data;
+}
+function tableCellMinWidth(data,c,span=1){return data.colWidths.slice(c,c+span).reduce((a,b)=>a+Number(b||0),0)}
+function renderTableElement(el,raw){
+  const data=normalizeTableData(raw);const selected=el.classList.contains('selected-duels-component');
+  el.className='duels-table-component'+(selected?' selected-duels-component':'');el.setAttribute('contenteditable','false');
+  el.style.setProperty('--duels-table-base-width',`${data.baseWidth}px`);el.style.setProperty('--duels-table-border',data.borderColor);setComponentPayload(el,data);
+  let html='<div class="duels-table-scroll"><table class="duels-table"><colgroup>'+data.colWidths.map(w=>`<col style="min-width:${w}px;width:${w}px">`).join('')+'</colgroup><tbody>';
+  for(let r=0;r<data.rows;r++){
+    html+='<tr>';
+    for(let c=0;c<data.cols;c++){
+      const cell=data.cells[r][c];if(cell===null)continue;
+      const rs=cell.rowSpan>1?` rowspan="${cell.rowSpan}"`:'';const cs=cell.colSpan>1?` colspan="${cell.colSpan}"`:'';
+      const mw=tableCellMinWidth(data,c,cell.colSpan);
+      html+=`<td${rs}${cs} style="background:${cell.color};min-width:${mw}px">${textLinesHtml(cell.text)||'<br>'}</td>`;
+    }
+    html+='</tr>';
+  }
+  html+='</tbody></table></div>';el.innerHTML=html;
+  requestAnimationFrame(()=>{const table=$('.duels-table',el);if(table)el.dataset.actualWidth=String(Math.ceil(table.getBoundingClientRect().width))});
+}
+function makeTableComponent(data){const el=document.createElement('div');el.dataset.duelsComponent='table';renderTableElement(el,data);return el}
+function tableRootAt(data,r,c){
+  if(data.cells[r]?.[c])return[r,c];
+  for(let rr=0;rr<=r;rr++)for(let cc=0;cc<=c;cc++){const x=data.cells[rr]?.[cc];if(x&&rr+x.rowSpan>r&&cc+x.colSpan>c)return[rr,cc]}
+  return null;
+}
+function tableSelectedRoots(){return [...document.querySelectorAll('#tableEditGrid [data-table-select]:checked')].map(x=>[Number(x.dataset.r),Number(x.dataset.c)])}
+function tableMergeSelection(data){
+  const roots=tableSelectedRoots();if(roots.length<2){alert('병합할 셀을 2개 이상 선택하세요.');return false}
+  const selected=new Set(roots.map(([r,c])=>`${r}:${c}`));let minR=99,minC=99,maxR=-1,maxC=-1;
+  for(const [r,c] of roots){const cell=data.cells[r]?.[c];if(!cell)continue;minR=Math.min(minR,r);minC=Math.min(minC,c);maxR=Math.max(maxR,r+cell.rowSpan-1);maxC=Math.max(maxC,c+cell.colSpan-1)}
+  if(maxR<0)return false;
+  for(let r=minR;r<=maxR;r++)for(let c=minC;c<=maxC;c++){const root=tableRootAt(data,r,c);if(!root||!selected.has(`${root[0]}:${root[1]}`)){alert('병합하려는 셀은 빈틈 없는 사각형 영역이어야 합니다.');return false}}
+  const cells=roots.map(([r,c])=>data.cells[r][c]).filter(Boolean);const first=data.cells[minR][minC];
+  if(!first){alert('병합 영역의 왼쪽 위 셀을 함께 선택하세요.');return false}
+  first.text=cells.map(x=>x.text.trim()).filter(Boolean).join('\n');first.rowSpan=maxR-minR+1;first.colSpan=maxC-minC+1;
+  for(const [r,c] of roots)if(r!==minR||c!==minC)data.cells[r][c]=undefined;
+  rebuildTableCoverage(data);return true;
+}
+function tableUnmergeSelection(data){
+  const roots=tableSelectedRoots();if(roots.length!==1){alert('병합 해제할 셀 하나를 선택하세요.');return false}
+  const [r,c]=roots[0],cell=data.cells[r]?.[c];if(!cell||cell.rowSpan===1&&cell.colSpan===1){alert('선택한 셀은 병합되어 있지 않습니다.');return false}
+  const rs=cell.rowSpan,cs=cell.colSpan;cell.rowSpan=1;cell.colSpan=1;
+  for(let rr=r;rr<r+rs;rr++)for(let cc=c;cc<c+cs;cc++)if(rr!==r||cc!==c)data.cells[rr][cc]=freshTableCell();
+  rebuildTableCoverage(data);return true;
+}
+function tableInsertRow(data,index){
+  index=Math.max(0,Math.min(data.rows,index));
+  for(let r=0;r<data.rows;r++)for(let c=0;c<data.cols;c++){const x=data.cells[r][c];if(x&&r<index&&r+x.rowSpan>index)x.rowSpan++}
+  data.cells.splice(index,0,Array.from({length:data.cols},freshTableCell));data.rows++;rebuildTableCoverage(data);
+}
+function tableRemoveRow(data,index){
+  if(data.rows<=1){alert('표에는 최소 1개의 행이 필요합니다.');return false}
+  index=Math.max(0,Math.min(data.rows-1,index));
+  const movers=[];
+  for(let r=0;r<data.rows;r++)for(let c=0;c<data.cols;c++){const x=data.cells[r][c];if(!x)continue;if(r===index&&x.rowSpan>1){const copy={...x,rowSpan:x.rowSpan-1};movers.push([index+1,c,copy])}else if(r<index&&r+x.rowSpan>index)x.rowSpan--}
+  data.cells.splice(index,1);data.rows--;for(const [oldR,c,x] of movers){const nr=Math.max(0,oldR-1);data.cells[nr][c]=x}rebuildTableCoverage(data);return true;
+}
+function tableInsertCol(data,index){
+  index=Math.max(0,Math.min(data.cols,index));
+  for(let r=0;r<data.rows;r++)for(let c=0;c<data.cols;c++){const x=data.cells[r][c];if(x&&c<index&&c+x.colSpan>index)x.colSpan++}
+  for(let r=0;r<data.rows;r++)data.cells[r].splice(index,0,freshTableCell());
+  const basis=Math.max(40,Math.round(data.baseWidth/Math.max(1,data.cols)));data.colWidths.splice(index,0,basis);data.cols++;data.baseWidth=data.colWidths.reduce((a,b)=>a+b,0);rebuildTableCoverage(data);
+}
+function tableRemoveCol(data,index){
+  if(data.cols<=1){alert('표에는 최소 1개의 열이 필요합니다.');return false}
+  index=Math.max(0,Math.min(data.cols-1,index));const movers=[];
+  for(let r=0;r<data.rows;r++)for(let c=0;c<data.cols;c++){const x=data.cells[r][c];if(!x)continue;if(c===index&&x.colSpan>1){movers.push([r,index+1,{...x,colSpan:x.colSpan-1}])}else if(c<index&&c+x.colSpan>index)x.colSpan--}
+  for(let r=0;r<data.rows;r++)data.cells[r].splice(index,1);data.colWidths.splice(index,1);data.cols--;for(const [r,oldC,x] of movers){const nc=Math.max(0,oldC-1);data.cells[r][nc]=x}data.baseWidth=data.colWidths.reduce((a,b)=>a+b,0);rebuildTableCoverage(data);return true;
+}
+function resizeTableGrid(data,nextRows,nextCols){
+  nextRows=tableInt(nextRows,data.rows,1,20);nextCols=tableInt(nextCols,data.cols,1,20);
+  while(data.rows<nextRows)tableInsertRow(data,data.rows);
+  while(data.rows>nextRows){if(!tableRemoveRow(data,data.rows-1))break}
+  while(data.cols<nextCols)tableInsertCol(data,data.cols);
+  while(data.cols>nextCols){if(!tableRemoveCol(data,data.cols-1))break}
+  rebuildTableCoverage(data);return data;
+}
+function applyTableBaseWidth(data,width){
+  width=tableInt(width,400,120,4000);const old=Math.max(1,data.colWidths.reduce((a,b)=>a+b,0));let next=data.colWidths.map(w=>Math.max(40,Math.round(w*width/old)));let sum=next.reduce((a,b)=>a+b,0);next[next.length-1]+=width-sum;if(next[next.length-1]<40)next[next.length-1]=40;data.colWidths=next;data.baseWidth=next.reduce((a,b)=>a+b,0);
+}
+function syncTableFormToData(data){
+  const base=$('#tableBaseWidth');if(base)applyTableBaseWidth(data,base.value);
+  const bc=$('#tableBorderColor');if(bc)data.borderColor=tableColor(bc.value);
+  $$('[data-table-text]').forEach(x=>{const r=Number(x.dataset.r),c=Number(x.dataset.c);if(data.cells[r]?.[c])data.cells[r][c].text=x.value});
+  $$('[data-table-color]').forEach(x=>{const r=Number(x.dataset.r),c=Number(x.dataset.c);if(data.cells[r]?.[c])data.cells[r][c].color=tableColor(x.value,'#0d1520')});
+  $$('[data-col-width]').forEach(x=>{const c=Number(x.dataset.c);if(c<data.cols)data.colWidths[c]=tableInt(x.value,data.colWidths[c],40,2000)});
+  data.baseWidth=data.colWidths.reduce((a,b)=>a+b,0);
+}
+function tableEditorHtml(data,existing){
+  let cells='';for(let r=0;r<data.rows;r++){for(let c=0;c<data.cols;c++){const x=data.cells[r][c];if(x===null)continue;cells+=`<div class="table-cell-editor" style="grid-column:span ${x.colSpan};grid-row:span ${x.rowSpan}"><div class="table-cell-head"><label><input type="checkbox" data-table-select data-r="${r}" data-c="${c}"> 셀 ${r+1}-${c+1}${x.rowSpan>1||x.colSpan>1?` · ${x.rowSpan}×${x.colSpan}`:''}</label><input type="color" data-table-color data-r="${r}" data-c="${c}" value="${tableColor(x.color,'#0d1520')}" title="셀 색상"></div><textarea data-table-text data-r="${r}" data-c="${c}" rows="2">${escapeHtml(x.text)}</textarea></div>`}}
+  const widths=data.colWidths.map((w,c)=>`<label class="table-col-width">열 ${c+1}<input type="number" min="40" max="2000" data-col-width data-c="${c}" value="${w}"></label>`).join('');
+  return `<h2>${existing?'표 수정':'표 삽입'}</h2><div class="component-form-grid"><div class="form-row"><label>기본 가로 너비</label><div class="inline-field"><select id="tableWidthPreset"><option value="400" ${data.baseWidth===400?'selected':''}>기본 · 400px</option><option value="custom" ${data.baseWidth!==400?'selected':''}>직접 입력</option></select><input id="tableBaseWidth" type="number" min="120" max="4000" value="${data.baseWidth}"></div></div><div class="form-row"><label>테두리 색상</label><input id="tableBorderColor" type="color" value="${data.borderColor}"></div><div class="form-row"><label>행 개수</label><input id="tableRows" type="number" min="1" max="20" value="${data.rows}"></div><div class="form-row"><label>열 개수</label><input id="tableCols" type="number" min="1" max="20" value="${data.cols}"></div></div>${existing?`<div class="table-size-status">기본 크기 <b id="tableBaseWidthLabel">${data.baseWidth}px</b> · 현재 실제 크기 <b id="tableActualWidth">${Math.max(data.baseWidth,Number(existing.dataset.actualWidth)||Math.ceil(existing.getBoundingClientRect().width)||data.baseWidth)}px</b> <button id="syncTableActual" type="button">실제 크기를 기본 크기로 동기화</button></div>`:''}<div class="table-structure-tools"><label>기준 행 <input id="tableRowIndex" type="number" min="1" max="${data.rows}" value="1"></label><button id="rowBefore" type="button">위에 행 추가</button><button id="rowAfter" type="button">아래에 행 추가</button><button id="rowRemove" type="button">행 제거</button><span class="tool-divider"></span><label>기준 열 <input id="tableColIndex" type="number" min="1" max="${data.cols}" value="1"></label><button id="colBefore" type="button">왼쪽 열 추가</button><button id="colAfter" type="button">오른쪽 열 추가</button><button id="colRemove" type="button">열 제거</button></div><div class="table-column-widths">${widths}</div><div class="table-merge-tools"><button id="mergeTableCells" type="button">선택 셀 병합</button><button id="unmergeTableCell" type="button">병합 해제</button><span class="muted">셀 왼쪽 위의 체크박스로 병합할 셀을 선택합니다.</span></div><div id="tableEditGrid" class="table-edit-grid" style="grid-template-columns:repeat(${data.cols},minmax(130px,1fr))">${cells}</div><div class="modal-actions"><button id="cancelComponent">취소</button>${existing?'<button id="deleteComponent" class="danger">삭제</button>':''}<button id="saveComponent" class="primary">${existing?'수정':'삽입'}</button></div>`;
+}
+function tableModal(existing=null){
+  if(!existing)captureComponentInsertionPoint();else rememberSelection();let data=normalizeTableData(existing?componentPayload(existing):{rows:2,cols:2,baseWidth:400,borderColor:'#2a4a6a'});
+  const redraw=()=>{openModal(tableEditorHtml(data,existing));bind();};
+  const bind=()=>{
+    $('#cancelComponent').onclick=closeModal;
+    $('#tableWidthPreset').onchange=e=>{if(e.target.value==='400'){$('#tableBaseWidth').value=400;applyTableBaseWidth(data,400);redraw()}};
+    $('#tableBaseWidth').onchange=e=>{applyTableBaseWidth(data,e.target.value);redraw()};
+    $('#tableBorderColor').oninput=e=>data.borderColor=tableColor(e.target.value);
+    $('#tableRows').onchange=e=>{syncTableFormToData(data);resizeTableGrid(data,e.target.value,data.cols);redraw()};
+    $('#tableCols').onchange=e=>{syncTableFormToData(data);resizeTableGrid(data,data.rows,e.target.value);redraw()};
+    const flush=()=>syncTableFormToData(data);
+    const rowIndex=()=>tableInt($('#tableRowIndex').value,1,1,data.rows)-1,colIndex=()=>tableInt($('#tableColIndex').value,1,1,data.cols)-1;
+    $('#rowBefore').onclick=()=>{flush();tableInsertRow(data,rowIndex());redraw()};$('#rowAfter').onclick=()=>{flush();tableInsertRow(data,rowIndex()+1);redraw()};$('#rowRemove').onclick=()=>{flush();if(tableRemoveRow(data,rowIndex()))redraw()};
+    $('#colBefore').onclick=()=>{flush();tableInsertCol(data,colIndex());redraw()};$('#colAfter').onclick=()=>{flush();tableInsertCol(data,colIndex()+1);redraw()};$('#colRemove').onclick=()=>{flush();if(tableRemoveCol(data,colIndex()))redraw()};
+    $('#mergeTableCells').onclick=()=>{flush();if(tableMergeSelection(data))redraw()};$('#unmergeTableCell').onclick=()=>{flush();if(tableUnmergeSelection(data))redraw()};
+    $$('[data-col-width]').forEach(x=>x.onchange=()=>{flush();redraw()});
+    if(existing){$('#syncTableActual').onclick=()=>{flush();const actual=Math.max(data.baseWidth,Math.ceil($('.duels-table',existing)?.getBoundingClientRect().width||existing.getBoundingClientRect().width||data.baseWidth));applyTableBaseWidth(data,actual);redraw()};$('#deleteComponent').onclick=()=>{if(confirm('이 표를 삭제할까요?')){const host=existing.closest('.editable');existing.remove();host?.dispatchEvent(new Event('input',{bubbles:true}));closeModal()}}}
+    $('#saveComponent').onclick=()=>{flush();data=normalizeTableData(data);if(existing){renderTableElement(existing,data);existing.closest('.editable')?.dispatchEvent(new Event('input',{bubbles:true}));closeModal()}else{const node=makeTableComponent(data);if(insertBlockComponent(node))closeModal()}};
+  };
+  redraw();
+}
+
 function validEditableRange(candidate){
   if(!candidate)return null;try{const r=candidate.cloneRange();const base=r.commonAncestorContainer.nodeType===1?r.commonAncestorContainer:r.commonAncestorContainer.parentElement;const editable=base?.closest?.('.editable');return editable&&document.contains(editable)?{range:r,editable}:null}catch{return null}
 }
@@ -613,9 +789,10 @@ function descriptionBoxModal(existing=null){
   if(existing)$('#deleteComponent').onclick=()=>{if(confirm('이 설명 상자를 삭제할까요?')){const host=existing.closest('.editable');existing.remove();host?.dispatchEvent(new Event('input',{bubbles:true}));closeModal()}};
   $('#saveComponent').onclick=()=>{const data={title:$('#dbTitle').value.trim(),color:$('#dbColor').value,body:$('#dbBody').value};if(existing){renderDescriptionBoxElement(existing,data);existing.closest('.editable')?.dispatchEvent(new Event('input',{bubbles:true}));closeModal()}else{const node=makeDescriptionBox(data);if(insertBlockComponent(node))closeModal()}};
 }
-function openComponentEditor(el){const type=el.dataset.duelsComponent;if(type==='character-card')characterCardModal(el);else if(type==='description-box')descriptionBoxModal(el)}
+function openComponentEditor(el){const type=el.dataset.duelsComponent;if(type==='character-card')characterCardModal(el);else if(type==='description-box')descriptionBoxModal(el);else if(type==='table')tableModal(el)}
 $('#characterCardBtn').onclick=()=>characterCardModal();
 $('#descriptionBoxBtn').onclick=()=>descriptionBoxModal();
+$('#tableBtn').onclick=()=>tableModal();
 function selectImage(img){ state.selectedImage=img; $$('.selected-image').forEach(x=>x.classList.remove('selected-image')); img.classList.add('selected-image'); $('#pictureTabBtn').classList.remove('hidden'); updateImageTools(); updateOverlay(); switchRibbon('picture'); }
 function updateImageTools(){const img=state.selectedImage;if(!img)return;const r=img.getBoundingClientRect();$('#imageWidth').value=Math.round(r.width);$('#imageHeight').value=Math.round(r.height);$('#imageRotation').value=getRotation(img);$('#pictureBorderWidth').value=parseFloat(img.style.borderWidth)||0;const bc=rgbToHex(img.style.borderColor);if(bc)$('#pictureBorderColor').value=bc;$('#imageWrapSelect').value=getImageWrap(img)}
 function rgbToHex(v){if(!v)return null;if(/^#/.test(v))return v;const m=v.match(/\d+/g);if(!m||m.length<3)return null;return '#'+m.slice(0,3).map(x=>(+x).toString(16).padStart(2,'0')).join('')}
