@@ -7,16 +7,16 @@
   "categorySlug": "캐릭터",
   "content": {
     "type": "wiki-sections-v3",
-    "introHtml": "<p></p>",
+    "introHtml": "<img alt=\"\" src=\"https://raw.githubusercontent.com/LyangNem/Duels/main/character/runef.png\" class=\"\" data-aspect-ratio=\"1\" style=\"display: block; max-width: 100%; width: auto; height: auto; transform: rotate(0deg);\"><p></p>",
     "sections": [
       {
         "id": "sec_3d7b9ca754ff4428b8edd3b1ff4983c1",
         "title": "개요",
-        "contentHtml": "<p></p>",
+        "contentHtml": "루네프임미다<p></p>",
         "children": []
       }
     ]
   },
   "createdAt": "2026-09-23T02:44:14+0900",
-  "updatedAt": "2026-09-23T02:44:14+0900"
+  "updatedAt": "2026-09-23T02:45:16+0900"
 }
