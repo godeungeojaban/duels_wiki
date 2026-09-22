@@ -48,10 +48,10 @@ function normalizeContent(content){ if(content?.type==='wiki-sections-v3') retur
   return {type:'wiki-sections-v3',introHtml:oldNodeToHtml(content||{type:'doc'}),sections:[{id:uid('sec'),title:'개요',contentHtml:'<p></p>',children:[]}]}; }
 function mediaSrc(src){ if(!src)return''; if(src.startsWith('/media/'))return'/__media__/'+encodeURIComponent(src.slice(1)); return src; }
 function viewHtml(html){ const t=document.createElement('template'); t.innerHTML=html||''; $$('img',t.content).forEach(img=>{const src=img.getAttribute('src')||'';img.setAttribute('src',mediaSrc(src));}); $$('a',t.content).forEach(a=>{const h=a.getAttribute('href')||''; if(h.startsWith('wiki:/'))a.dataset.wikiLink=h;}); upgradeDuelsComponents(t.content); return t.innerHTML; }
-function storageHtml(el){ const clone=el.cloneNode(true); $$('img',clone).forEach(img=>{let src=img.getAttribute('src')||''; if(src.startsWith('/__media__/')){src='/'+decodeURIComponent(src.slice('/__media__/'.length));img.setAttribute('src',src);} img.classList.remove('selected-image');}); $$('[data-editor-only]',clone).forEach(x=>x.remove()); return clone.innerHTML; }
+function storageHtml(el){ const clone=el.cloneNode(true); $$('img',clone).forEach(img=>{let src=img.getAttribute('src')||''; if(src.startsWith('/__media__/')){src='/'+decodeURIComponent(src.slice('/__media__/'.length));img.setAttribute('src',src);} img.classList.remove('selected-image');}); $$('.selected-duels-component',clone).forEach(x=>x.classList.remove('selected-duels-component')); $$('[data-editor-only]',clone).forEach(x=>x.remove()); return clone.innerHTML; }
 
 function sectionAnchor(id){return 'section-'+String(id).replace(/[^a-zA-Z0-9_-]/g,'-')}
-function renderToc(sections,prefix='',depth=0){return sections.map((s,i)=>{const n=prefix?`${prefix}.${i+1}`:`${i+1}`;return `<div class="toc-line" style="padding-left:${depth*16}px"><a href="#" data-section-anchor="${sectionAnchor(s.id)}">${n}. ${escapeHtml(s.title||'제목 없음')}</a></div>${renderToc(s.children||[],n,depth+1)}`}).join('')}
+function renderToc(sections,prefix='',depth=0){return sections.map((s,i)=>{const n=prefix?`${prefix}.${i+1}`:`${i+1}`;return `<div class="toc-line" style="padding-left:${depth*16}px"><a class="toc-number" href="#" data-section-anchor="${sectionAnchor(s.id)}">${n}.</a> <span class="toc-text">${escapeHtml(s.title||'제목 없음')}</span></div>${renderToc(s.children||[],n,depth+1)}`}).join('')}
 function renderSections(sections,selfHash,prefix='',depth=1){return sections.map((s,i)=>{const n=prefix?`${prefix}.${i+1}`:`${i+1}`;return `<section class="section depth-${Math.min(depth,3)}"><h2 id="${sectionAnchor(s.id)}" class="section-title"><a class="number" href="${selfHash}">${n}.</a>${escapeHtml(s.title||'제목 없음')}</h2><div class="section-body wiki-body">${viewHtml(s.contentHtml)}</div>${renderSections(s.children||[],selfHash,n,depth+1)}</section>`}).join('')}
 function bindWikiLinks(root){ $$('a[data-wiki-link]',root).forEach(a=>a.addEventListener('click',e=>{e.preventDefault(); const x=a.dataset.wikiLink.slice(6); if(!x||x==='/'){location.hash='#/';return} const p=x.replace(/^\//,'').split('/').map(decodeURIComponent); navigate(p[0],p[1]||null);})); $$('[data-section-anchor]',root).forEach(a=>a.addEventListener('click',e=>{e.preventDefault();document.getElementById(a.dataset.sectionAnchor)?.scrollIntoView({behavior:'smooth',block:'start'});})); }
 
@@ -91,12 +91,24 @@ function bindEditable(el){
   el.addEventListener('mouseup',rememberSelection);
   el.addEventListener('keyup',rememberSelection);
   el.addEventListener('click',e=>{
+    const component=e.target.closest('[data-duels-component]');
+    if(component&&el.contains(component)){
+      e.preventDefault();
+      clearObjectSelection(true);
+      $$('.selected-duels-component').forEach(x=>x.classList.remove('selected-duels-component'));
+      component.classList.add('selected-duels-component');
+      if(component.dataset.duelsComponent==='character-card')openComponentEditor(component);
+      return;
+    }
     if(e.target.tagName==='IMG'){ selectImage(e.target); return; }
+    $$('.selected-duels-component').forEach(x=>x.classList.remove('selected-duels-component'));
     if(!e.target.closest('img')) clearObjectSelection(true);
   });
   el.addEventListener('dblclick',e=>{
     const component=e.target.closest('[data-duels-component]');
-    if(component&&el.contains(component)){e.preventDefault();openComponentEditor(component);}
+    if(component&&el.contains(component)&&component.dataset.duelsComponent!=='character-card'){
+      e.preventDefault();openComponentEditor(component);
+    }
   });
 }
 function rememberSelection(){ const sel=getSelection(); if(sel.rangeCount&&state.editing){ const r=sel.getRangeAt(0); if($('#editPage')?.contains(r.commonAncestorContainer))state.savedRange=r.cloneRange(); } }
@@ -177,20 +189,40 @@ function characterCardTextHtml(value){
   const lines=String(value||'').split(/\r?\n/);
   return lines.map(line=>`<div>${line.trim()?escapeHtml(line):'<br>'}</div>`).join('');
 }
+function cardDimension(v,fallback,min,max){const n=Number(v);return Number.isFinite(n)?Math.max(min,Math.min(max,Math.round(n))):fallback}
+function cardFade(v){return ['none','soft','normal','strong'].includes(String(v||''))?String(v):'normal'}
+const CARD_RATIO_PRESETS=Object.freeze({
+  'duels':{label:'듀얼즈 카드 비율',ratio:138/222},
+  'portrait-3-4':{label:'세로 3:4',ratio:3/4},
+  'square':{label:'1:1',ratio:1},
+  'landscape-3-2':{label:'누운 카드 3:2',ratio:3/2},
+  'landscape-16-9':{label:'누운 카드 16:9',ratio:16/9}
+});
+function applyCardRatioPreset(key){
+  const height=cardDimension($('#ccHeight')?.value,222,100,1200);
+  if(key==='profile'){$('#ccWidth').value=200;$('#ccHeight').value=280;return}
+  const preset=CARD_RATIO_PRESETS[key];if(!preset)return;
+  $('#ccWidth').value=cardDimension(Math.round(height*preset.ratio),138,80,1200);
+}
 function renderCharacterCardElement(el,data){
   const color=componentColor(data.color),image=String(data.image||'').trim(),text=legacyCharacterCardText(data);
-  el.className='duels-character-card';
+  const width=cardDimension(data.width,138,80,1200),height=cardDimension(data.height,222,100,1200),fade=cardFade(data.fade);
+  const selected=el.classList.contains('selected-duels-component');
+  el.className='duels-character-card'+(selected?' selected-duels-component':'');
   el.setAttribute('contenteditable','false');
   el.removeAttribute('tabindex');
+  el.dataset.fade=fade;
   el.style.setProperty('--duels-card-color',color);
-  setComponentPayload(el,{color,image,text});
+  el.style.setProperty('--duels-card-width',`${width}px`);
+  el.style.setProperty('--duels-card-height',`${height}px`);
+  setComponentPayload(el,{color,image,text,width,height,fade});
   el.innerHTML=`${image?`<div class="duels-character-card-image" style="background-image:url(&quot;${escapeHtml(mediaSrc(image))}&quot;)"></div>`:'<div class="duels-character-card-image empty"></div>'}<div class="duels-character-card-shade"></div><div class="duels-character-card-copy">${characterCardTextHtml(text)}</div>`;
 }
 function makeCharacterCard(data){const el=document.createElement('div');el.dataset.duelsComponent='character-card';renderCharacterCardElement(el,data);return el}
 function renderDescriptionBoxElement(el,data){
-  const color=componentColor(data.color),title=String(data.title||'설명'),body=String(data.body||'');
+  const color=componentColor(data.color),title=String(data.title??'').trim(),body=String(data.body||'');
   el.className='duels-description-box';el.setAttribute('contenteditable','false');el.style.setProperty('--duels-box-color',color);setComponentPayload(el,{title,color,body});
-  el.innerHTML=`<div class="duels-description-box-title">${escapeHtml(title)}</div><div class="duels-description-box-body">${textLinesHtml(body)}</div>`;
+  el.innerHTML=`${title?`<div class="duels-description-box-title">${escapeHtml(title)}</div>`:''}<div class="duels-description-box-body">${textLinesHtml(body)}</div>`;
 }
 function makeDescriptionBox(data){const el=document.createElement('div');el.dataset.duelsComponent='description-box';renderDescriptionBoxElement(el,data);return el}
 function upgradeDuelsComponents(root){
@@ -204,26 +236,26 @@ function insertBlockComponent(node){
   if(!range||!editable){showStatus('구성요소를 삽입할 편집 위치를 먼저 선택하세요.',true);return false}
   range.deleteContents();
   const block=base?.closest?.('p');
-  if(block&&editable.contains(block)){block.insertAdjacentElement('afterend',node)}else range.insertNode(node);
-  const spacer=document.createElement('p');spacer.innerHTML='<br>';
-  node.insertAdjacentElement('afterend',spacer);
-  const next=document.createRange();next.selectNodeContents(spacer);next.collapse(true);sel.removeAllRanges();sel.addRange(next);state.savedRange=next.cloneRange();
+  if(block&&editable.contains(block))block.insertAdjacentElement('afterend',node);else range.insertNode(node);
+  const next=document.createRange();next.setStartAfter(node);next.collapse(true);sel.removeAllRanges();sel.addRange(next);state.savedRange=next.cloneRange();
   editable.dispatchEvent(new Event('input',{bubbles:true}));return true;
 }
 function characterCardModal(existing=null){
   rememberSelection();const d=existing?componentPayload(existing):{};
-  const text=legacyCharacterCardText(d);
-  openModal(`<h2>${existing?'캐릭터 카드 수정':'캐릭터 카드 삽입'}</h2><div class="form-row"><label>이미지 PNG/JPG URL 또는 /media/... 경로</label><input id="ccImage" value="${escapeHtml(d.image||'')}"></div><div class="form-row"><label>카드 글씨</label><textarea id="ccText" rows="7" placeholder="원하는 글씨를 자유롭게 입력하세요.">${escapeHtml(text)}</textarea></div><div class="form-row"><label>테두리 강조색</label><input id="ccColor" type="color" value="${componentColor(d.color)}"></div><p class="muted">이미지는 듀얼즈 캐릭터 카드처럼 카드 배경을 채우고 아래로 어둡게 페이드됩니다. 글씨의 용도나 형식은 제한하지 않습니다.</p><div class="modal-actions"><button id="cancelComponent">취소</button>${existing?'<button id="deleteComponent" class="danger">삭제</button>':''}<button id="saveComponent" class="primary">${existing?'수정':'삽입'}</button></div>`);
+  const text=legacyCharacterCardText(d),width=cardDimension(d.width,138,80,1200),height=cardDimension(d.height,222,100,1200),fade=cardFade(d.fade);
+  openModal(`<h2>${existing?'캐릭터 카드 수정':'캐릭터 카드 삽입'}</h2><div class="form-row"><label>이미지 PNG/JPG URL 또는 /media/... 경로</label><input id="ccImage" value="${escapeHtml(d.image||'')}"></div><div class="form-row"><label>카드 글씨</label><textarea id="ccText" rows="7" placeholder="원하는 글씨를 자유롭게 입력하세요.">${escapeHtml(text)}</textarea></div><div class="form-row"><label>크기 / 비율 프리셋</label><select id="ccPreset"><option value="custom">직접 입력</option><option value="profile">제목 아래 프로필 · 200×280</option><option value="duels">듀얼즈 카드 비율 · 138:222</option><option value="portrait-3-4">세로 3:4</option><option value="square">1:1</option><option value="landscape-3-2">누운 카드 3:2</option><option value="landscape-16-9">누운 카드 16:9</option></select><div class="muted" style="margin-top:5px">비율 프리셋은 현재 높이를 기준으로 너비를 계산합니다. ‘제목 아래 프로필’만 권장 크기 200×280을 바로 적용합니다.</div></div><div class="component-form-grid"><div class="form-row"><label>너비</label><input id="ccWidth" type="number" min="80" max="1200" value="${width}"></div><div class="form-row"><label>높이</label><input id="ccHeight" type="number" min="100" max="1200" value="${height}"></div><div class="form-row"><label>이미지 페이드</label><select id="ccFade"><option value="none" ${fade==='none'?'selected':''}>없음</option><option value="soft" ${fade==='soft'?'selected':''}>약하게</option><option value="normal" ${fade==='normal'?'selected':''}>기본</option><option value="strong" ${fade==='strong'?'selected':''}>강하게</option></select></div><div class="form-row"><label>테두리 강조색</label><input id="ccColor" type="color" value="${componentColor(d.color)}"></div></div><p class="muted">이미지는 카드 전체를 cover 방식으로 채우며 카드 중심과 이미지 중심이 일치합니다. 비율이 맞지 않는 부분은 자동으로 잘립니다.</p><div class="modal-actions"><button id="cancelComponent">취소</button>${existing?'<button id="deleteComponent" class="danger">삭제</button>':''}<button id="saveComponent" class="primary">${existing?'수정':'삽입'}</button></div>`);
+  $('#ccPreset').onchange=e=>applyCardRatioPreset(e.target.value);
   $('#cancelComponent').onclick=closeModal;
   if(existing)$('#deleteComponent').onclick=()=>{if(confirm('이 캐릭터 카드 블록을 삭제할까요?')){const host=existing.closest('.editable');existing.remove();host?.dispatchEvent(new Event('input',{bubbles:true}));closeModal()}};
-  $('#saveComponent').onclick=()=>{const data={image:normalizeImageUrl($('#ccImage').value.trim()),text:$('#ccText').value,color:$('#ccColor').value};if(existing){renderCharacterCardElement(existing,data);existing.closest('.editable')?.dispatchEvent(new Event('input',{bubbles:true}));closeModal()}else{const node=makeCharacterCard(data);if(insertBlockComponent(node))closeModal()}};
+  $('#saveComponent').onclick=()=>{const data={image:normalizeImageUrl($('#ccImage').value.trim()),text:$('#ccText').value,color:$('#ccColor').value,width:cardDimension($('#ccWidth').value,138,80,1200),height:cardDimension($('#ccHeight').value,222,100,1200),fade:cardFade($('#ccFade').value)};if(existing){renderCharacterCardElement(existing,data);existing.closest('.editable')?.dispatchEvent(new Event('input',{bubbles:true}));closeModal()}else{const node=makeCharacterCard(data);if(insertBlockComponent(node))closeModal()}};
 }
+
 function descriptionBoxModal(existing=null){
   rememberSelection();const d=existing?componentPayload(existing):{};
-  openModal(`<h2>${existing?'설명 상자 수정':'설명 상자 삽입'}</h2><div class="form-row"><label>제목</label><input id="dbTitle" value="${escapeHtml(d.title||'설명')}"></div><div class="form-row"><label>강조색</label><input id="dbColor" type="color" value="${componentColor(d.color)}"></div><div class="form-row"><label>내용</label><textarea id="dbBody" rows="8">${escapeHtml(d.body||'')}</textarea></div><p class="muted">듀얼즈의 호버 설명 상자 색감과 정보 밀도를 기준으로 한 고정형 설명 블록입니다.</p><div class="modal-actions"><button id="cancelComponent">취소</button>${existing?'<button id="deleteComponent" class="danger">삭제</button>':''}<button id="saveComponent" class="primary">${existing?'수정':'삽입'}</button></div>`);
+  openModal(`<h2>${existing?'설명 상자 수정':'설명 상자 삽입'}</h2><div class="form-row"><label>제목 <span class="muted">(선택)</span></label><input id="dbTitle" value="${escapeHtml(d.title??'')}" placeholder="비워두면 제목 칸을 만들지 않습니다."></div><div class="form-row"><label>강조색</label><input id="dbColor" type="color" value="${componentColor(d.color)}"></div><div class="form-row"><label>내용</label><textarea id="dbBody" rows="8">${escapeHtml(d.body||'')}</textarea></div><p class="muted">제목이 비어 있으면 본문 영역만 삽입됩니다.</p><div class="modal-actions"><button id="cancelComponent">취소</button>${existing?'<button id="deleteComponent" class="danger">삭제</button>':''}<button id="saveComponent" class="primary">${existing?'수정':'삽입'}</button></div>`);
   $('#cancelComponent').onclick=closeModal;
   if(existing)$('#deleteComponent').onclick=()=>{if(confirm('이 설명 상자를 삭제할까요?')){const host=existing.closest('.editable');existing.remove();host?.dispatchEvent(new Event('input',{bubbles:true}));closeModal()}};
-  $('#saveComponent').onclick=()=>{const data={title:$('#dbTitle').value.trim()||'설명',color:$('#dbColor').value,body:$('#dbBody').value};if(existing){renderDescriptionBoxElement(existing,data);existing.closest('.editable')?.dispatchEvent(new Event('input',{bubbles:true}));closeModal()}else{const node=makeDescriptionBox(data);if(insertBlockComponent(node))closeModal()}};
+  $('#saveComponent').onclick=()=>{const data={title:$('#dbTitle').value.trim(),color:$('#dbColor').value,body:$('#dbBody').value};if(existing){renderDescriptionBoxElement(existing,data);existing.closest('.editable')?.dispatchEvent(new Event('input',{bubbles:true}));closeModal()}else{const node=makeDescriptionBox(data);if(insertBlockComponent(node))closeModal()}};
 }
 function openComponentEditor(el){const type=el.dataset.duelsComponent;if(type==='character-card')characterCardModal(el);else if(type==='description-box')descriptionBoxModal(el)}
 $('#characterCardBtn').onclick=()=>characterCardModal();
