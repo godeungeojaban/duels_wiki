@@ -1,0 +1,18 @@
+{
+  "id": "root",
+  "kind": "root",
+  "title": "Duels Wiki",
+  "slug": "_root",
+  "content": {
+    "type": "wiki-sections-v3",
+    "introHtml": "<p></p>",
+    "sections": [
+      {
+        "id": "root-overview",
+        "title": "개요",
+        "contentHtml": "<p></p>",
+        "children": []
+      }
+    ]
+  }
+}
