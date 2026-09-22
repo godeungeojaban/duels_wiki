@@ -14,9 +14,15 @@
         "title": "개요",
         "contentHtml": "<p></p>",
         "children": []
+      },
+      {
+        "id": "sec_69c9660e9d2944c0ac600d4083544d73",
+        "title": "상세",
+        "contentHtml": "<p></p>",
+        "children": []
       }
     ]
   },
   "createdAt": "2026-09-22T15:28:32+0900",
-  "updatedAt": "2026-09-22T15:28:32+0900"
+  "updatedAt": "2026-09-22T15:30:08+0900"
 }
