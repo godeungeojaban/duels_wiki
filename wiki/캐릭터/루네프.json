@@ -7,16 +7,92 @@
   "categorySlug": "캐릭터",
   "content": {
     "type": "wiki-sections-v3",
-    "introHtml": "<p></p>",
+    "introHtml": "<div data-duels-component=\"character-card\" class=\"duels-character-card\" contenteditable=\"false\" data-fade=\"none\" data-align=\"left\" data-duels-data=\"%7B%22color%22%3A%22%234c10c4%22%2C%22image%22%3A%22https%3A%2F%2Fraw.githubusercontent.com%2FLyangNem%2FDuels%2Fmain%2Fcharacter%2Frunef.png%22%2C%22text%22%3A%22%22%2C%22width%22%3A400%2C%22height%22%3A400%2C%22fade%22%3A%22none%22%2C%22align%22%3A%22left%22%7D\" style=\"--duels-card-color: #4c10c4; --duels-card-width: 400px; --duels-card-height: 400px;\"><div class=\"duels-character-card-image\" style=\"background-image:url(&quot;https://raw.githubusercontent.com/LyangNem/Duels/main/character/runef.png&quot;)\"></div><div class=\"duels-character-card-shade\"></div><div class=\"duels-character-card-copy\"><div><br></div></div></div><div data-duels-component=\"description-box\" class=\"duels-description-box\" contenteditable=\"false\" data-duels-data=\"%7B%22title%22%3A%22%EB%A3%A8%EB%84%A4%ED%94%84%22%2C%22color%22%3A%22%234c10c4%22%2C%22body%22%3A%224%EC%9B%90%EC%86%8C%EB%A5%BC%20%EB%8B%A4%EB%A3%A8%EB%8A%94%20%EB%A7%88%EB%B2%95%EC%82%AC%20%EB%A7%88%EC%9D%84%EC%9D%98%20%EC%86%8C%EB%85%80.%22%7D\" style=\"--duels-box-color: #4c10c4;\"><div class=\"duels-description-box-title\">루네프</div><div class=\"duels-description-box-body\">4원소를 다루는 마법사 마을의 소녀.</div></div><p></p>",
     "sections": [
       {
         "id": "sec_8b5940be29254fa996aa40087aedcc50",
         "title": "개요",
-        "contentHtml": "<p></p>",
+        "contentHtml": "숨겨진 마법사 스쿼드 소속 지속전투형 중거리 저격수 캐릭터.<p></p>",
         "children": []
+      },
+      {
+        "id": "sec_0959748009854929bb65cd405648dda0",
+        "title": "배경",
+        "contentHtml": "숨겨진 마법사 마을에 살고 있는 소녀로, 얼음 마법에만 미숙한 것이 특징이다.<p></p>",
+        "children": []
+      },
+      {
+        "id": "sec_50058a84339b45a1aaba380f49744624",
+        "title": "능력치",
+        "contentHtml": "이건 표 만들어야 할 듯?<p></p>",
+        "children": []
+      },
+      {
+        "id": "sec_80435a69eeae4140ba75b8725b1ae541",
+        "title": "스킬셋",
+        "contentHtml": "<p></p>",
+        "children": [
+          {
+            "id": "sec_826ab48519254957825c7714bffe1db1",
+            "title": "[LMB] - 마법탄",
+            "contentHtml": "마법 에너지를 발사한다. 일정 시간 내에 재사용할 수 있다.",
+            "children": [
+              {
+                "id": "sec_643c16ecf19a4a04835003db0f0c8785",
+                "title": "[LMB/LMB] - 연쇄 마법탄",
+                "contentHtml": "더 강한 마법 에너지를 발사한다.<div><br></div><div>루네프의 높은 평타 대미지의 기반이 되는 메커니즘으로, 얼음 마법과 조합하면 확정적으로 높은 피해를 줄 수 있다.</div>",
+                "children": []
+              }
+            ]
+          },
+          {
+            "id": "sec_310869adbc5842ddb4a574e66ce61d54",
+            "title": "[RMB] - 화염 마법",
+            "contentHtml": "0.4초 선딜레이 후 화염구를 발사해 폭발 피해를 주고 1초 동안 화염 효과를 부여한다.<p></p><div><br></div><div>루네프의 폭딜의 원천으로, 원거리 교전의 대부분을 담당한다.</div>",
+            "children": [
+              {
+                "id": "sec_ce89a4a3d9b94e0ba7aeb41f3aa409f3",
+                "title": "[RMB/LMB] - 얼음 마법",
+                "contentHtml": "선딜레이 시간 내에 좌클릭 시 부채꼴 범위에 피해를 주고 1초 동안 빙결시킨다.<p></p><div><br></div><div>루네프의 유일한 하드CC기로, 근접 대처 및 이니시에이팅을 담당한다.</div>",
+                "children": []
+              },
+              {
+                "id": "sec_a58c90a1c69b47838d9b0c7cc15cd625",
+                "title": "[RMB/RMB] - 번개 마법",
+                "contentHtml": "선딜레이 시간 내에 우클릭 시 지정한 위치에 낙뢰를 떨어뜨려 피해를 주고 1초 동안 감전시킨다.<p></p><div><br></div><div>벽을 무시한다는 특성 덕분에 근접 캐릭터들이 벽을 끼고 버티는 걸 방해할 수 있지만 그 대가로 매우 낮은 피해량을 지니고 있다.</div>",
+                "children": []
+              }
+            ]
+          },
+          {
+            "id": "sec_75244e04833443338b4e410cb788f687",
+            "title": "[L-Shift] - 바람 마법",
+            "contentHtml": "벽을 관통하는 토네이도를 생성해 맞은 적을 사거리 끝까지 밀어낸다.<p></p><div><br></div><div>토네이도의 폭이 굉장히 크기 때문에 판정은 후하지만 이 스킬의 최대 단점은 저열한 탄속으로, 얼음 마법과 연계하지 않으면 사실상 적중이 거의 불가능한 스킬이다.</div><div>하지만 엄연한 반격기이기에 일단 적중만 한다면 밀려나는 내내 무력화가 지속되어 굉장히 강력한 CC 스킬로 거듭난다.</div>",
+            "children": []
+          }
+        ]
+      },
+      {
+        "id": "sec_3f940d5aed654ec1ae966eaf9161ca40",
+        "title": "평가",
+        "contentHtml": "다재다능, 원거리 교전에 특화된 작은 육각형 캐릭터<p></p>",
+        "children": []
+      },
+      {
+        "id": "sec_233c800d17914a209ec70fe8244035a1",
+        "title": "상성",
+        "contentHtml": "<p></p>",
+        "children": [
+          {
+            "id": "sec_0e8431919c27447db94031f5eec9dda4",
+            "title": "극단적인 상성",
+            "contentHtml": "<p></p>",
+            "children": []
+          }
+        ]
       }
     ]
   },
   "createdAt": "2026-09-23T05:00:12+0900",
-  "updatedAt": "2026-09-23T05:00:12+0900"
+  "updatedAt": "2026-09-23T05:23:14+0900"
 }
