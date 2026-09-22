@@ -10,8 +10,8 @@
 <div id="app">
   <header class="appbar">
     <button id="sidebarToggle" class="icon-btn mobile-only" aria-label="문서 목록">☰</button>
-    <div class="brand-stack"><a class="brand" href="#/">DUELS WIKI</a><span class="brand-sub">DATA ARCHIVE / EDITOR</span></div>
-    <span class="version">Editor 3.17</span>
+    <a class="brand" href="#/">Duels Wiki</a>
+    <span class="version">Editor 3.19</span>
     <div class="spacer"></div>
     <button id="settingsBtn" class="ghost-btn">GitHub 설정</button>
   </header>
@@ -84,6 +84,8 @@
             <button id="imageUrlBtn" class="big-tool"><span class="big-icon">🖼</span><span>그림 링크</span></button>
             <button id="imageUploadBtn" class="big-tool"><span class="big-icon">↑</span><span>그림 업로드</span></button>
             <input id="imageFile" type="file" accept="image/png,image/jpeg" hidden>
+            <button id="characterCardBtn" class="big-tool"><span class="big-icon">◇</span><span>캐릭터 카드</span></button>
+            <button id="descriptionBoxBtn" class="big-tool"><span class="big-icon">▤</span><span>설명 상자</span></button>
             <button id="insertLinkBtn" class="big-tool"><span class="big-icon">🔗</span><span>내부 링크</span></button>
           </div>
           <span class="ribbon-group-title">삽입</span>
@@ -132,14 +134,12 @@
 
   <div class="workspace">
     <aside id="sidebar" class="sidebar">
-      <div class="side-label"><span>ARCHIVE</span><small>DOCUMENT INDEX</small></div>
       <div class="side-actions">
         <button id="newCategoryBtn">카테고리 생성</button>
         <button id="newDocumentBtn">문서 생성</button>
       </div>
       <div id="tree" class="tree"><div class="loading">불러오는 중…</div></div>
     </aside>
-    <div id="sidebarScrim" class="sidebar-scrim"></div>
 
     <main class="main">
       <div id="status" class="status hidden"></div>

@@ -31,14 +31,8 @@ function sortedCategories(categories){
 }
 async function refreshIndex(){ state.index=await api('/api/index'); if(state.index)state.index.categories=sortedCategories(state.index.categories); renderTree(); }
 function renderTree(){ const tree=$('#tree'); if(!state.index){tree.innerHTML='<div class="loading">불러오는 중…</div>';return}
-  const route=parseRoute();
-  let html=`<button class="tree-cat-title tree-root ${route?'':'active'}" data-root><span>DUELS WIKI</span><small>ROOT</small></button>`;
-  for(const c of sortedCategories(state.index.categories)){
-    const catActive=route?.category===c.slug&&!route?.doc;
-    html+=`<div class="tree-cat"><button class="tree-cat-title ${catActive?'active':''}" data-cat="${escapeHtml(c.slug)}"><span>${escapeHtml(c.name)}</span><small>${c.id==='uncategorized'?'SYSTEM':'CATEGORY'}</small></button>`;
-    for(const d of c.documents||[]){const active=route?.category===c.slug&&route?.doc===d.slug;html+=`<button class="tree-doc ${active?'active':''}" data-cat="${escapeHtml(c.slug)}" data-doc="${escapeHtml(d.slug)}"><span>${escapeHtml(d.title)}</span></button>`;}
-    html+='</div>';
-  }
+  let html='<button class="tree-cat-title" data-root>Duels Wiki</button>';
+  for(const c of sortedCategories(state.index.categories)){ html+=`<div class="tree-cat"><button class="tree-cat-title" data-cat="${escapeHtml(c.slug)}">${escapeHtml(c.name)}</button>`; for(const d of c.documents||[]) html+=`<button class="tree-doc" data-cat="${escapeHtml(c.slug)}" data-doc="${escapeHtml(d.slug)}">${escapeHtml(d.title)}</button>`; html+='</div>'; }
   tree.innerHTML=html;
   $('[data-root]',tree)?.addEventListener('click',()=>{location.hash='#/';closeMobileSidebar()});
   $$('[data-cat]',tree).forEach(b=>b.addEventListener('click',()=>{navigate(b.dataset.cat,b.dataset.doc||null);closeMobileSidebar()}));
@@ -99,6 +93,10 @@ function bindEditable(el){
   el.addEventListener('click',e=>{
     if(e.target.tagName==='IMG'){ selectImage(e.target); return; }
     if(!e.target.closest('img')) clearObjectSelection(true);
+  });
+  el.addEventListener('dblclick',e=>{
+    const component=e.target.closest('[data-duels-component]');
+    if(component&&el.contains(component)){e.preventDefault();openComponentEditor(component);}
   });
 }
 function rememberSelection(){ const sel=getSelection(); if(sel.rangeCount&&state.editing){ const r=sel.getRangeAt(0); if($('#editPage')?.contains(r.commonAncestorContainer))state.savedRange=r.cloneRange(); } }
@@ -162,6 +160,56 @@ function insertImage(src){
   else {showStatus('그림을 삽입할 편집 위치를 먼저 선택하세요.',true);return}
   img.src=src;initializeInsertedImage(img);selectImage(img);rememberSelection();
 }
+
+
+function textLinesHtml(value){return escapeHtml(String(value||'')).replace(/\r?\n/g,'<br>')}
+function componentPayload(el){
+  try{return JSON.parse(decodeURIComponent(el.dataset.duelsData||''))}catch{return{}}
+}
+function setComponentPayload(el,data){el.dataset.duelsData=encodeURIComponent(JSON.stringify(data))}
+function componentColor(v){return /^#[0-9a-f]{6}$/i.test(String(v||''))?v:'#44aaff'}
+function renderCharacterCardElement(el,data){
+  const color=componentColor(data.color),name=String(data.name||'캐릭터'),english=String(data.english||''),title=String(data.title||''),desc=String(data.description||''),health=String(data.health||'-'),move=String(data.move||'-'),skills=String(data.skills||''),image=String(data.image||'').trim();
+  el.className='duels-character-card';el.setAttribute('contenteditable','false');el.tabIndex=0;el.style.setProperty('--duels-card-color',color);setComponentPayload(el,{name,english,title,color,image,description:desc,health,move,skills});
+  el.innerHTML=`<div class="duels-character-portrait">${image?`<img src="${escapeHtml(mediaSrc(image))}" alt="${escapeHtml(name)}">`:`<span>${escapeHtml(name.slice(0,1)||'?')}</span>`}</div><div class="duels-character-name">${escapeHtml(name)}</div>${title?`<div class="duels-character-title">${escapeHtml(title)}</div>`:''}<div class="duels-character-mini-stats"><div><b>HEALTH</b><span>${escapeHtml(health)}</span></div><div><b>MOVE</b><span>${escapeHtml(move)}</span></div></div><div class="duels-character-tooltip" role="tooltip"><div class="duels-character-tooltip-title">${escapeHtml(name)}${english?` : ${escapeHtml(english)}`:''}</div>${desc?`<div class="duels-character-tooltip-desc">${textLinesHtml(desc)}</div>`:''}<div class="duels-character-tooltip-stats"><b>[HEALTH]</b> ${escapeHtml(health)}<span></span><b>[MOVE SPEED]</b> ${escapeHtml(move)}</div>${skills?`<div class="duels-character-tooltip-skills">${textLinesHtml(skills)}</div>`:''}</div>`;
+}
+function makeCharacterCard(data){const el=document.createElement('div');el.dataset.duelsComponent='character-card';renderCharacterCardElement(el,data);return el}
+function renderDescriptionBoxElement(el,data){
+  const color=componentColor(data.color),title=String(data.title||'설명'),body=String(data.body||'');
+  el.className='duels-description-box';el.setAttribute('contenteditable','false');el.style.setProperty('--duels-box-color',color);setComponentPayload(el,{title,color,body});
+  el.innerHTML=`<div class="duels-description-box-title">${escapeHtml(title)}</div><div class="duels-description-box-body">${textLinesHtml(body)}</div>`;
+}
+function makeDescriptionBox(data){const el=document.createElement('div');el.dataset.duelsComponent='description-box';renderDescriptionBoxElement(el,data);return el}
+function insertBlockComponent(node){
+  restoreSelection();const sel=getSelection();const range=sel?.rangeCount?sel.getRangeAt(0):null;
+  const base=range&&(range.commonAncestorContainer.nodeType===1?range.commonAncestorContainer:range.commonAncestorContainer.parentElement);
+  const editable=base?.closest?.('.editable');
+  if(!range||!editable){showStatus('구성요소를 삽입할 편집 위치를 먼저 선택하세요.',true);return false}
+  range.deleteContents();
+  const block=base?.closest?.('p');
+  if(block&&editable.contains(block)){block.insertAdjacentElement('afterend',node)}else range.insertNode(node);
+  const spacer=document.createElement('p');spacer.innerHTML='<br>';
+  node.insertAdjacentElement('afterend',spacer);
+  const next=document.createRange();next.selectNodeContents(spacer);next.collapse(true);sel.removeAllRanges();sel.addRange(next);state.savedRange=next.cloneRange();
+  editable.dispatchEvent(new Event('input',{bubbles:true}));return true;
+}
+function characterCardModal(existing=null){
+  rememberSelection();const d=existing?componentPayload(existing):{};
+  openModal(`<h2>${existing?'캐릭터 카드 수정':'캐릭터 카드 삽입'}</h2><div class="component-form-grid"><div class="form-row"><label>캐릭터명</label><input id="ccName" value="${escapeHtml(d.name||'')}"></div><div class="form-row"><label>영문명</label><input id="ccEnglish" value="${escapeHtml(d.english||'')}"></div><div class="form-row"><label>대표색</label><input id="ccColor" type="color" value="${componentColor(d.color)}"></div><div class="form-row"><label>칭호 / 부제</label><input id="ccTitle" value="${escapeHtml(d.title||'')}"></div><div class="form-row span-2"><label>초상화 PNG/JPG URL 또는 /media/... 경로</label><input id="ccImage" value="${escapeHtml(d.image||'')}"></div><div class="form-row"><label>체력</label><input id="ccHealth" value="${escapeHtml(d.health||'')}"></div><div class="form-row"><label>이동속도</label><input id="ccMove" value="${escapeHtml(d.move||'')}"></div><div class="form-row span-2"><label>캐릭터 설명</label><textarea id="ccDescription" rows="4">${escapeHtml(d.description||'')}</textarea></div><div class="form-row span-2"><label>스킬 설명 · 한 줄씩 입력</label><textarea id="ccSkills" rows="6" placeholder="[LMB] 기술명 — 설명\n[RMB] 기술명 — 설명">${escapeHtml(d.skills||'')}</textarea></div></div><p class="muted">카드에 마우스를 올리거나 포커스하면 듀얼즈식 설명 상자가 표시됩니다. 편집 화면에서는 카드를 더블클릭해 다시 수정할 수 있습니다.</p><div class="modal-actions"><button id="cancelComponent">취소</button>${existing?'<button id="deleteComponent" class="danger">삭제</button>':''}<button id="saveComponent" class="primary">${existing?'수정':'삽입'}</button></div>`);
+  $('#cancelComponent').onclick=closeModal;
+  if(existing)$('#deleteComponent').onclick=()=>{if(confirm('이 캐릭터 카드를 삭제할까요?')){const host=existing.closest('.editable');existing.remove();host?.dispatchEvent(new Event('input',{bubbles:true}));closeModal()}};
+  $('#saveComponent').onclick=()=>{const data={name:$('#ccName').value.trim()||'캐릭터',english:$('#ccEnglish').value.trim(),color:$('#ccColor').value,title:$('#ccTitle').value.trim(),image:normalizeImageUrl($('#ccImage').value.trim()),health:$('#ccHealth').value.trim(),move:$('#ccMove').value.trim(),description:$('#ccDescription').value,skills:$('#ccSkills').value};if(existing){renderCharacterCardElement(existing,data);existing.closest('.editable')?.dispatchEvent(new Event('input',{bubbles:true}));closeModal()}else{const node=makeCharacterCard(data);if(insertBlockComponent(node))closeModal()}};
+}
+function descriptionBoxModal(existing=null){
+  rememberSelection();const d=existing?componentPayload(existing):{};
+  openModal(`<h2>${existing?'설명 상자 수정':'설명 상자 삽입'}</h2><div class="form-row"><label>제목</label><input id="dbTitle" value="${escapeHtml(d.title||'설명')}"></div><div class="form-row"><label>강조색</label><input id="dbColor" type="color" value="${componentColor(d.color)}"></div><div class="form-row"><label>내용</label><textarea id="dbBody" rows="8">${escapeHtml(d.body||'')}</textarea></div><p class="muted">듀얼즈의 호버 설명 상자 색감과 정보 밀도를 기준으로 한 고정형 설명 블록입니다.</p><div class="modal-actions"><button id="cancelComponent">취소</button>${existing?'<button id="deleteComponent" class="danger">삭제</button>':''}<button id="saveComponent" class="primary">${existing?'수정':'삽입'}</button></div>`);
+  $('#cancelComponent').onclick=closeModal;
+  if(existing)$('#deleteComponent').onclick=()=>{if(confirm('이 설명 상자를 삭제할까요?')){const host=existing.closest('.editable');existing.remove();host?.dispatchEvent(new Event('input',{bubbles:true}));closeModal()}};
+  $('#saveComponent').onclick=()=>{const data={title:$('#dbTitle').value.trim()||'설명',color:$('#dbColor').value,body:$('#dbBody').value};if(existing){renderDescriptionBoxElement(existing,data);existing.closest('.editable')?.dispatchEvent(new Event('input',{bubbles:true}));closeModal()}else{const node=makeDescriptionBox(data);if(insertBlockComponent(node))closeModal()}};
+}
+function openComponentEditor(el){const type=el.dataset.duelsComponent;if(type==='character-card')characterCardModal(el);else if(type==='description-box')descriptionBoxModal(el)}
+$('#characterCardBtn').onclick=()=>characterCardModal();
+$('#descriptionBoxBtn').onclick=()=>descriptionBoxModal();
 function selectImage(img){ state.selectedImage=img; $$('.selected-image').forEach(x=>x.classList.remove('selected-image')); img.classList.add('selected-image'); $('#pictureTabBtn').classList.remove('hidden'); updateImageTools(); updateOverlay(); switchRibbon('picture'); }
 function updateImageTools(){const img=state.selectedImage;if(!img)return;const r=img.getBoundingClientRect();$('#imageWidth').value=Math.round(r.width);$('#imageHeight').value=Math.round(r.height);$('#imageRotation').value=getRotation(img);$('#pictureBorderWidth').value=parseFloat(img.style.borderWidth)||0;const bc=rgbToHex(img.style.borderColor);if(bc)$('#pictureBorderColor').value=bc;$('#imageWrapSelect').value=getImageWrap(img)}
 function rgbToHex(v){if(!v)return null;if(/^#/.test(v))return v;const m=v.match(/\d+/g);if(!m||m.length<3)return null;return '#'+m.slice(0,3).map(x=>(+x).toString(16).padStart(2,'0')).join('')}
@@ -219,11 +267,9 @@ $('#newCategoryBtn').onclick=()=>{openModal(`<h2>카테고리 생성</h2><div cl
 $('#newDocumentBtn').onclick=()=>{const cats=sortedCategories(state.index?.categories||[]);openModal(`<h2>문서 생성</h2><div class="form-row"><label>카테고리</label><select id="newDocCat">${cats.map(c=>`<option value="${escapeHtml(c.slug)}">${escapeHtml(c.name)}</option>`).join('')}</select></div><div class="form-row"><label>문서 제목</label><input id="newDocTitle"></div><div class="modal-actions"><button id="cancelNewDoc">취소</button><button id="createNewDoc" class="primary">생성</button></div>`);$('#cancelNewDoc').onclick=closeModal;$('#createNewDoc').onclick=async()=>{try{const cat=$('#newDocCat').value,title=$('#newDocTitle').value;const r=await api('/api/document/create',{method:'POST',body:JSON.stringify({category:cat,title,content:{type:'wiki-sections-v3',introHtml:'<p></p>',sections:[{id:uid('sec'),title:'개요',contentHtml:'<p></p>',children:[]}]}})});closeModal();await refreshIndex();navigate(cat,r.document.slug)}catch(e){alert(e.message)}}};
 
 $('#settingsBtn').onclick=async()=>{const c=state.config||await api('/api/config');openModal(`<h2>GitHub 설정</h2><div class="form-row"><label>Owner</label><input id="cfgOwner" value="${escapeHtml(c.owner)}"></div><div class="form-row"><label>Repository</label><input id="cfgRepo" value="${escapeHtml(c.repo)}"></div><div class="form-row"><label>Branch</label><input id="cfgBranch" value="${escapeHtml(c.branch)}"></div><div class="form-row"><label>Fine-grained PAT (Contents: Read and write)</label><input id="cfgToken" type="password" placeholder="${c.tokenConfigured?'이미 저장됨 — 변경할 때만 입력':'github_pat_...'}"></div><p class="muted">토큰은 GitHub에 업로드되지 않고 이 PC의 로컬 설정에만 저장됩니다.</p><div class="modal-actions"><button id="cancelCfg">취소</button><button id="saveCfg" class="primary">저장</button></div>`);$('#cancelCfg').onclick=closeModal;$('#saveCfg').onclick=async()=>{try{const body={owner:$('#cfgOwner').value,repo:$('#cfgRepo').value,branch:$('#cfgBranch').value};if($('#cfgToken').value)body.token=$('#cfgToken').value;await api('/api/token',{method:'POST',body:JSON.stringify(body)});closeModal();location.reload()}catch(e){alert(e.message)}}};
-function closeMobileSidebar(){ $('#sidebar').classList.remove('open');$('#sidebarScrim').classList.remove('open'); }
-function toggleMobileSidebar(){const open=!$('#sidebar').classList.contains('open');$('#sidebar').classList.toggle('open',open);$('#sidebarScrim').classList.toggle('open',open)}
-$('#sidebarToggle').onclick=toggleMobileSidebar;
-$('#sidebarScrim').onclick=closeMobileSidebar;
-window.addEventListener('resize',()=>{if(innerWidth>760)closeMobileSidebar()});
-window.addEventListener('hashchange',()=>{if(state.editing&&!confirm('편집 중인 변경사항이 저장되지 않을 수 있습니다. 이동할까요?'))return;renderTree();renderRoute()});
+function closeMobileSidebar(){ $('#sidebar')?.classList.remove('open'); }
+$('#sidebarToggle').onclick=()=>$('#sidebar').classList.toggle('open');
+window.addEventListener('resize',()=>{if(innerWidth>720)closeMobileSidebar()});
+window.addEventListener('hashchange',()=>{if(state.editing&&!confirm('편집 중인 변경사항이 저장되지 않을 수 있습니다. 이동할까요?'))return;renderRoute()});
 
 (async function init(){try{state.config=await api('/api/config'); if(!state.config.tokenConfigured)showStatus('GitHub Token을 설정하면 편집/저장이 가능합니다.');await refreshIndex();await renderRoute();}catch(e){showStatus(e.message,true);$('#viewPage').innerHTML=`<div class="wiki-card"><h2>초기화 실패</h2><p>${escapeHtml(e.message)}</p><p>우측 상단 GitHub 설정에서 저장소와 토큰을 확인해주세요.</p></div>`}})();
