@@ -134,7 +134,7 @@ $('#imageUploadBtn').onclick=()=>$('#imageFile').click();
 $('#imageFile').onchange=async e=>{const f=e.target.files?.[0];if(!f)return;if(!['image/png','image/jpeg'].includes(f.type)){showStatus('PNG/JPG만 업로드할 수 있습니다.',true);return}const data=await fileDataUrl(f);try{const r=await api('/api/media',{method:'POST',body:JSON.stringify({filename:f.name,data})});insertImage(r.src);showStatus('그림을 GitHub 저장소에 업로드했습니다.')}catch(err){showStatus(err.message,true)}e.target.value=''};
 function fileDataUrl(f){return new Promise((res,rej)=>{const r=new FileReader;r.onload=()=>res(r.result);r.onerror=rej;r.readAsDataURL(f)})}
 function insertImage(src){restoreSelection();const img=document.createElement('img');img.src=src;img.style.width='480px';img.style.height='auto';img.style.display='block';img.style.maxWidth='100%';img.alt='';const range=getSelection()?.rangeCount?getSelection().getRangeAt(0):null;if(range){range.deleteContents();range.insertNode(img);range.setStartAfter(img);range.collapse(true)}selectImage(img);rememberSelection()}
-function selectImage(img){ clearTableSelection(); state.selectedImage=img; $$('.selected-image').forEach(x=>x.classList.remove('selected-image')); img.classList.add('selected-image'); $('#pictureTabBtn').classList.remove('hidden'); updateImageTools(); updateOverlay(); switchRibbon('picture'); }
+function selectImage(img){ clearTableSelection(); state.selectedImage=img; $$('.selected-image').forEach(x=>x.classList.remove('selected-image')); img.classList.add('selected-image'); const cell=img.closest('td,th'); const table=tableOfCell(cell); if(cell&&table){state.selectedTable=table;state.selectedCell=cell;state.tableCells=[cell];cell.classList.add('table-cell-selected');$('#tableTabBtn').classList.remove('hidden');refreshTableTools();updateTableResizeOverlay();} $('#pictureTabBtn').classList.remove('hidden'); updateImageTools(); updateOverlay(); switchRibbon('picture'); }
 function updateImageTools(){const img=state.selectedImage;if(!img)return;const r=img.getBoundingClientRect();$('#imageWidth').value=Math.round(r.width);$('#imageHeight').value=Math.round(r.height);$('#imageRotation').value=getRotation(img);$('#pictureBorderWidth').value=parseFloat(img.style.borderWidth)||0;const bc=rgbToHex(img.style.borderColor);if(bc)$('#pictureBorderColor').value=bc;$('#imageWrapSelect').value=getImageWrap(img)}
 function rgbToHex(v){if(!v)return null;if(/^#/.test(v))return v;const m=v.match(/\d+/g);if(!m||m.length<3)return null;return '#'+m.slice(0,3).map(x=>(+x).toString(16).padStart(2,'0')).join('')}
 function getRotation(img){const m=(img.style.transform||'').match(/rotate\((-?[\d.]+)deg\)/);return m?Number(m[1]):0}
@@ -160,10 +160,10 @@ function startImageResize(e){if(!state.selectedImage)return;e.preventDefault();c
 $('#insertTableBtn').onclick=()=>{rememberSelection();openModal(`<h2>표 삽입</h2><div class="form-row"><label>행</label><input id="tableRows" type="number" min="1" max="30" value="3"></div><div class="form-row"><label>열</label><input id="tableCols" type="number" min="1" max="20" value="3"></div><div class="modal-actions"><button id="cancelTable">취소</button><button id="createTable" class="primary">삽입</button></div>`);$('#cancelTable').onclick=closeModal;$('#createTable').onclick=()=>{insertTable(Math.max(1,Math.min(30,+$('#tableRows').value||3)),Math.max(1,Math.min(20,+$('#tableCols').value||3)));closeModal()}};
 function insertTable(rows,cols){restoreSelection();const table=document.createElement('table');table.className='wiki-table';table.style.width='100%';table.style.marginLeft='0';table.style.marginRight='0';const tbody=document.createElement('tbody');for(let r=0;r<rows;r++){const tr=document.createElement('tr');for(let c=0;c<cols;c++){const td=document.createElement('td');td.innerHTML='<p><br></p>';td.style.width=`${100/cols}%`;td.style.height='40px';tr.appendChild(td)}tbody.appendChild(tr)}table.appendChild(tbody);const range=getSelection()?.rangeCount?getSelection().getRangeAt(0):null;if(range){range.deleteContents();range.insertNode(table);const p=document.createElement('p');p.innerHTML='<br>';table.after(p);range.setStart(table.rows[0].cells[0],0);range.collapse(true)}selectSingleTableCell(table.rows[0].cells[0]);rememberSelection()}
 function tableOfCell(cell){return cell?.closest('table.wiki-table,table')||null}
-function clearTableSelection(){ $$('.table-cell-selected').forEach(c=>c.classList.remove('table-cell-selected')); $$('.table-selected').forEach(t=>t.classList.remove('table-selected')); state.selectedTable=null;state.selectedCell=null;state.tableCells=[];state.tableDrag=null;$('#tableTabBtn').classList.add('hidden'); }
+function clearTableSelection(){ $$('.table-cell-selected').forEach(c=>c.classList.remove('table-cell-selected')); $$('.table-selected').forEach(t=>t.classList.remove('table-selected')); state.selectedTable=null;state.selectedCell=null;state.tableCells=[];state.tableDrag=null;$('#tableTabBtn').classList.add('hidden'); hideTableResizeOverlay(); }
 function clearImageSelection(){if(state.selectedImage)state.selectedImage.classList.remove('selected-image');state.selectedImage=null;$('#pictureTabBtn').classList.add('hidden');updateOverlay()}
 function clearObjectSelection(switchHome=true){clearImageSelection();clearTableSelection();if(switchHome&&state.editing)switchRibbon('home')}
-function selectSingleTableCell(cell){clearImageSelection();clearTableSelection();const table=tableOfCell(cell);if(!table)return;state.selectedTable=table;state.selectedCell=cell;state.tableCells=[cell];cell.classList.add('table-cell-selected');$('#tableTabBtn').classList.remove('hidden');refreshTableTools();switchRibbon('table')}
+function selectSingleTableCell(cell){clearImageSelection();clearTableSelection();const table=tableOfCell(cell);if(!table)return;state.selectedTable=table;state.selectedCell=cell;state.tableCells=[cell];cell.classList.add('table-cell-selected');$('#tableTabBtn').classList.remove('hidden');refreshTableTools();updateTableResizeOverlay();switchRibbon('table')}
 function beginTableCellDrag(cell,e){if(e.button!==0)return;selectSingleTableCell(cell);state.tableDrag={table:tableOfCell(cell),anchor:cell};}
 function extendTableCellDrag(cell){const d=state.tableDrag;if(!d||tableOfCell(cell)!==d.table)return;const rows=[...d.table.rows],ar=rows.indexOf(d.anchor.parentElement),br=rows.indexOf(cell.parentElement),ac=d.anchor.cellIndex,bc=cell.cellIndex,minR=Math.min(ar,br),maxR=Math.max(ar,br),minC=Math.min(ac,bc),maxC=Math.max(ac,bc);$$('.table-cell-selected',d.table).forEach(x=>x.classList.remove('table-cell-selected'));state.tableCells=[];for(let r=minR;r<=maxR;r++){for(let c=minC;c<=maxC;c++){const x=rows[r].cells[c];if(x){x.classList.add('table-cell-selected');state.tableCells.push(x)}}}state.selectedCell=state.tableCells[0]||cell;refreshTableTools()}
 document.addEventListener('pointerup',()=>state.tableDrag=null);
@@ -184,8 +184,8 @@ $('#colDeleteBtn').onclick=()=>{const t=state.selectedTable,c=activeCol();if(!t|
 function distributeColumns(t=state.selectedTable){if(!t)return;const n=logicalColCount(t);if(!n)return;[...t.rows].forEach(r=>[...r.cells].forEach(c=>c.style.width=`${100/n}%`));t.style.width='100%'}
 $('#distributeColsBtn').onclick=()=>distributeColumns();
 $('#distributeRowsBtn').onclick=()=>{const t=state.selectedTable;if(!t)return;const hs=[...t.rows].map(r=>r.getBoundingClientRect().height),h=Math.max(36,...hs);[...t.rows].forEach(r=>[...r.cells].forEach(c=>c.style.height=`${h}px`))};
-$('#cellWidthInput').onchange=e=>{const c=state.selectedCell,t=state.selectedTable;if(!c||!t)return;const w=Math.max(36,Number(e.target.value)||36),idx=c.cellIndex;[...t.rows].forEach(r=>{if(r.cells[idx])r.cells[idx].style.width=`${w}px`});t.style.width='auto';};
-$('#cellHeightInput').onchange=e=>{const row=activeRow();if(!row)return;const h=Math.max(24,Number(e.target.value)||24);[...row.cells].forEach(c=>c.style.height=`${h}px`)};
+$('#cellWidthInput').onchange=e=>{const c=state.selectedCell,t=state.selectedTable;if(!c||!t)return;const w=Math.max(36,Number(e.target.value)||36);setColumnWidth(t,c,w);updateTableResizeOverlay();};
+$('#cellHeightInput').onchange=e=>{const row=activeRow();if(!row)return;const h=Math.max(24,Number(e.target.value)||24);setRowHeight(row,h);updateTableResizeOverlay();};
 $('#tableFitBtn').onclick=()=>distributeColumns();
 $$('[data-table-align]').forEach(b=>b.onclick=()=>{const t=state.selectedTable;if(!t)return;const a=b.dataset.tableAlign;t.style.marginLeft=a==='center'||a==='right'?'auto':'0';t.style.marginRight=a==='center'||a==='left'?'auto':'0'});
 $$('[data-cell-align]').forEach(b=>b.onclick=()=>selectedTableCells().forEach(c=>c.style.textAlign=b.dataset.cellAlign));
@@ -196,6 +196,59 @@ $('#cellBorderColor').oninput=applyCellBorders;$('#cellBorderWidth').onchange=ap
 $('#mergeCellsBtn').onclick=mergeSelectedCells;$('#splitCellBtn').onclick=splitSelectedCell;
 function mergeSelectedCells(){const t=state.selectedTable,cells=selectedTableCells();if(!t||cells.length<2)return alert('병합할 셀을 드래그로 선택하세요.');if(cells.some(c=>c.colSpan>1||c.rowSpan>1))return alert('이미 병합된 셀이 포함되어 있습니다. 먼저 분할해주세요.');const rows=[...t.rows],pos=cells.map(c=>({c,r:rows.indexOf(c.parentElement),x:c.cellIndex})),minR=Math.min(...pos.map(p=>p.r)),maxR=Math.max(...pos.map(p=>p.r)),minC=Math.min(...pos.map(p=>p.x)),maxC=Math.max(...pos.map(p=>p.x));if(cells.length!==(maxR-minR+1)*(maxC-minC+1))return alert('직사각형 영역만 병합할 수 있습니다.');const anchor=rows[minR].cells[minC],htmls=pos.filter(p=>p.c!==anchor).map(p=>p.c.innerHTML).filter(x=>x&&x!=='<p><br></p>');anchor.colSpan=maxC-minC+1;anchor.rowSpan=maxR-minR+1;if(htmls.length)anchor.innerHTML+=(anchor.innerHTML?'<br>':'')+htmls.join('<br>');pos.filter(p=>p.c!==anchor).sort((a,b)=>b.r-a.r||b.x-a.x).forEach(p=>p.c.remove());selectSingleTableCell(anchor)}
 function splitSelectedCell(){const cell=state.selectedCell;if(!cell)return;const cs=cell.colSpan||1,rs=cell.rowSpan||1;if(cs===1&&rs===1)return;const table=tableOfCell(cell),rows=[...table.rows],r0=rows.indexOf(cell.parentElement),c0=cell.cellIndex;cell.colSpan=1;cell.rowSpan=1;for(let r=0;r<rs;r++){const row=rows[r0+r];if(!row)continue;const count=r===0?cs-1:cs;for(let i=0;i<count;i++){const td=blankCell();const at=r===0?c0+1+i:c0+i;row.insertBefore(td,row.cells[at]||null)}}selectSingleTableCell(cell)}
+
+
+/* 3.9 Word-like draggable table sizing */
+function hideTableResizeOverlay(){const ov=$('#tableResizeOverlay');if(ov)ov.classList.add('hidden')}
+function updateTableResizeOverlay(){
+  const ov=$('#tableResizeOverlay'),cell=state.selectedCell,table=state.selectedTable;
+  if(!ov||!state.editing||!cell||!table||!document.body.contains(cell)){hideTableResizeOverlay();return}
+  const cr=cell.getBoundingClientRect(),tr=table.getBoundingClientRect(),rr=cell.parentElement.getBoundingClientRect();
+  const ch=$('.table-col-handle',ov),rh=$('.table-row-handle',ov),sh=$('.table-size-handle',ov);
+  ch.style.left=`${cr.right}px`;ch.style.top=`${tr.top}px`;ch.style.height=`${tr.height}px`;
+  rh.style.left=`${tr.left}px`;rh.style.top=`${rr.bottom}px`;rh.style.width=`${tr.width}px`;
+  sh.style.left=`${tr.right}px`;sh.style.top=`${tr.bottom}px`;
+  ov.classList.remove('hidden');
+}
+function cellVisualColumnIndex(cell){return cell?.cellIndex??0}
+function fitImagesToCellWidth(cell,width){
+  const inner=Math.max(20,width-18);
+  $$('img',cell).forEach(img=>{const r=img.getBoundingClientRect();if(r.width>inner){const ratio=r.width/Math.max(1,r.height);img.style.width=`${inner}px`;img.style.height=`${inner/ratio}px`;img.style.maxWidth='100%'}});
+}
+function fitImagesToRowHeight(row,height){
+  const inner=Math.max(20,height-14);
+  $$('img',row).forEach(img=>{const r=img.getBoundingClientRect();if(r.height>inner){const ratio=r.width/Math.max(1,r.height);img.style.height=`${inner}px`;img.style.width=`${inner*ratio}px`;img.style.maxWidth='100%'}});
+}
+function setColumnWidth(table,anchorCell,width){
+  width=Math.max(36,Math.round(width));const idx=cellVisualColumnIndex(anchorCell);table.dataset.wordResize='1';table.style.tableLayout='fixed';
+  [...table.rows].forEach(row=>{const cell=row.cells[idx];if(cell){cell.style.width=`${width}px`;cell.style.minWidth=`${width}px`;cell.style.maxWidth=`${width}px`;fitImagesToCellWidth(cell,width)}});
+  const widths=[...table.rows[0].cells].map(c=>Math.max(36,c.getBoundingClientRect().width));table.style.width=`${Math.round(widths.reduce((a,b)=>a+b,0))}px`;table.style.maxWidth='none';
+}
+function setRowHeight(row,height){
+  height=Math.max(24,Math.round(height));row.dataset.fixedHeight='1';row.style.height=`${height}px`;
+  [...row.cells].forEach(c=>{c.style.height=`${height}px`;c.style.maxHeight=`${height}px`});fitImagesToRowHeight(row,height);
+}
+function startColumnDrag(e){
+  const table=state.selectedTable,cell=state.selectedCell;if(!table||!cell)return;e.preventDefault();e.stopPropagation();
+  const startX=e.clientX,startW=cell.getBoundingClientRect().width;
+  const move=ev=>{setColumnWidth(table,cell,startW+(ev.clientX-startX));refreshTableTools();updateTableResizeOverlay()};
+  const up=()=>{removeEventListener('pointermove',move);removeEventListener('pointerup',up)};addEventListener('pointermove',move);addEventListener('pointerup',up);
+}
+function startRowDrag(e){
+  const row=activeRow();if(!row)return;e.preventDefault();e.stopPropagation();const startY=e.clientY,startH=row.getBoundingClientRect().height;
+  const move=ev=>{setRowHeight(row,startH+(ev.clientY-startY));refreshTableTools();updateTableResizeOverlay()};
+  const up=()=>{removeEventListener('pointermove',move);removeEventListener('pointerup',up)};addEventListener('pointermove',move);addEventListener('pointerup',up);
+}
+function startTableSizeDrag(e){
+  const table=state.selectedTable;if(!table)return;e.preventDefault();e.stopPropagation();const r=table.getBoundingClientRect(),sx=e.clientX,sy=e.clientY,startW=r.width,startH=r.height;
+  const colWidths=[...table.rows[0].cells].map(c=>c.getBoundingClientRect().width);const rowHeights=[...table.rows].map(row=>row.getBoundingClientRect().height);
+  const move=ev=>{const scale=Math.max(.25,Math.min(4,Math.max((startW+(ev.clientX-sx))/startW,(startH+(ev.clientY-sy))/startH)));table.dataset.wordResize='1';table.style.tableLayout='fixed';[...table.rows].forEach((row,ri)=>{setRowHeight(row,rowHeights[ri]*scale);[...row.cells].forEach((c,ci)=>{const w=(colWidths[ci]||c.getBoundingClientRect().width)*scale;c.style.width=`${Math.max(36,w)}px`;c.style.minWidth=c.style.width;c.style.maxWidth=c.style.width;fitImagesToCellWidth(c,w)})});table.style.width=`${Math.round(startW*scale)}px`;table.style.maxWidth='none';refreshTableTools();updateTableResizeOverlay()};
+  const up=()=>{removeEventListener('pointermove',move);removeEventListener('pointerup',up)};addEventListener('pointermove',move);addEventListener('pointerup',up);
+}
+$('.table-col-handle',$('#tableResizeOverlay')).addEventListener('pointerdown',startColumnDrag);
+$('.table-row-handle',$('#tableResizeOverlay')).addEventListener('pointerdown',startRowDrag);
+$('.table-size-handle',$('#tableResizeOverlay')).addEventListener('pointerdown',startTableSizeDrag);
+window.addEventListener('scroll',updateTableResizeOverlay,true);window.addEventListener('resize',updateTableResizeOverlay);
 
 function clearObjectSelectionOnOutside(e){if(e.target.closest('.editable')||e.target.closest('#ribbon')||e.target.closest('#imageOverlay')||e.target.closest('.modal'))return;clearObjectSelection();}
 document.addEventListener('mousedown',clearObjectSelectionOnOutside);
