@@ -10,11 +10,24 @@
       {
         "id": "root-overview",
         "title": "개요",
-        "contentHtml": "<p></p>",
+        "contentHtml": "Lyan___이 개발한 html 기반 2D 탑뷰 클래스 액션 PVP 게임.<p></p>",
         "children": []
+      },
+      {
+        "id": "sec_78fbf5e6d11b4243ab404e41010e6fef",
+        "title": "시스템",
+        "contentHtml": "<p></p>",
+        "children": [
+          {
+            "id": "sec_5514fda2a39a4e74b9bd020f70fef1b1",
+            "title": "캐릭터",
+            "contentHtml": "자세한 설명은 캐릭터 참조.",
+            "children": []
+          }
+        ]
       }
     ]
   },
-  "updatedAt": "2026-09-22T15:51:52+0900",
+  "updatedAt": "2026-09-22T15:56:04+0900",
   "createdAt": "2026-09-22T15:51:52+0900"
 }
