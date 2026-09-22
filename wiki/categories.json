@@ -6,5 +6,12 @@
     "system": true,
     "deletable": false,
     "hasInfo": false
+  },
+  {
+    "id": "cat_3dcbf0a5e29b4cdaabc36f6a68243788",
+    "name": "기타",
+    "slug": "기타",
+    "deletable": true,
+    "hasInfo": true
   }
 ]
