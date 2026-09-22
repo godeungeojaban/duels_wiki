@@ -1,0 +1,22 @@
+{
+  "id": "doc_3da6b224cbb04a3e87e320bd028be36d",
+  "kind": "category-info",
+  "title": "캐릭터",
+  "slug": "_info",
+  "categoryId": "cat_f824edf57b0f42ba9057117c93d52fd9",
+  "categorySlug": "캐릭터",
+  "content": {
+    "type": "wiki-sections-v3",
+    "introHtml": "<p></p>",
+    "sections": [
+      {
+        "id": "sec_15c11318b8b442d2807d9e4c4dd6a180",
+        "title": "개요",
+        "contentHtml": "<p></p>",
+        "children": []
+      }
+    ]
+  },
+  "createdAt": "2026-09-23T05:00:02+0900",
+  "updatedAt": "2026-09-23T05:00:02+0900"
+}
