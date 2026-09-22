@@ -12,11 +12,11 @@
       {
         "id": "sec_51d17db2e843414990a3722ab12bd406",
         "title": "개요",
-        "contentHtml": "<div data-duels-component=\"description-box\" class=\"duels-description-box\" contenteditable=\"false\" data-duels-data=\"%7B%22title%22%3A%22%EC%9D%91%EC%95%A0%22%2C%22color%22%3A%22%23cfcfcf%22%2C%22body%22%3A%22%22%7D\" style=\"--duels-box-color: #cfcfcf;\"><div class=\"duels-description-box-title\">응애</div></div><p></p>",
+        "contentHtml": "<div data-duels-component=\"description-box\" class=\"duels-description-box\" contenteditable=\"false\" data-duels-data=\"%7B%22title%22%3A%22%EC%9D%91%EC%95%A0%22%2C%22color%22%3A%22%23cfcfcf%22%2C%22body%22%3A%22%22%7D\" style=\"--duels-box-color: #cfcfcf;\"><div class=\"duels-description-box-title\">응애</div></div><p>루네프다.</p><p></p>",
         "children": []
       }
     ]
   },
   "createdAt": "2026-09-23T04:48:47+0900",
-  "updatedAt": "2026-09-23T04:51:13+0900"
+  "updatedAt": "2026-09-23T04:52:34+0900"
 }
