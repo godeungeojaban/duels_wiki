@@ -1,0 +1,22 @@
+{
+  "id": "doc_e60374af2521401fb1a9bd872f6cdac2",
+  "kind": "document",
+  "title": "타우",
+  "slug": "타우",
+  "categoryId": "cat_3dcbf0a5e29b4cdaabc36f6a68243788",
+  "categorySlug": "기타",
+  "content": {
+    "type": "wiki-sections-v3",
+    "introHtml": "<p></p>",
+    "sections": [
+      {
+        "id": "sec_2350cdfa35224fe08abf0548662b012e",
+        "title": "개요",
+        "contentHtml": "<p></p>",
+        "children": []
+      }
+    ]
+  },
+  "createdAt": "2026-09-22T15:28:32+0900",
+  "updatedAt": "2026-09-22T15:28:32+0900"
+}
