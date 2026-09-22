@@ -1,12 +1,11 @@
-# Duels Wiki 3.0
+# Duels Wiki 3.2
 
-## 3.0
+## 3.2
 
-- Next.js / npm 편집기 폐기
-- Python 표준 라이브러리 기반 단일 로컬 런처 `DuelsWikiEditor.py` 도입
-- 편집 UI는 GitHub `editor/`에서 실행할 때 자동 다운로드/캐시
-- GitHub API를 통한 문서/카테고리/이미지 직접 편집
-- GitHub Actions + Python 정적 빌더로 Pages 자동 갱신
-- 표 기능 전체 제거
-- 2.x 문서 호환 변환
-- 토큰을 저장소에서 완전히 분리해 로컬 설정에만 저장
+- 3.1 패키징 오류 수정: 실제 3.1 UI/루트 문서 코드를 포함
+- 편집 툴바를 헤더 바로 아래 DOM 위치로 이동하고 sticky 고정
+- 사이드바는 툴바 높이를 반영하여 편집 중 겹치지 않도록 조정
+- 카테고리 생성/문서 생성 버튼 줄바꿈 방지 및 사이드바 폭 확대
+- `/`를 `wiki/_root.json` 기반의 실제 편집 가능한 Duels Wiki 문서로 사용
+- 루트 문서 저장/역사 API 및 정적 사이트 빌드 반영
+- Editor/Launcher 버전 표기를 3.2로 통일
