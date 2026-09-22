@@ -30,8 +30,12 @@
 
 .toc-number{display:inline-block;min-width:2.2em}.toc-text{color:#b7c2cc}
 
-/* 3.25 character color presets */
+/* 3.26 character color presets */
 .character-color-presets{position:relative;display:inline-block;margin-top:6px;vertical-align:middle}.character-color-presets>summary{list-style:none;display:inline-flex;align-items:center;min-height:26px;padding:4px 8px;border:1px solid #29435c;border-radius:2px;background:#09111a;color:#8fa9bd;font-size:10px;letter-spacing:.04em;cursor:pointer;user-select:none}.character-color-presets>summary::-webkit-details-marker{display:none}.character-color-presets>summary::before{content:'▸';margin-right:5px;color:#58bfff}.character-color-presets[open]>summary::before{content:'▾'}.character-color-grid{position:absolute;left:0;top:calc(100% + 5px);z-index:140;width:min(430px,calc(100vw - 36px));max-height:310px;overflow:auto;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;padding:8px;border:1px solid #29435c;background:linear-gradient(180deg,#0d1520,#091019);box-shadow:0 12px 32px #000b,0 0 16px #249cff22}.character-color-swatch{min-width:0;display:flex;align-items:center;gap:5px;padding:5px 6px!important;margin:0!important;border-color:#20384c!important;background:#09121a!important;color:#8196a8!important;font-size:9px!important;letter-spacing:0!important;text-align:left}.character-color-swatch:hover{border-color:#4af!important;color:#dff!important;background:#102130!important}.character-color-swatch i{width:14px;height:14px;flex:0 0 14px;border:1px solid #ffffff55;border-radius:2px;box-shadow:0 0 5px #000}.character-color-swatch span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.ribbon-color-presets{margin:0}.ribbon-color-presets .character-color-grid{top:calc(100% + 7px)}
 @media(max-width:720px){.character-color-grid{grid-template-columns:repeat(3,minmax(0,1fr));width:min(92vw,360px);max-height:260px}}
 
 .duels-description-box-title:only-child{border-bottom:0}.duels-description-box-body:empty{display:none}
+
+/* 3.26 floating character palette: portal to body so ribbon overflow cannot clip it */
+.character-color-floating-grid{position:fixed!important;z-index:100000!important;margin:0!important;display:grid!important}
+.ribbon-color-presets>.character-color-grid{display:none!important}

@@ -2,7 +2,7 @@
 
 const $ = (s, r=document) => r.querySelector(s);
 const $$ = (s, r=document) => [...r.querySelectorAll(s)];
-const state = { index:null, current:null, currentPath:'', editing:false, savedRange:null, selectedImage:null, activeRibbon:'home', config:null };
+const state = { index:null, current:null, currentPath:'', editing:false, savedRange:null, componentInsertionRange:null, lastEditable:null, selectedImage:null, activeRibbon:'home', config:null };
 const escapeHtml = s => String(s??'').replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
 const uid = p => `${p}_${crypto.randomUUID().replaceAll('-','')}`;
 const DUELS_CHARACTER_COLORS=Object.freeze([
@@ -62,25 +62,39 @@ const DUELS_CHARACTER_COLORS=Object.freeze([
   Object.freeze({name:'델트루브',color:'#b5652b'}),
   Object.freeze({name:'시아넬리',color:'#8b1223'})
 ]);
+function characterColorButtons(){return DUELS_CHARACTER_COLORS.map(x=>`<button type="button" class="character-color-swatch" data-color="${x.color}" title="${escapeHtml(x.name)} · ${x.color}"><i style="background:${x.color}"></i><span>${escapeHtml(x.name)}</span></button>`).join('')}
+function closeFloatingCharacterColors(){document.querySelectorAll('.character-color-floating-grid').forEach(x=>x.remove())}
+function openFloatingCharacterColors(summary,input){
+  closeFloatingCharacterColors();
+  const grid=document.createElement('div');grid.className='character-color-grid character-color-floating-grid';grid.innerHTML=characterColorButtons();document.body.appendChild(grid);
+  const r=summary.getBoundingClientRect(),pad=8;let left=r.left,top=r.bottom+6;
+  const w=Math.min(430,window.innerWidth-16);grid.style.width=`${Math.max(220,w)}px`;
+  if(left+w>window.innerWidth-pad)left=Math.max(pad,window.innerWidth-pad-w);
+  grid.style.left=`${Math.max(pad,left)}px`;grid.style.top=`${Math.max(pad,top)}px`;
+  requestAnimationFrame(()=>{const gr=grid.getBoundingClientRect();if(gr.bottom>window.innerHeight-pad)grid.style.top=`${Math.max(pad,r.top-gr.height-6)}px`});
+  grid.addEventListener('mousedown',e=>e.preventDefault());
+  grid.addEventListener('click',e=>{const button=e.target.closest('[data-color]');if(!button)return;input.value=button.dataset.color;input.dispatchEvent(new Event('input',{bubbles:true}));input.dispatchEvent(new Event('change',{bubbles:true}));closeFloatingCharacterColors()});
+}
 function enhanceColorInputs(root=document){
   $$('input[type="color"]',root).forEach(input=>{
     if(input.dataset.duelsCharacterColors==='1')return;
     input.dataset.duelsCharacterColors='1';
+    const inRibbon=!!input.closest('.ribbon');
     const details=document.createElement('details');
-    details.className='character-color-presets'+(input.closest('.ribbon')?' ribbon-color-presets':'');
-    details.innerHTML=`<summary>캐릭터 색</summary><div class="character-color-grid">${DUELS_CHARACTER_COLORS.map(x=>`<button type="button" class="character-color-swatch" data-color="${x.color}" title="${escapeHtml(x.name)} · ${x.color}"><i style="background:${x.color}"></i><span>${escapeHtml(x.name)}</span></button>`).join('')}</div>`;
+    details.className='character-color-presets'+(inRibbon?' ribbon-color-presets':'');
+    details.innerHTML=inRibbon?'<summary>캐릭터 색</summary>':`<summary>캐릭터 색</summary><div class="character-color-grid">${characterColorButtons()}</div>`;
     const host=input.closest('label.color-tool');
     if(host)host.insertAdjacentElement('afterend',details);else input.insertAdjacentElement('afterend',details);
-    details.addEventListener('click',e=>{
-      const button=e.target.closest('[data-color]');if(!button)return;
-      e.preventDefault();e.stopPropagation();
-      input.value=button.dataset.color;
-      input.dispatchEvent(new Event('input',{bubbles:true}));
-      input.dispatchEvent(new Event('change',{bubbles:true}));
-      details.open=false;
-    });
+    if(inRibbon){
+      const summary=details.querySelector('summary');
+      summary.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();const already=!!document.querySelector('.character-color-floating-grid');if(already){closeFloatingCharacterColors();details.open=false}else{details.open=true;openFloatingCharacterColors(summary,input)}});
+    }else{
+      details.addEventListener('click',e=>{const button=e.target.closest('[data-color]');if(!button)return;e.preventDefault();e.stopPropagation();input.value=button.dataset.color;input.dispatchEvent(new Event('input',{bubbles:true}));input.dispatchEvent(new Event('change',{bubbles:true}));details.open=false});
+    }
   });
 }
+document.addEventListener('mousedown',e=>{if(!e.target.closest('.character-color-floating-grid,.ribbon-color-presets')){closeFloatingCharacterColors();document.querySelectorAll('.ribbon-color-presets[open]').forEach(x=>x.open=false)}});
+window.addEventListener('resize',closeFloatingCharacterColors);window.addEventListener('scroll',closeFloatingCharacterColors,true);
 
 async function api(url, options={}) {
   const res = await fetch(url, {cache:'no-store', headers:{'Content-Type':'application/json', ...(options.headers||{})}, ...options});
@@ -164,6 +178,8 @@ $('#ribbon').addEventListener('mousedown',e=>{ if(e.target.closest('button'))e.p
 $('.ribbon-panels').addEventListener('wheel',e=>{const t=e.currentTarget;if(t.scrollWidth>t.clientWidth){e.preventDefault();e.stopPropagation();t.scrollLeft+=Math.abs(e.deltaX)>Math.abs(e.deltaY)?e.deltaX:e.deltaY;}},{passive:false});
 
 function bindEditable(el){
+  el.addEventListener('focusin',()=>{state.lastEditable=el});
+  el.addEventListener('mousedown',()=>{state.lastEditable=el});
   el.addEventListener('mouseup',rememberSelection);
   el.addEventListener('keyup',rememberSelection);
   el.addEventListener('click',e=>{
@@ -309,19 +325,31 @@ function upgradeDuelsComponents(root){
   $$('[data-duels-component="character-card"]',root).forEach(el=>renderCharacterCardElement(el,componentPayload(el)));
   $$('[data-duels-component="description-box"]',root).forEach(el=>renderDescriptionBoxElement(el,componentPayload(el)));
 }
+function validEditableRange(candidate){
+  if(!candidate)return null;try{const r=candidate.cloneRange();const base=r.commonAncestorContainer.nodeType===1?r.commonAncestorContainer:r.commonAncestorContainer.parentElement;const editable=base?.closest?.('.editable');return editable&&document.contains(editable)?{range:r,editable}:null}catch{return null}
+}
+function captureComponentInsertionPoint(){
+  rememberSelection();let found=validEditableRange(state.savedRange);
+  if(!found&&state.lastEditable?.isConnected){const r=document.createRange();r.selectNodeContents(state.lastEditable);r.collapse(false);found={range:r,editable:state.lastEditable}}
+  state.componentInsertionRange=found?.range?.cloneRange()||null;
+}
 function insertBlockComponent(node){
-  restoreSelection();const sel=getSelection();const range=sel?.rangeCount?sel.getRangeAt(0):null;
-  const base=range&&(range.commonAncestorContainer.nodeType===1?range.commonAncestorContainer:range.commonAncestorContainer.parentElement);
-  const editable=base?.closest?.('.editable');
-  if(!range||!editable){showStatus('구성요소를 삽입할 편집 위치를 먼저 선택하세요.',true);return false}
+  const found=validEditableRange(state.componentInsertionRange)||validEditableRange(state.savedRange);
+  const editable=found?.editable||state.lastEditable;
+  if(!editable?.isConnected){showStatus('구성요소를 삽입할 편집 위치를 먼저 선택하세요.',true);return false}
+  const range=found?.range||(()=>{const r=document.createRange();r.selectNodeContents(editable);r.collapse(false);return r})();
+  const base=range.commonAncestorContainer.nodeType===1?range.commonAncestorContainer:range.commonAncestorContainer.parentElement;
   range.deleteContents();
   const block=base?.closest?.('p');
-  if(block&&editable.contains(block))block.insertAdjacentElement('afterend',node);else range.insertNode(node);
-  const next=document.createRange();next.setStartAfter(node);next.collapse(true);sel.removeAllRanges();sel.addRange(next);state.savedRange=next.cloneRange();
+  if(block&&editable.contains(block)){
+    const empty=!block.textContent.trim()&&!block.querySelector('img,[data-duels-component],br:not(:only-child)');
+    if(empty)block.replaceWith(node);else block.insertAdjacentElement('afterend',node);
+  }else range.insertNode(node);
+  const next=document.createRange();next.setStartAfter(node);next.collapse(true);const sel=getSelection();sel.removeAllRanges();sel.addRange(next);state.savedRange=next.cloneRange();state.componentInsertionRange=null;state.lastEditable=editable;
   editable.dispatchEvent(new Event('input',{bubbles:true}));return true;
 }
 function characterCardModal(existing=null){
-  rememberSelection();const d=existing?componentPayload(existing):{};
+  if(!existing)captureComponentInsertionPoint();else rememberSelection();const d=existing?componentPayload(existing):{};
   const text=legacyCharacterCardText(d),width=cardDimension(d.width,138,80,1200),height=cardDimension(d.height,222,100,1200),fade=cardFade(d.fade),align=cardAlign(d.align);
   openModal(`<h2>${existing?'캐릭터 카드 수정':'캐릭터 카드 삽입'}</h2><div class="form-row"><label>이미지 PNG/JPG URL 또는 /media/... 경로</label><input id="ccImage" value="${escapeHtml(d.image||'')}"></div><div class="form-row"><label>카드 글씨</label><textarea id="ccText" rows="7" placeholder="원하는 글씨를 자유롭게 입력하세요.">${escapeHtml(text)}</textarea></div><div class="form-row"><label>크기 / 비율 프리셋</label><select id="ccPreset"><option value="custom">직접 입력</option><option value="profile">프로필 · 400×400</option><option value="duels">듀얼즈 카드 비율 · 138:222</option><option value="portrait-3-4">세로 3:4</option><option value="square">1:1</option><option value="landscape-3-2">누운 카드 3:2</option><option value="landscape-16-9">누운 카드 16:9</option></select><div class="muted" style="margin-top:5px">비율 프리셋은 현재 높이를 기준으로 너비를 계산합니다. ‘프로필’은 400×400 고정 크기를 바로 적용합니다.</div></div><div class="component-form-grid"><div class="form-row"><label>너비</label><input id="ccWidth" type="number" min="80" max="1200" value="${width}"></div><div class="form-row"><label>높이</label><input id="ccHeight" type="number" min="100" max="1200" value="${height}"></div><div class="form-row"><label>배치</label><select id="ccAlign"><option value="left" ${align==='left'?'selected':''}>왼쪽</option><option value="center" ${align==='center'?'selected':''}>가운데</option><option value="right" ${align==='right'?'selected':''}>오른쪽</option></select></div><div class="form-row"><label>이미지 페이드</label><select id="ccFade"><option value="none" ${fade==='none'?'selected':''}>없음</option><option value="soft" ${fade==='soft'?'selected':''}>약하게</option><option value="normal" ${fade==='normal'?'selected':''}>기본</option><option value="strong" ${fade==='strong'?'selected':''}>강하게</option></select></div><div class="form-row"><label>테두리 강조색</label><input id="ccColor" type="color" value="${componentColor(d.color)}"></div></div><p class="muted">이미지는 카드 전체를 cover 방식으로 채우며 카드 중심과 이미지 중심이 일치합니다. 비율이 맞지 않는 부분은 자동으로 잘립니다.</p><div class="modal-actions"><button id="cancelComponent">취소</button>${existing?'<button id="deleteComponent" class="danger">삭제</button>':''}<button id="saveComponent" class="primary">${existing?'수정':'삽입'}</button></div>`);
   $('#ccPreset').onchange=e=>applyCardRatioPreset(e.target.value);
@@ -331,7 +359,7 @@ function characterCardModal(existing=null){
 }
 
 function descriptionBoxModal(existing=null){
-  rememberSelection();const d=existing?componentPayload(existing):{};
+  if(!existing)captureComponentInsertionPoint();else rememberSelection();const d=existing?componentPayload(existing):{};
   openModal(`<h2>${existing?'설명 상자 수정':'설명 상자 삽입'}</h2><div class="form-row"><label>제목 <span class="muted">(선택)</span></label><input id="dbTitle" value="${escapeHtml(d.title??'')}" placeholder="비워두면 제목 칸을 만들지 않습니다."></div><div class="form-row"><label>강조색</label><input id="dbColor" type="color" value="${componentColor(d.color)}"></div><div class="form-row"><label>내용</label><textarea id="dbBody" rows="8">${escapeHtml(d.body||'')}</textarea></div><p class="muted">제목이 비어 있으면 본문만, 내용이 비어 있으면 제목만 표시됩니다.</p><div class="modal-actions"><button id="cancelComponent">취소</button>${existing?'<button id="deleteComponent" class="danger">삭제</button>':''}<button id="saveComponent" class="primary">${existing?'수정':'삽입'}</button></div>`);
   $('#cancelComponent').onclick=closeModal;
   if(existing)$('#deleteComponent').onclick=()=>{if(confirm('이 설명 상자를 삭제할까요?')){const host=existing.closest('.editable');existing.remove();host?.dispatchEvent(new Event('input',{bubbles:true}));closeModal()}};

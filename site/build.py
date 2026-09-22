@@ -132,8 +132,9 @@ def build():
     if MEDIA.exists():shutil.copytree(MEDIA,OUT/'media',dirs_exist_ok=True)
     cats=load_json(WIKI/'categories.json',[]) or []
     if isinstance(cats,dict):cats=cats.get('categories',[])
-    if not any(c.get('id')=='uncategorized' for c in cats):cats.append({'id':'uncategorized','name':'미분류','slug':'미분류','hasInfo':False,'system':True})
-    cats.sort(key=lambda c:(1 if c.get('id')=='uncategorized' or c.get('slug')==UNCAT else 0,str(c.get('name',''))))
+    # 미분류는 편집기 전용이다. 정적 열람 사이트에는 카테고리/하위 문서 모두 노출·생성하지 않는다.
+    cats=[c for c in cats if c.get('id')!='uncategorized' and c.get('slug')!=UNCAT and c.get('name')!=UNCAT]
+    cats.sort(key=lambda c:str(c.get('name','')))
     allcats=[]
     for c in cats:
         folder=WIKI/c['slug'];docs=[]
