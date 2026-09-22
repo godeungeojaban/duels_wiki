@@ -21,13 +21,27 @@ function routeFor(cat, doc){ return doc ? `#/c/${encodeURIComponent(cat)}/d/${en
 function parseRoute(){ const h=location.hash||'#/'; const m=h.match(/^#\/c\/([^/]+)(?:\/d\/([^/]+))?/); return m?{category:decodeURIComponent(m[1]),doc:m[2]?decodeURIComponent(m[2]):null}:null; }
 function navigate(cat,doc){ location.hash=routeFor(cat,doc); }
 
-async function refreshIndex(){ state.index=await api('/api/index'); renderTree(); }
+function sortedCategories(categories){
+  return [...(categories||[])].sort((a,b)=>{
+    const au=a?.id==='uncategorized'||a?.slug==='미분류';
+    const bu=b?.id==='uncategorized'||b?.slug==='미분류';
+    if(au!==bu)return au?1:-1;
+    return String(a?.name||'').localeCompare(String(b?.name||''),'ko');
+  });
+}
+async function refreshIndex(){ state.index=await api('/api/index'); if(state.index)state.index.categories=sortedCategories(state.index.categories); renderTree(); }
 function renderTree(){ const tree=$('#tree'); if(!state.index){tree.innerHTML='<div class="loading">불러오는 중…</div>';return}
-  let html='<button class="tree-cat-title" data-root>Duels Wiki</button>';
-  for(const c of state.index.categories){ html+=`<div class="tree-cat"><button class="tree-cat-title" data-cat="${escapeHtml(c.slug)}">${escapeHtml(c.name)}</button>`; for(const d of c.documents||[]) html+=`<button class="tree-doc" data-cat="${escapeHtml(c.slug)}" data-doc="${escapeHtml(d.slug)}">${escapeHtml(d.title)}</button>`; html+='</div>'; }
+  const route=parseRoute();
+  let html=`<button class="tree-cat-title tree-root ${route?'':'active'}" data-root><span>DUELS WIKI</span><small>ROOT</small></button>`;
+  for(const c of sortedCategories(state.index.categories)){
+    const catActive=route?.category===c.slug&&!route?.doc;
+    html+=`<div class="tree-cat"><button class="tree-cat-title ${catActive?'active':''}" data-cat="${escapeHtml(c.slug)}"><span>${escapeHtml(c.name)}</span><small>${c.id==='uncategorized'?'SYSTEM':'CATEGORY'}</small></button>`;
+    for(const d of c.documents||[]){const active=route?.category===c.slug&&route?.doc===d.slug;html+=`<button class="tree-doc ${active?'active':''}" data-cat="${escapeHtml(c.slug)}" data-doc="${escapeHtml(d.slug)}"><span>${escapeHtml(d.title)}</span></button>`;}
+    html+='</div>';
+  }
   tree.innerHTML=html;
-  $('[data-root]',tree)?.addEventListener('click',()=>{location.hash='#/'});
-  $$('[data-cat]',tree).forEach(b=>b.addEventListener('click',()=>navigate(b.dataset.cat,b.dataset.doc||null)));
+  $('[data-root]',tree)?.addEventListener('click',()=>{location.hash='#/';closeMobileSidebar()});
+  $$('[data-cat]',tree).forEach(b=>b.addEventListener('click',()=>{navigate(b.dataset.cat,b.dataset.doc||null);closeMobileSidebar()}));
 }
 
 function oldNodeToHtml(node){ if(!node)return''; if(node.type==='text'){let t=escapeHtml(node.text||''); for(const m of node.marks||[]){ if(m.type==='bold')t=`<strong>${t}</strong>`; else if(m.type==='italic')t=`<em>${t}</em>`; else if(m.type==='strike')t=`<s>${t}</s>`; else if(m.type==='link'){const href=escapeHtml(m.attrs?.href||'#');t=`<a href="${href}">${t}</a>`;} else if(m.type==='textStyle'){const st=[];if(m.attrs?.color)st.push(`color:${m.attrs.color}`);if(m.attrs?.fontSize)st.push(`font-size:${m.attrs.fontSize}`);if(st.length)t=`<span style="${st.join(';')}">${t}</span>`;} } return t; }
@@ -202,10 +216,14 @@ document.addEventListener('mousedown',clearObjectSelectionOnOutside);
 async function showHistory(){try{const r=await api(`/api/history?path=${encodeURIComponent(state.currentPath)}`);openModal(`<h2>문서 역사</h2>${r.history.length?r.history.map(x=>`<div class="history-row"><div><code>${escapeHtml(x.sha)}</code> · ${escapeHtml(x.author)}</div><div>${escapeHtml(x.message)}</div><div class="muted">${escapeHtml(x.date)}</div></div>`).join(''):'<p>수정 이력이 없습니다.</p>'}<div class="modal-actions"><button id="closeHistory">닫기</button></div>`);$('#closeHistory').onclick=closeModal}catch(e){showStatus(e.message,true)}}
 
 $('#newCategoryBtn').onclick=()=>{openModal(`<h2>카테고리 생성</h2><div class="form-row"><label>카테고리 이름</label><input id="newCatName"></div><div class="modal-actions"><button id="cancelNewCat">취소</button><button id="createNewCat" class="primary">생성</button></div>`);$('#cancelNewCat').onclick=closeModal;$('#createNewCat').onclick=async()=>{try{const r=await api('/api/category',{method:'POST',body:JSON.stringify({name:$('#newCatName').value})});closeModal();await refreshIndex();navigate(r.category.slug,null)}catch(e){alert(e.message)}}};
-$('#newDocumentBtn').onclick=()=>{const cats=state.index?.categories||[];openModal(`<h2>문서 생성</h2><div class="form-row"><label>카테고리</label><select id="newDocCat">${cats.map(c=>`<option value="${escapeHtml(c.slug)}">${escapeHtml(c.name)}</option>`).join('')}</select></div><div class="form-row"><label>문서 제목</label><input id="newDocTitle"></div><div class="modal-actions"><button id="cancelNewDoc">취소</button><button id="createNewDoc" class="primary">생성</button></div>`);$('#cancelNewDoc').onclick=closeModal;$('#createNewDoc').onclick=async()=>{try{const cat=$('#newDocCat').value,title=$('#newDocTitle').value;const r=await api('/api/document/create',{method:'POST',body:JSON.stringify({category:cat,title,content:{type:'wiki-sections-v3',introHtml:'<p></p>',sections:[{id:uid('sec'),title:'개요',contentHtml:'<p></p>',children:[]}]}})});closeModal();await refreshIndex();navigate(cat,r.document.slug)}catch(e){alert(e.message)}}};
+$('#newDocumentBtn').onclick=()=>{const cats=sortedCategories(state.index?.categories||[]);openModal(`<h2>문서 생성</h2><div class="form-row"><label>카테고리</label><select id="newDocCat">${cats.map(c=>`<option value="${escapeHtml(c.slug)}">${escapeHtml(c.name)}</option>`).join('')}</select></div><div class="form-row"><label>문서 제목</label><input id="newDocTitle"></div><div class="modal-actions"><button id="cancelNewDoc">취소</button><button id="createNewDoc" class="primary">생성</button></div>`);$('#cancelNewDoc').onclick=closeModal;$('#createNewDoc').onclick=async()=>{try{const cat=$('#newDocCat').value,title=$('#newDocTitle').value;const r=await api('/api/document/create',{method:'POST',body:JSON.stringify({category:cat,title,content:{type:'wiki-sections-v3',introHtml:'<p></p>',sections:[{id:uid('sec'),title:'개요',contentHtml:'<p></p>',children:[]}]}})});closeModal();await refreshIndex();navigate(cat,r.document.slug)}catch(e){alert(e.message)}}};
 
 $('#settingsBtn').onclick=async()=>{const c=state.config||await api('/api/config');openModal(`<h2>GitHub 설정</h2><div class="form-row"><label>Owner</label><input id="cfgOwner" value="${escapeHtml(c.owner)}"></div><div class="form-row"><label>Repository</label><input id="cfgRepo" value="${escapeHtml(c.repo)}"></div><div class="form-row"><label>Branch</label><input id="cfgBranch" value="${escapeHtml(c.branch)}"></div><div class="form-row"><label>Fine-grained PAT (Contents: Read and write)</label><input id="cfgToken" type="password" placeholder="${c.tokenConfigured?'이미 저장됨 — 변경할 때만 입력':'github_pat_...'}"></div><p class="muted">토큰은 GitHub에 업로드되지 않고 이 PC의 로컬 설정에만 저장됩니다.</p><div class="modal-actions"><button id="cancelCfg">취소</button><button id="saveCfg" class="primary">저장</button></div>`);$('#cancelCfg').onclick=closeModal;$('#saveCfg').onclick=async()=>{try{const body={owner:$('#cfgOwner').value,repo:$('#cfgRepo').value,branch:$('#cfgBranch').value};if($('#cfgToken').value)body.token=$('#cfgToken').value;await api('/api/token',{method:'POST',body:JSON.stringify(body)});closeModal();location.reload()}catch(e){alert(e.message)}}};
-$('#sidebarToggle').onclick=()=>$('#sidebar').classList.toggle('open');
-window.addEventListener('hashchange',()=>{if(state.editing&&!confirm('편집 중인 변경사항이 저장되지 않을 수 있습니다. 이동할까요?'))return;renderRoute()});
+function closeMobileSidebar(){ $('#sidebar').classList.remove('open');$('#sidebarScrim').classList.remove('open'); }
+function toggleMobileSidebar(){const open=!$('#sidebar').classList.contains('open');$('#sidebar').classList.toggle('open',open);$('#sidebarScrim').classList.toggle('open',open)}
+$('#sidebarToggle').onclick=toggleMobileSidebar;
+$('#sidebarScrim').onclick=closeMobileSidebar;
+window.addEventListener('resize',()=>{if(innerWidth>760)closeMobileSidebar()});
+window.addEventListener('hashchange',()=>{if(state.editing&&!confirm('편집 중인 변경사항이 저장되지 않을 수 있습니다. 이동할까요?'))return;renderTree();renderRoute()});
 
 (async function init(){try{state.config=await api('/api/config'); if(!state.config.tokenConfigured)showStatus('GitHub Token을 설정하면 편집/저장이 가능합니다.');await refreshIndex();await renderRoute();}catch(e){showStatus(e.message,true);$('#viewPage').innerHTML=`<div class="wiki-card"><h2>초기화 실패</h2><p>${escapeHtml(e.message)}</p><p>우측 상단 GitHub 설정에서 저장소와 토큰을 확인해주세요.</p></div>`}})();
