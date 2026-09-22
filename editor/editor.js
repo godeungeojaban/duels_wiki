@@ -5,6 +5,82 @@ const $$ = (s, r=document) => [...r.querySelectorAll(s)];
 const state = { index:null, current:null, currentPath:'', editing:false, savedRange:null, selectedImage:null, activeRibbon:'home', config:null };
 const escapeHtml = s => String(s??'').replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
 const uid = p => `${p}_${crypto.randomUUID().replaceAll('-','')}`;
+const DUELS_CHARACTER_COLORS=Object.freeze([
+  Object.freeze({name:'슈비',color:'#ff4500'}),
+  Object.freeze({name:'루뷰',color:'#00aaff'}),
+  Object.freeze({name:'미아루키',color:'#ff1493'}),
+  Object.freeze({name:'메인마드',color:'#795548'}),
+  Object.freeze({name:'메후구',color:'#00e676'}),
+  Object.freeze({name:'리안',color:'#ffa500'}),
+  Object.freeze({name:'타우',color:'#00ffff'}),
+  Object.freeze({name:'베르',color:'#ff2244'}),
+  Object.freeze({name:'엘린',color:'#c8d8f0'}),
+  Object.freeze({name:'엔소냐',color:'#ee00ff'}),
+  Object.freeze({name:'메이실',color:'#ffd700'}),
+  Object.freeze({name:'에라 파비',color:'#38bdf8'}),
+  Object.freeze({name:'레이카',color:'#ff7a00'}),
+  Object.freeze({name:'샤이라즈',color:'#78909c'}),
+  Object.freeze({name:'페이즈',color:'#8855ff'}),
+  Object.freeze({name:'칸',color:'#1a6b35'}),
+  Object.freeze({name:'체리티',color:'#6b0f1a'}),
+  Object.freeze({name:'코녕',color:'#f5e6c8'}),
+  Object.freeze({name:'헤르쟝',color:'#00c897'}),
+  Object.freeze({name:'하츠하츠',color:'#aaff00'}),
+  Object.freeze({name:'프릴',color:'#ff69b4'}),
+  Object.freeze({name:'다즈빈',color:'#3355ff'}),
+  Object.freeze({name:'유이',color:'#6e97ff'}),
+  Object.freeze({name:'펠루나',color:'#555555'}),
+  Object.freeze({name:'셰리나 비아',color:'#6a36c9'}),
+  Object.freeze({name:'스야',color:'#0000ad'}),
+  Object.freeze({name:'루네프',color:'#4c10c4'}),
+  Object.freeze({name:'로온',color:'#a5f9a6'}),
+  Object.freeze({name:'인투',color:'#a18a8a'}),
+  Object.freeze({name:'메라 모나',color:'#ff21da'}),
+  Object.freeze({name:'타다타',color:'#2f7a40'}),
+  Object.freeze({name:'나남낭',color:'#fbc7ff'}),
+  Object.freeze({name:'레이즈',color:'#bfa136'}),
+  Object.freeze({name:'레비나',color:'#a63b46'}),
+  Object.freeze({name:'키',color:'#c3c9de'}),
+  Object.freeze({name:'소르',color:'#4d4d8f'}),
+  Object.freeze({name:'제리',color:'#59c980'}),
+  Object.freeze({name:'룰리',color:'#e6dd85'}),
+  Object.freeze({name:'레테',color:'#a7b0a4'}),
+  Object.freeze({name:'클레아',color:'#213b5a'}),
+  Object.freeze({name:'셸로',color:'#522a50'}),
+  Object.freeze({name:'티냐',color:'#92cbd6'}),
+  Object.freeze({name:'라임',color:'#c1fab1'}),
+  Object.freeze({name:'큐리',color:'#8b6cd9'}),
+  Object.freeze({name:'하푸푸',color:'#ffe6f7'}),
+  Object.freeze({name:'아츠테오',color:'#735800'}),
+  Object.freeze({name:'나레',color:'#b8dcff'}),
+  Object.freeze({name:'키네스',color:'#910101'}),
+  Object.freeze({name:'에즈레일',color:'#6f82a8'}),
+  Object.freeze({name:'뉴',color:'#c64a73'}),
+  Object.freeze({name:'가에',color:'#7f8992'}),
+  Object.freeze({name:'사이엔',color:'#4f79aa'}),
+  Object.freeze({name:'카논',color:'#c94141'}),
+  Object.freeze({name:'델트루브',color:'#b5652b'}),
+  Object.freeze({name:'시아넬리',color:'#8b1223'})
+]);
+function enhanceColorInputs(root=document){
+  $$('input[type="color"]',root).forEach(input=>{
+    if(input.dataset.duelsCharacterColors==='1')return;
+    input.dataset.duelsCharacterColors='1';
+    const details=document.createElement('details');
+    details.className='character-color-presets'+(input.closest('.ribbon')?' ribbon-color-presets':'');
+    details.innerHTML=`<summary>캐릭터 색</summary><div class="character-color-grid">${DUELS_CHARACTER_COLORS.map(x=>`<button type="button" class="character-color-swatch" data-color="${x.color}" title="${escapeHtml(x.name)} · ${x.color}"><i style="background:${x.color}"></i><span>${escapeHtml(x.name)}</span></button>`).join('')}</div>`;
+    const host=input.closest('label.color-tool');
+    if(host)host.insertAdjacentElement('afterend',details);else input.insertAdjacentElement('afterend',details);
+    details.addEventListener('click',e=>{
+      const button=e.target.closest('[data-color]');if(!button)return;
+      e.preventDefault();e.stopPropagation();
+      input.value=button.dataset.color;
+      input.dispatchEvent(new Event('input',{bubbles:true}));
+      input.dispatchEvent(new Event('change',{bubbles:true}));
+      details.open=false;
+    });
+  });
+}
 
 async function api(url, options={}) {
   const res = await fetch(url, {cache:'no-store', headers:{'Content-Type':'application/json', ...(options.headers||{})}, ...options});
@@ -13,7 +89,7 @@ async function api(url, options={}) {
   return data;
 }
 function showStatus(msg, error=false){ const el=$('#status'); el.textContent=msg; el.classList.toggle('error',error); el.classList.remove('hidden'); clearTimeout(showStatus.t); showStatus.t=setTimeout(()=>el.classList.add('hidden'),4500); }
-function openModal(html){ $('#modal').innerHTML=html; $('#modalBackdrop').classList.remove('hidden'); }
+function openModal(html){ $('#modal').innerHTML=html; enhanceColorInputs($('#modal')); $('#modalBackdrop').classList.remove('hidden'); }
 function closeModal(){ $('#modalBackdrop').classList.add('hidden'); $('#modal').innerHTML=''; }
 $('#modalBackdrop').addEventListener('mousedown',e=>{if(e.target===e.currentTarget)closeModal()});
 
@@ -115,7 +191,9 @@ function rememberSelection(){ const sel=getSelection(); if(sel.rangeCount&&state
 function restoreSelection(){ if(!state.savedRange)return; const sel=getSelection(); sel.removeAllRanges(); sel.addRange(state.savedRange); }
 function exec(cmd,value=null){ restoreSelection(); document.execCommand(cmd,false,value); rememberSelection(); }
 $$('[data-cmd]').forEach(b=>b.onclick=()=>exec(b.dataset.cmd));
-$$('[data-align]').forEach(b=>b.onclick=()=>exec(b.dataset.align==='left'?'justifyLeft':b.dataset.align==='center'?'justifyCenter':b.dataset.align==='right'?'justifyRight':'justifyFull'));
+function selectedCharacterCard(){return $('.selected-duels-component[data-duels-component="character-card"]',$('#editPage'))}
+function setCharacterCardAlign(value){const card=selectedCharacterCard();if(!card)return false;const data=componentPayload(card);data.align=cardAlign(value);renderCharacterCardElement(card,data);card.classList.add('selected-duels-component');card.closest('.editable')?.dispatchEvent(new Event('input',{bubbles:true}));return true}
+$$('[data-align]').forEach(b=>b.onclick=()=>{const a=b.dataset.align;if(a!=='justify'&&setCharacterCardAlign(a))return;exec(a==='left'?'justifyLeft':a==='center'?'justifyCenter':a==='right'?'justifyRight':'justifyFull')});
 $('#textColor').oninput=e=>exec('foreColor',e.target.value);
 $('#highlightColor').oninput=e=>exec('hiliteColor',e.target.value);
 $('#fontSizeInput').onchange=e=>applyFontSize(Number(e.target.value)||16);
@@ -191,6 +269,7 @@ function characterCardTextHtml(value){
 }
 function cardDimension(v,fallback,min,max){const n=Number(v);return Number.isFinite(n)?Math.max(min,Math.min(max,Math.round(n))):fallback}
 function cardFade(v){return ['none','soft','normal','strong'].includes(String(v||''))?String(v):'normal'}
+function cardAlign(v){return ['left','center','right'].includes(String(v||''))?String(v):'left'}
 const CARD_RATIO_PRESETS=Object.freeze({
   'duels':{label:'듀얼즈 카드 비율',ratio:138/222},
   'portrait-3-4':{label:'세로 3:4',ratio:3/4},
@@ -200,29 +279,30 @@ const CARD_RATIO_PRESETS=Object.freeze({
 });
 function applyCardRatioPreset(key){
   const height=cardDimension($('#ccHeight')?.value,222,100,1200);
-  if(key==='profile'){$('#ccWidth').value=200;$('#ccHeight').value=280;return}
+  if(key==='profile'){$('#ccWidth').value=400;$('#ccHeight').value=400;return}
   const preset=CARD_RATIO_PRESETS[key];if(!preset)return;
   $('#ccWidth').value=cardDimension(Math.round(height*preset.ratio),138,80,1200);
 }
 function renderCharacterCardElement(el,data){
   const color=componentColor(data.color),image=String(data.image||'').trim(),text=legacyCharacterCardText(data);
-  const width=cardDimension(data.width,138,80,1200),height=cardDimension(data.height,222,100,1200),fade=cardFade(data.fade);
+  const width=cardDimension(data.width,138,80,1200),height=cardDimension(data.height,222,100,1200),fade=cardFade(data.fade),align=cardAlign(data.align);
   const selected=el.classList.contains('selected-duels-component');
   el.className='duels-character-card'+(selected?' selected-duels-component':'');
   el.setAttribute('contenteditable','false');
   el.removeAttribute('tabindex');
   el.dataset.fade=fade;
+  el.dataset.align=align;
   el.style.setProperty('--duels-card-color',color);
   el.style.setProperty('--duels-card-width',`${width}px`);
   el.style.setProperty('--duels-card-height',`${height}px`);
-  setComponentPayload(el,{color,image,text,width,height,fade});
+  setComponentPayload(el,{color,image,text,width,height,fade,align});
   el.innerHTML=`${image?`<div class="duels-character-card-image" style="background-image:url(&quot;${escapeHtml(mediaSrc(image))}&quot;)"></div>`:'<div class="duels-character-card-image empty"></div>'}<div class="duels-character-card-shade"></div><div class="duels-character-card-copy">${characterCardTextHtml(text)}</div>`;
 }
 function makeCharacterCard(data){const el=document.createElement('div');el.dataset.duelsComponent='character-card';renderCharacterCardElement(el,data);return el}
 function renderDescriptionBoxElement(el,data){
-  const color=componentColor(data.color),title=String(data.title??'').trim(),body=String(data.body||'');
+  const color=componentColor(data.color),title=String(data.title??'').trim(),body=String(data.body||''),hasBody=body.trim().length>0;
   el.className='duels-description-box';el.setAttribute('contenteditable','false');el.style.setProperty('--duels-box-color',color);setComponentPayload(el,{title,color,body});
-  el.innerHTML=`${title?`<div class="duels-description-box-title">${escapeHtml(title)}</div>`:''}<div class="duels-description-box-body">${textLinesHtml(body)}</div>`;
+  el.innerHTML=`${title?`<div class="duels-description-box-title">${escapeHtml(title)}</div>`:''}${hasBody?`<div class="duels-description-box-body">${textLinesHtml(body)}</div>`:''}`;
 }
 function makeDescriptionBox(data){const el=document.createElement('div');el.dataset.duelsComponent='description-box';renderDescriptionBoxElement(el,data);return el}
 function upgradeDuelsComponents(root){
@@ -242,17 +322,17 @@ function insertBlockComponent(node){
 }
 function characterCardModal(existing=null){
   rememberSelection();const d=existing?componentPayload(existing):{};
-  const text=legacyCharacterCardText(d),width=cardDimension(d.width,138,80,1200),height=cardDimension(d.height,222,100,1200),fade=cardFade(d.fade);
-  openModal(`<h2>${existing?'캐릭터 카드 수정':'캐릭터 카드 삽입'}</h2><div class="form-row"><label>이미지 PNG/JPG URL 또는 /media/... 경로</label><input id="ccImage" value="${escapeHtml(d.image||'')}"></div><div class="form-row"><label>카드 글씨</label><textarea id="ccText" rows="7" placeholder="원하는 글씨를 자유롭게 입력하세요.">${escapeHtml(text)}</textarea></div><div class="form-row"><label>크기 / 비율 프리셋</label><select id="ccPreset"><option value="custom">직접 입력</option><option value="profile">제목 아래 프로필 · 200×280</option><option value="duels">듀얼즈 카드 비율 · 138:222</option><option value="portrait-3-4">세로 3:4</option><option value="square">1:1</option><option value="landscape-3-2">누운 카드 3:2</option><option value="landscape-16-9">누운 카드 16:9</option></select><div class="muted" style="margin-top:5px">비율 프리셋은 현재 높이를 기준으로 너비를 계산합니다. ‘제목 아래 프로필’만 권장 크기 200×280을 바로 적용합니다.</div></div><div class="component-form-grid"><div class="form-row"><label>너비</label><input id="ccWidth" type="number" min="80" max="1200" value="${width}"></div><div class="form-row"><label>높이</label><input id="ccHeight" type="number" min="100" max="1200" value="${height}"></div><div class="form-row"><label>이미지 페이드</label><select id="ccFade"><option value="none" ${fade==='none'?'selected':''}>없음</option><option value="soft" ${fade==='soft'?'selected':''}>약하게</option><option value="normal" ${fade==='normal'?'selected':''}>기본</option><option value="strong" ${fade==='strong'?'selected':''}>강하게</option></select></div><div class="form-row"><label>테두리 강조색</label><input id="ccColor" type="color" value="${componentColor(d.color)}"></div></div><p class="muted">이미지는 카드 전체를 cover 방식으로 채우며 카드 중심과 이미지 중심이 일치합니다. 비율이 맞지 않는 부분은 자동으로 잘립니다.</p><div class="modal-actions"><button id="cancelComponent">취소</button>${existing?'<button id="deleteComponent" class="danger">삭제</button>':''}<button id="saveComponent" class="primary">${existing?'수정':'삽입'}</button></div>`);
+  const text=legacyCharacterCardText(d),width=cardDimension(d.width,138,80,1200),height=cardDimension(d.height,222,100,1200),fade=cardFade(d.fade),align=cardAlign(d.align);
+  openModal(`<h2>${existing?'캐릭터 카드 수정':'캐릭터 카드 삽입'}</h2><div class="form-row"><label>이미지 PNG/JPG URL 또는 /media/... 경로</label><input id="ccImage" value="${escapeHtml(d.image||'')}"></div><div class="form-row"><label>카드 글씨</label><textarea id="ccText" rows="7" placeholder="원하는 글씨를 자유롭게 입력하세요.">${escapeHtml(text)}</textarea></div><div class="form-row"><label>크기 / 비율 프리셋</label><select id="ccPreset"><option value="custom">직접 입력</option><option value="profile">프로필 · 400×400</option><option value="duels">듀얼즈 카드 비율 · 138:222</option><option value="portrait-3-4">세로 3:4</option><option value="square">1:1</option><option value="landscape-3-2">누운 카드 3:2</option><option value="landscape-16-9">누운 카드 16:9</option></select><div class="muted" style="margin-top:5px">비율 프리셋은 현재 높이를 기준으로 너비를 계산합니다. ‘프로필’은 400×400 고정 크기를 바로 적용합니다.</div></div><div class="component-form-grid"><div class="form-row"><label>너비</label><input id="ccWidth" type="number" min="80" max="1200" value="${width}"></div><div class="form-row"><label>높이</label><input id="ccHeight" type="number" min="100" max="1200" value="${height}"></div><div class="form-row"><label>배치</label><select id="ccAlign"><option value="left" ${align==='left'?'selected':''}>왼쪽</option><option value="center" ${align==='center'?'selected':''}>가운데</option><option value="right" ${align==='right'?'selected':''}>오른쪽</option></select></div><div class="form-row"><label>이미지 페이드</label><select id="ccFade"><option value="none" ${fade==='none'?'selected':''}>없음</option><option value="soft" ${fade==='soft'?'selected':''}>약하게</option><option value="normal" ${fade==='normal'?'selected':''}>기본</option><option value="strong" ${fade==='strong'?'selected':''}>강하게</option></select></div><div class="form-row"><label>테두리 강조색</label><input id="ccColor" type="color" value="${componentColor(d.color)}"></div></div><p class="muted">이미지는 카드 전체를 cover 방식으로 채우며 카드 중심과 이미지 중심이 일치합니다. 비율이 맞지 않는 부분은 자동으로 잘립니다.</p><div class="modal-actions"><button id="cancelComponent">취소</button>${existing?'<button id="deleteComponent" class="danger">삭제</button>':''}<button id="saveComponent" class="primary">${existing?'수정':'삽입'}</button></div>`);
   $('#ccPreset').onchange=e=>applyCardRatioPreset(e.target.value);
   $('#cancelComponent').onclick=closeModal;
   if(existing)$('#deleteComponent').onclick=()=>{if(confirm('이 캐릭터 카드 블록을 삭제할까요?')){const host=existing.closest('.editable');existing.remove();host?.dispatchEvent(new Event('input',{bubbles:true}));closeModal()}};
-  $('#saveComponent').onclick=()=>{const data={image:normalizeImageUrl($('#ccImage').value.trim()),text:$('#ccText').value,color:$('#ccColor').value,width:cardDimension($('#ccWidth').value,138,80,1200),height:cardDimension($('#ccHeight').value,222,100,1200),fade:cardFade($('#ccFade').value)};if(existing){renderCharacterCardElement(existing,data);existing.closest('.editable')?.dispatchEvent(new Event('input',{bubbles:true}));closeModal()}else{const node=makeCharacterCard(data);if(insertBlockComponent(node))closeModal()}};
+  $('#saveComponent').onclick=()=>{const data={image:normalizeImageUrl($('#ccImage').value.trim()),text:$('#ccText').value,color:$('#ccColor').value,width:cardDimension($('#ccWidth').value,138,80,1200),height:cardDimension($('#ccHeight').value,222,100,1200),fade:cardFade($('#ccFade').value),align:cardAlign($('#ccAlign').value)};if(existing){renderCharacterCardElement(existing,data);existing.closest('.editable')?.dispatchEvent(new Event('input',{bubbles:true}));closeModal()}else{const node=makeCharacterCard(data);if(insertBlockComponent(node))closeModal()}};
 }
 
 function descriptionBoxModal(existing=null){
   rememberSelection();const d=existing?componentPayload(existing):{};
-  openModal(`<h2>${existing?'설명 상자 수정':'설명 상자 삽입'}</h2><div class="form-row"><label>제목 <span class="muted">(선택)</span></label><input id="dbTitle" value="${escapeHtml(d.title??'')}" placeholder="비워두면 제목 칸을 만들지 않습니다."></div><div class="form-row"><label>강조색</label><input id="dbColor" type="color" value="${componentColor(d.color)}"></div><div class="form-row"><label>내용</label><textarea id="dbBody" rows="8">${escapeHtml(d.body||'')}</textarea></div><p class="muted">제목이 비어 있으면 본문 영역만 삽입됩니다.</p><div class="modal-actions"><button id="cancelComponent">취소</button>${existing?'<button id="deleteComponent" class="danger">삭제</button>':''}<button id="saveComponent" class="primary">${existing?'수정':'삽입'}</button></div>`);
+  openModal(`<h2>${existing?'설명 상자 수정':'설명 상자 삽입'}</h2><div class="form-row"><label>제목 <span class="muted">(선택)</span></label><input id="dbTitle" value="${escapeHtml(d.title??'')}" placeholder="비워두면 제목 칸을 만들지 않습니다."></div><div class="form-row"><label>강조색</label><input id="dbColor" type="color" value="${componentColor(d.color)}"></div><div class="form-row"><label>내용</label><textarea id="dbBody" rows="8">${escapeHtml(d.body||'')}</textarea></div><p class="muted">제목이 비어 있으면 본문만, 내용이 비어 있으면 제목만 표시됩니다.</p><div class="modal-actions"><button id="cancelComponent">취소</button>${existing?'<button id="deleteComponent" class="danger">삭제</button>':''}<button id="saveComponent" class="primary">${existing?'수정':'삽입'}</button></div>`);
   $('#cancelComponent').onclick=closeModal;
   if(existing)$('#deleteComponent').onclick=()=>{if(confirm('이 설명 상자를 삭제할까요?')){const host=existing.closest('.editable');existing.remove();host?.dispatchEvent(new Event('input',{bubbles:true}));closeModal()}};
   $('#saveComponent').onclick=()=>{const data={title:$('#dbTitle').value.trim(),color:$('#dbColor').value,body:$('#dbBody').value};if(existing){renderDescriptionBoxElement(existing,data);existing.closest('.editable')?.dispatchEvent(new Event('input',{bubbles:true}));closeModal()}else{const node=makeDescriptionBox(data);if(insertBlockComponent(node))closeModal()}};
@@ -323,3 +403,6 @@ window.addEventListener('resize',()=>{if(innerWidth>720)closeMobileSidebar()});
 window.addEventListener('hashchange',()=>{if(state.editing&&!confirm('편집 중인 변경사항이 저장되지 않을 수 있습니다. 이동할까요?'))return;renderRoute()});
 
 (async function init(){try{state.config=await api('/api/config'); if(!state.config.tokenConfigured)showStatus('GitHub Token을 설정하면 편집/저장이 가능합니다.');await refreshIndex();await renderRoute();}catch(e){showStatus(e.message,true);$('#viewPage').innerHTML=`<div class="wiki-card"><h2>초기화 실패</h2><p>${escapeHtml(e.message)}</p><p>우측 상단 GitHub 설정에서 저장소와 토큰을 확인해주세요.</p></div>`}})();
+
+// 3.25: 모든 색 입력에 접이식 듀얼즈 캐릭터 색 프리셋을 연결한다.
+enhanceColorInputs(document);
