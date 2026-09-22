@@ -1,36 +1,22 @@
 {
-  "id": "doc_f7d280d6-ee9c-4d05-bc21-782ff0b54787",
+  "id": "doc_a9522f5b69c34168900c60cc7d8b6644",
   "kind": "category-info",
   "title": "캐릭터",
   "slug": "_info",
-  "categoryId": "cat_e3e097e1-4b02-4fef-aa7f-cdf7f9695827",
+  "categoryId": "cat_80b206cc3a0c42b9bb1d02f2d5a7a0c4",
   "categorySlug": "캐릭터",
   "content": {
-    "type": "doc",
-    "content": [
+    "type": "wiki-sections-v3",
+    "introHtml": "<p></p>",
+    "sections": [
       {
-        "type": "heading",
-        "attrs": {
-          "level": 1
-        },
-        "content": [
-          {
-            "type": "text",
-            "text": "개요"
-          }
-        ]
-      },
-      {
-        "type": "paragraph",
-        "content": [
-          {
-            "type": "text",
-            "text": "캐릭터의 개요다."
-          }
-        ]
+        "id": "sec_04a15d4702504dfe89f273792364c3ca",
+        "title": "개요",
+        "contentHtml": "<p></p>",
+        "children": []
       }
     ]
   },
-  "createdAt": "2026-09-21T05:32:01.989Z",
-  "updatedAt": "2026-09-21T05:32:51.424Z"
+  "createdAt": "2026-09-22T16:00:02+0900",
+  "updatedAt": "2026-09-22T16:00:02+0900"
 }
