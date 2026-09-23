@@ -6,7 +6,7 @@ BRANCH="main"
 INITIAL_CONTENT=0
 
 echo "========================================"
-echo " Duels Wiki Git Sync 3.50"
+echo " Duels Wiki Git Sync 3.51"
 echo "========================================"
 echo "[POLICY] wiki/ and media/ are user content. Existing remote content is preserved."
 

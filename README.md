@@ -1,6 +1,6 @@
-# Duels Wiki 3.50
+# Duels Wiki 3.51
 
-Duels Wiki 3.50는 Python 표준 라이브러리 기반 로컬 편집기 + GitHub 저장소 + GitHub Pages 정적 열람 사이트 구조다. Node.js/Next.js/npm은 사용하지 않는다.
+Duels Wiki 3.51는 Python 표준 라이브러리 기반 로컬 편집기 + GitHub 저장소 + GitHub Pages 정적 열람 사이트 구조다. Node.js/Next.js/npm은 사용하지 않는다.
 
 ## 실행
 
@@ -94,7 +94,7 @@ Duels Wiki 3.50는 Python 표준 라이브러리 기반 로컬 편집기 + GitHu
 ZIP의 최상위 폴더가 그대로 GitHub 저장소 루트가 된다. `README.md`와 `VERSION.md`도 이 안에 있으므로 함께 commit된다.
 
 ```text
-duels_wiki_3.50/
+duels_wiki_3.51/
 ├─ DuelsWikiEditor.py     GitHub에 저장되는 로컬 런처 최신본
 ├─ run_editor.bat         로컬 실행/런처 업데이트용 (.gitignore)
 ├─ git_sync.bat           Windows Git 동기화

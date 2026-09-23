@@ -2,7 +2,7 @@
 
 const $ = (s, r=document) => r.querySelector(s);
 const $$ = (s, r=document) => [...r.querySelectorAll(s)];
-const state = { index:null, current:null, currentPath:'', editing:false, savedRange:null, componentInsertionRange:null, lastEditable:null, selectedImage:null, activeRibbon:'home', config:null };
+const state = { index:null, current:null, currentPath:'', editing:false, savedRange:null, componentInsertionRange:null, footnoteInsertionRange:null, footnoteInsertionEditable:null, lastEditable:null, selectedImage:null, activeRibbon:'home', config:null };
 const escapeHtml = s => String(s??'').replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
 const uid = p => `${p}_${crypto.randomUUID().replaceAll('-','')}`;
 const DUELS_CHARACTER_PROFILES=Object.freeze([
@@ -582,17 +582,24 @@ $('#internalLinkBtn').onclick=openInternalLink; $('#insertLinkBtn').onclick=open
 
 
 function currentFootnoteTarget(){
-  rememberSelection();const r=state.savedRange;if(!r)return null;const el=r.commonAncestorContainer.nodeType===1?r.commonAncestorContainer:r.commonAncestorContainer.parentElement;const editable=el?.closest?.('.editable');if(!editable||!$('#editPage')?.contains(editable)||editable.dataset.footnoteEditor)return null;return editable;
+  const r=state.savedRange;if(!r)return null;const el=r.commonAncestorContainer.nodeType===1?r.commonAncestorContainer:r.commonAncestorContainer.parentElement;const editable=el?.closest?.('.editable');if(!editable||!editable.isConnected||!$('#editPage')?.contains(editable)||editable.dataset.footnoteEditor)return null;return editable;
 }
+function captureFootnoteInsertionPoint(){
+  rememberSelection();const editable=currentFootnoteTarget();if(!editable)return false;
+  state.footnoteInsertionRange=state.savedRange.cloneRange();state.footnoteInsertionEditable=editable;return true;
+}
+function clearFootnoteInsertionPoint(){state.footnoteInsertionRange=null;state.footnoteInsertionEditable=null}
 function insertFootnoteReference(id){
-  const editable=currentFootnoteTarget();if(!editable){alert('본문의 각주를 넣을 위치에 커서를 놓아주세요.');return false}restoreSelection();const r=getSelection()?.rangeCount?getSelection().getRangeAt(0):null;if(!r||!editable.contains(r.commonAncestorContainer))return false;
-  const a=document.createElement('a');a.className='footnote-ref';a.dataset.footnoteRef=id;a.contentEditable='false';const n=footnoteNumber(editingContent,id);a.href=`#${footnoteAnchor(id)}`;a.textContent=`[${n??'?'}]`;a.title=`각주 ${n??''}`.trim();const sup=document.createElement('sup');sup.append(a);r.deleteContents();r.insertNode(sup);r.setStartAfter(sup);r.collapse(true);const sel=getSelection();sel.removeAllRanges();sel.addRange(r);state.savedRange=r.cloneRange();editable.dispatchEvent(new Event('input',{bubbles:true}));return true;
+  const editable=state.footnoteInsertionEditable;const stored=state.footnoteInsertionRange;if(!editable||!stored||!editable.isConnected||!$('#editPage')?.contains(editable)){clearFootnoteInsertionPoint();alert('본문의 각주를 넣을 위치에 커서를 놓아주세요.');return false}
+  let r;try{r=stored.cloneRange()}catch{clearFootnoteInsertionPoint();return false}if(!editable.contains(r.commonAncestorContainer)){clearFootnoteInsertionPoint();return false}
+  editable.focus({preventScroll:true});const sel=getSelection();sel.removeAllRanges();sel.addRange(r);
+  const a=document.createElement('a');a.className='footnote-ref';a.dataset.footnoteRef=id;a.contentEditable='false';const n=footnoteNumber(editingContent,id);a.href=`#${footnoteAnchor(id)}`;a.textContent=`[${n??'?'}]`;a.title=`각주 ${n??''}`.trim();const sup=document.createElement('sup');sup.append(a);r.deleteContents();r.insertNode(sup);r.setStartAfter(sup);r.collapse(true);sel.removeAllRanges();sel.addRange(r);state.savedRange=r.cloneRange();clearFootnoteInsertionPoint();editable.dispatchEvent(new Event('input',{bubbles:true}));return true;
 }
 function openFootnoteDialog(){
-  if(!currentFootnoteTarget()){alert('본문의 각주를 넣을 위치에 커서를 놓은 뒤 다시 눌러주세요.');return}
+  if(!captureFootnoteInsertionPoint()){alert('본문의 각주를 넣을 위치에 커서를 놓은 뒤 다시 눌러주세요.');return}
   const notes=editingContent.footnotes||[];
   openModal(`<div class="footnote-modal"><h2>각주 삽입</h2><p class="muted">기존 각주를 다시 참조하거나 새 각주를 추가할 수 있습니다.</p>${notes.length?`<div class="footnote-choice-list">${notes.map((f,i)=>`<button type="button" class="footnote-choice" data-footnote-choice="${escapeHtml(f.id)}"><span>[${i+1}]</span><span>${escapeHtml((new DOMParser().parseFromString(f.contentHtml||'','text/html').body.textContent||'내용 없음').trim().slice(0,80)||'내용 없음')}</span></button>`).join('')}</div>`:'<div class="footnote-empty">아직 등록된 각주가 없습니다.</div>'}<div class="footnote-new"><label>새 각주</label><textarea id="newFootnoteText" rows="4" placeholder="각주 내용을 입력하세요."></textarea></div><div class="modal-actions"><button id="cancelFootnote">취소</button><button id="createFootnote" class="primary">새 각주 추가</button></div></div>`);
-  $('#cancelFootnote').onclick=closeModal;
+  $('#cancelFootnote').onclick=()=>{clearFootnoteInsertionPoint();closeModal()};
   $$('.footnote-choice').forEach(b=>b.onclick=()=>{const id=b.dataset.footnoteChoice;closeModal();insertFootnoteReference(id)});
   $('#createFootnote').onclick=()=>{const text=$('#newFootnoteText').value.trim();if(!text){$('#newFootnoteText').focus();return}const id=uid('fn');editingContent.footnotes.push({id,contentHtml:`<p>${escapeHtml(text).replace(/\n/g,'<br>')}</p>`});closeModal();refreshFootnoteBlock();insertFootnoteReference(id);};
   $('#newFootnoteText').focus();
