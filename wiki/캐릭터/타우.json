@@ -7,24 +7,24 @@
   "categorySlug": "캐릭터",
   "content": {
     "type": "wiki-sections-v3",
-    "introHtml": "<p></p><div data-duels-component=\"character-card\" class=\"duels-character-card\" contenteditable=\"false\" data-fade=\"none\" data-align=\"left\" data-duels-data=\"%7B%22color%22%3A%22%23ffa500%22%2C%22image%22%3A%22https%3A%2F%2Fraw.githubusercontent.com%2FLyangNem%2FDuels%2Fmain%2Fcharacter%2Flian.png%22%2C%22text%22%3A%22%22%2C%22width%22%3A400%2C%22height%22%3A400%2C%22fade%22%3A%22none%22%2C%22align%22%3A%22left%22%7D\" style=\"--duels-card-color: #ffa500; --duels-card-width: 400px; --duels-card-height: 400px;\"><div class=\"duels-character-card-image\" style=\"background-image:url(&quot;https://raw.githubusercontent.com/LyangNem/Duels/main/character/lian.png&quot;)\"></div><div class=\"duels-character-card-shade\"></div><div class=\"duels-character-card-copy\"><div><br></div></div></div><div data-duels-component=\"description-box\" class=\"duels-description-box\" contenteditable=\"false\" data-duels-data=\"%7B%22title%22%3A%22%EB%A6%AC%EC%95%88%22%2C%22color%22%3A%22%23ffa500%22%2C%22body%22%3A%22%EB%B0%A9%EC%96%B4%EC%9D%98%20%EB%A7%88%EC%8A%A4%ED%84%B0%22%7D\" style=\"--duels-box-color: #ffa500;\"><div class=\"duels-description-box-title\">리안</div><div class=\"duels-description-box-body\">방어의 마스터</div></div>",
+    "introHtml": "<p></p><div data-duels-component=\"character-card\" class=\"duels-character-card\" contenteditable=\"false\" data-fade=\"none\" data-align=\"left\" data-duels-data=\"%7B%22color%22%3A%22%2300ffff%22%2C%22image%22%3A%22https%3A%2F%2Fraw.githubusercontent.com%2FLyangNem%2FDuels%2Fmain%2Fcharacter%2Ftau.png%22%2C%22text%22%3A%22%22%2C%22width%22%3A400%2C%22height%22%3A400%2C%22fade%22%3A%22none%22%2C%22align%22%3A%22left%22%7D\" style=\"--duels-card-color: #00ffff; --duels-card-width: 400px; --duels-card-height: 400px;\"><div class=\"duels-character-card-image\" style=\"background-image:url(&quot;https://raw.githubusercontent.com/LyangNem/Duels/main/character/tau.png&quot;)\"></div><div class=\"duels-character-card-shade\"></div><div class=\"duels-character-card-copy\"><div><br></div></div></div><div data-duels-component=\"description-box\" class=\"duels-description-box\" contenteditable=\"false\" data-duels-data=\"%7B%22title%22%3A%22%ED%83%80%EC%9A%B0%22%2C%22color%22%3A%22%2300ffff%22%2C%22body%22%3A%22%EC%8A%A4%ED%8C%8C%ED%81%AC%20%EC%B0%A8%EC%A0%80%22%7D\" style=\"--duels-box-color: #00ffff;\"><div class=\"duels-description-box-title\">타우</div><div class=\"duels-description-box-body\">스파크 차저</div></div>",
     "sections": [
       {
         "id": "sec_a3dc20e67a10480e842fab2c2461955f",
         "title": "개요",
-        "contentHtml": "사이버 테크 스쿼드 소속 기동형 초근거리 암살자 캐릭터.<p></p>",
+        "contentHtml": "여행길 스쿼드 소속 파워형 근거리 암살자 캐릭터.<p></p>",
         "children": []
       },
       {
         "id": "sec_698c9e4d5bd04944a69ccae6bad1567f",
         "title": "배경",
-        "contentHtml": "과거 사고로 왼쪽 다리를 잃었지만 추진기가 달린 기계 의족으로 대체하며 전투 요원으로 거듭난 소녀이다.<p></p>",
+        "contentHtml": "몰루다.<p></p>",
         "children": []
       },
       {
         "id": "sec_16b399786785422da659b1bc777cccaa",
         "title": "능력치",
-        "contentHtml": "<div data-duels-component=\"table\" class=\"duels-table-component\" contenteditable=\"false\" data-duels-data=\"%7B%22rows%22%3A3%2C%22cols%22%3A2%2C%22baseWidth%22%3A300%2C%22borderColor%22%3A%22%23ffa500%22%2C%22colWidths%22%3A%5B100%2C200%5D%2C%22cells%22%3A%5B%5B%7B%22html%22%3A%22%EC%8A%A4%ED%83%AF%22%2C%22color%22%3A%22%23ffa500%22%2C%22align%22%3A%22center%22%2C%22rowSpan%22%3A1%2C%22colSpan%22%3A1%7D%2C%7B%22html%22%3A%22%EC%88%98%EC%B9%98%22%2C%22color%22%3A%22%23ffa500%22%2C%22align%22%3A%22center%22%2C%22rowSpan%22%3A1%2C%22colSpan%22%3A1%7D%5D%2C%5B%7B%22html%22%3A%22%3Cspan%20style%3D%5C%22color%3A%20rgb(82%2C%20255%2C%20116)%3B%20letter-spacing%3A%20-0.288px%3B%5C%22%3E%EC%B2%B4%EB%A0%A5%3C%2Fspan%3E%22%2C%22color%22%3A%22%230d1520%22%2C%22align%22%3A%22center%22%2C%22rowSpan%22%3A1%2C%22colSpan%22%3A1%7D%2C%7B%22html%22%3A%22800%22%2C%22color%22%3A%22%230d1520%22%2C%22align%22%3A%22center%22%2C%22rowSpan%22%3A1%2C%22colSpan%22%3A1%7D%5D%2C%5B%7B%22html%22%3A%22%3Cspan%20style%3D%5C%22color%3A%20rgb(242%2C%20181%2C%20240)%3B%20letter-spacing%3A%20-0.288px%3B%5C%22%3E%EC%9D%B4%EB%8F%99%20%EC%86%8D%EB%8F%84%3C%2Fspan%3E%22%2C%22color%22%3A%22%230d1520%22%2C%22align%22%3A%22center%22%2C%22rowSpan%22%3A1%2C%22colSpan%22%3A1%7D%2C%7B%22html%22%3A%22%EB%B9%A0%22%2C%22color%22%3A%22%230d1520%22%2C%22align%22%3A%22center%22%2C%22rowSpan%22%3A1%2C%22colSpan%22%3A1%7D%5D%5D%7D\" style=\"--duels-table-base-width: 300px; --duels-table-border: #ffa500;\"><div class=\"duels-table-scroll\"><table class=\"duels-table\"><colgroup><col style=\"min-width:100px;width:100px\"><col style=\"min-width:200px;width:200px\"></colgroup><tbody><tr><td style=\"background:#ffa500;min-width:100px;text-align:center\">스탯</td><td style=\"background:#ffa500;min-width:200px;text-align:center\">수치</td></tr><tr><td style=\"background:#0d1520;min-width:100px;text-align:center\"><span style=\"color: rgb(82, 255, 116); letter-spacing: -0.288px;\">체력</span></td><td style=\"background:#0d1520;min-width:200px;text-align:center\">800</td></tr><tr><td style=\"background:#0d1520;min-width:100px;text-align:center\"><span style=\"color: rgb(242, 181, 240); letter-spacing: -0.288px;\">이동 속도</span></td><td style=\"background:#0d1520;min-width:200px;text-align:center\">빠</td></tr></tbody></table></div></div><p></p>",
+        "contentHtml": "<div data-duels-component=\"table\" class=\"duels-table-component\" contenteditable=\"false\" data-duels-data=\"%7B%22rows%22%3A3%2C%22cols%22%3A2%2C%22baseWidth%22%3A300%2C%22borderColor%22%3A%22%2300ffff%22%2C%22fitWidth%22%3Afalse%2C%22colWidths%22%3A%5B100%2C200%5D%2C%22cells%22%3A%5B%5B%7B%22html%22%3A%22%EC%8A%A4%ED%83%AF%22%2C%22color%22%3A%22%2300ffff%22%2C%22align%22%3A%22center%22%2C%22rowSpan%22%3A1%2C%22colSpan%22%3A1%7D%2C%7B%22html%22%3A%22%EC%88%98%EC%B9%98%22%2C%22color%22%3A%22%2300ffff%22%2C%22align%22%3A%22center%22%2C%22rowSpan%22%3A1%2C%22colSpan%22%3A1%7D%5D%2C%5B%7B%22html%22%3A%22%3Cspan%20style%3D%5C%22color%3A%20rgb(82%2C%20255%2C%20116)%3B%20letter-spacing%3A%20-0.288px%3B%5C%22%3E%EC%B2%B4%EB%A0%A5%3C%2Fspan%3E%22%2C%22color%22%3A%22%230d1520%22%2C%22align%22%3A%22center%22%2C%22rowSpan%22%3A1%2C%22colSpan%22%3A1%7D%2C%7B%22html%22%3A%22800%22%2C%22color%22%3A%22%230d1520%22%2C%22align%22%3A%22center%22%2C%22rowSpan%22%3A1%2C%22colSpan%22%3A1%7D%5D%2C%5B%7B%22html%22%3A%22%3Cspan%20style%3D%5C%22color%3A%20rgb(242%2C%20181%2C%20240)%3B%20letter-spacing%3A%20-0.288px%3B%5C%22%3E%EC%9D%B4%EB%8F%99%20%EC%86%8D%EB%8F%84%3C%2Fspan%3E%22%2C%22color%22%3A%22%230d1520%22%2C%22align%22%3A%22center%22%2C%22rowSpan%22%3A1%2C%22colSpan%22%3A1%7D%2C%7B%22html%22%3A%22%EB%B9%A0%22%2C%22color%22%3A%22%230d1520%22%2C%22align%22%3A%22center%22%2C%22rowSpan%22%3A1%2C%22colSpan%22%3A1%7D%5D%5D%7D\" style=\"--duels-table-base-width: 300px; --duels-table-border: #00ffff;\"><div class=\"duels-table-scroll\"><table class=\"duels-table\"><colgroup><col style=\"min-width:100px;width:100px\"><col style=\"min-width:200px;width:200px\"></colgroup><tbody><tr><td style=\"background:#00ffff;min-width:100px;text-align:center\">스탯</td><td style=\"background:#00ffff;min-width:200px;text-align:center\">수치</td></tr><tr><td style=\"background:#0d1520;min-width:100px;text-align:center\"><span style=\"color: rgb(82, 255, 116); letter-spacing: -0.288px;\">체력</span></td><td style=\"background:#0d1520;min-width:200px;text-align:center\">800</td></tr><tr><td style=\"background:#0d1520;min-width:100px;text-align:center\"><span style=\"color: rgb(242, 181, 240); letter-spacing: -0.288px;\">이동 속도</span></td><td style=\"background:#0d1520;min-width:200px;text-align:center\">빠</td></tr></tbody></table></div></div><p></p>",
         "children": []
       },
       {
@@ -34,26 +34,27 @@
         "children": [
           {
             "id": "sec_6954576f67c646839f86afce8469a1ba",
-            "title": "[LMB] - 방패 스윙",
-            "contentHtml": "에너지 방패를 휘둘러 공격하며, 동시에 전방을 막아낸다.<p></p><div><br></div><div>리안의 기본적인 운영을 가능하게 만들어주는 저스테미나 방어기. 공격 딜레이가 짧고 범위가 넓은데다 방어 성공 시 방패 지속시간 초기화까지 붙어있어 활용도가 매우 높다.</div>",
-            "children": []
+            "title": "[LMB] - 스파크 낫",
+            "contentHtml": "낫을 휘둘러 피해를 주며, 적중한 적마다 스파크를 1 충전한다.<div><br></div><div>매우 심플한 구조의 일반 공격. 부채꼴 범위에 피해를 주고 고유 자원인 스파크를 획득한다.</div><div>하지만 이런 간단한 구조와 달리 타우의 일반 공격은 굉장히 좋은 성능을 자랑하는데, 타 근거리 캐릭터를 상대로 카이팅이 가능한 수준의 넓은 타격 범위와 후술할 추가 피해는 타우의 암살 안정성을 한층 높여주며, 타우의 성능은 곧 일반 공격의 성능에 좌우된다고 봐도 과언이 아니다.</div>",
+            "children": [
+              {
+                "id": "sec_b47be265ed564a37ab78479391f5d12a",
+                "title": "[LMB CRIT] - 과충전 스파크",
+                "contentHtml": "스파크가 3회 충전된 상태에서 일반 공격 적중 시 스파크를 모두 소모하여 최대 체력의 20%에 해당하는 추가 피해를 입히고 넉백시킨다.<div><br></div><div>타우의 아이덴티티이자 폭딜의 원천. 일반 공격을 3회 적중시키면 다음 일반 공격이 최대 체력의 20%에 해당하는 추가 피해를 주는 능력으로, 최대 체력 비례 피해라는 점 때문에 타우는 탱커 분쇄에 최적화되어있다.</div><div><br></div><div>또한 탱커가 아니더라도 최대 체력의 20%는 결코 적은 수치가 아니므로 과충전 스파크를 얼마나 빨리 순환시키느냐에 따라 타우의 성능이 천지차이로 갈린다.</div>",
+                "children": []
+              }
+            ]
           },
           {
             "id": "sec_bd847cfbc39d41498a10d64d32c050c5",
-            "title": "[RMB] - 돌진 백업",
-            "contentHtml": "최근 3회의 회피 위치를 6초간 기록하며, 사용 시 가장 최근에 생성된 회피 위치로 되돌아간다.<p></p><div><br></div><div>위험한 상황에 빠져나오는 탈출기, 위치 교란, 후술할 방패 돌진-돌진 백업 연계의 일방적인 딜교환 정도로 활용되는 제한사항이 많은 순간이동기. 낮은 스테미나 소모량에도 불구하고 실제 활용은 다소 적은 편이다.</div>",
+            "title": "[RMB] - 스파크 체인",
+            "contentHtml": "낫을 던져 적중한 위치로 이동하며 피해를 주고, 미적중 시 되돌아오는 낫에 맞은 적을 끌어오며 피해를 준다.<div><br></div><div>타우의 기동성을 책임지는 스킬. 기본적으로 리버스 그랩 스킬이지만, 각도를 잘 조절하면 그랩으로도 사용할 수 있다.</div><div><br></div><div>다만 타우는 일반 공격 범위가 넓은 대가로 체급이 타 근접 딜러에 비해 낮은 편이고, 이로 인해 근거리 체급 싸움에서 타우를 밟아버릴 수 있는 딜러가 많으니 사용에 주의해야 한다.</div>",
             "children": []
           },
           {
             "id": "sec_6ddd4db1a1cb4153b393b6d99505c25d",
-            "title": "[L-Shift] - 방패 올려치기",
-            "contentHtml": "짧은 직선 거리를 올려쳐 피해를 준다.<p></p><div><br></div><div>희대의 개 쓰레기 반격기. 리안이 저스트 회피에 목숨걸지 않아도 되는 이유이기도 하다. 방패라는 저스테미나 대체제가 존재하는 덕에, 리안의 교전에서 저스트 회피는 방패 돌진을 사용하기 위해 사용한 회피로 인해 가끔 받을 수 있는 추가 스킬 정도의 느낌이다.</div><div><br></div><div><strike><font color=\"#757575\">이 덕에 리안의 기본 운영 방식이 방패로 모든 공격을 막기(...)가 되었다.</font></strike></div>",
-            "children": []
-          },
-          {
-            "id": "sec_a4074f058b424c4a803d81c69efe958e",
-            "title": "[Space/LMB] - 방패 돌진",
-            "contentHtml": "회피 직후 0.5초 내에 좌클릭 시 빠르게 돌진하며 경로 상에 피해 및 넉백을 부여한다.<p></p><div><br></div><div>리안의 난이도를 더욱 올려주는 리안의 주요 공격. 스테미나 소모량에 비해 높은 피해량을 가진 것 같지만 실상은 회피 스테미나 소모량 + 방패 돌진 스테미나 소모량이기에 본전도 못찾는 효율이다.<br></div>",
+            "title": "[L-Shift] - 스파크 웨이브",
+            "contentHtml": "낫을 한 바퀴 돌려 원형 범위에 광역 피해를 주고 스파크를 최대치로 충전한다.<div><br></div><div>타우의 진정한 이니시에이팅 기술. 선딜레이 후 평타 사거리와 같은 크기의 원형 범위에 광역 피해를 주고 무력화 넉백을 적용한다.</div><div>적에게 날아가는 도중에 끔살이 가능하고 CC도 0.5초밖에 되지 않는 스파크 체인과 달리 비교적 먼 거리에서 안정적으로 하드CC를 넣을 수 있으며, 넉백이 있기에 카이팅에도 도움을 준다.</div><div><br></div><div>그리고 무엇보다 이 반격기가 높은 평가를 받는 이유는 바로 스파크 최대치 충전 효과다.</div><div>반격기 한 번으로 평타 3회 적중 조건을 아예 스킵해버리는 것은 물론, 기존에 스파크 충전이 되어 있다면 평-반격-평으로 순식간에 600+최대 체력의 40%에 해당하는 피해를 입힐 수 있다. 뿐만 아니라 이 효과는 아무런 조건 없이 발동되므로, 타우는 반격기를 허공에 날려도 다음 전투를 유리하게 시작할 수 있다.</div>",
             "children": []
           }
         ]
@@ -61,7 +62,7 @@
       {
         "id": "sec_1c8c3c8620bf4bad956df0728149f753",
         "title": "평가",
-        "contentHtml": "초기 캐릭터 임에도 불구하고 극단적으로 높은 난이도 덕에 기동성 높은 암살자를 찾아온 뉴비를 분쇄한다.<div><div><br></div><div>운영의 기본 전제가 상대방의 공격 타이밍을 심리전으로 전부 읽어내 정확한 타이밍에 방어해야 하며, 낮은 스테미나 소모량으로 상대의 공격을 받아치며 스테미나 차이가 심해지면 방패 돌진으로 진입하여 일방적인 이득을 보고 공격&nbsp;<span style=\"letter-spacing: -0.018em;\">도중 상대의 공격을 예측 방패로 전부 막아내야 하는 다소 정신나간 운영법을 가지고 있다.</span></div><div><span style=\"letter-spacing: -0.018em;\"><br></span></div><div>이 덕에 기동형 암살자라는 파격적인 전투 스타일에도 불구, 굉장한 비주류 캐릭터로 손꼽힌다.</div></div>",
+        "contentHtml": "<br>",
         "children": []
       },
       {
@@ -77,8 +78,9 @@
           }
         ]
       }
-    ]
+    ],
+    "footnotes": []
   },
   "createdAt": "2026-09-23T15:55:52+0900",
-  "updatedAt": "2026-09-23T15:55:52+0900"
+  "updatedAt": "2026-09-23T16:34:42+0900"
 }
