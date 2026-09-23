@@ -1,4 +1,11 @@
-# Duels Wiki 3.44
+# Duels Wiki 3.45
+
+## 3.45
+
+- 에디터 웹페이지의 버전 표시는 `editor/version.json`을 단일 기준으로 읽어 표시하도록 변경. 하드코딩된 과거 버전 표시 제거.
+- 런처 버전은 `APP_VERSION` 하나를 기준으로 HTTP Server 헤더와 콘솔 표시에 공통 적용.
+- `run_editor.bat`의 하드코딩 버전 문구를 제거해 이후 패키지 버전과 어긋나지 않도록 변경.
+- Git 동기화 배너와 Editor README의 현재 버전 표기도 3.45로 동기화.
 
 ## 3.44
 

@@ -933,7 +933,25 @@ $('#sidebarToggle').onclick=()=>$('#sidebar').classList.toggle('open');
 window.addEventListener('resize',()=>{if(innerWidth>720)closeMobileSidebar()});
 window.addEventListener('hashchange',()=>{if(state.editing&&!confirm('편집 중인 변경사항이 저장되지 않을 수 있습니다. 이동할까요?'))return;renderRoute()});
 
-(async function init(){try{state.config=await api('/api/config'); if(!state.config.tokenConfigured)showStatus('GitHub Token을 설정하면 편집/저장이 가능합니다.');await refreshIndex();await renderRoute();}catch(e){showStatus(e.message,true);$('#viewPage').innerHTML=`<div class="wiki-card"><h2>초기화 실패</h2><p>${escapeHtml(e.message)}</p><p>우측 상단 GitHub 설정에서 저장소와 토큰을 확인해주세요.</p></div>`}})();
+async function syncDisplayedVersion(){
+  let editorVersion='unknown';
+  try{
+    const response=await fetch('version.json',{cache:'no-store'});
+    if(response.ok){
+      const meta=await response.json();
+      editorVersion=String(meta?.version||'unknown');
+    }
+  }catch(_){ }
+  const launcherVersion=String(state.config?.launcherVersion||'unknown');
+  const label=$('#editorVersion');
+  if(label){
+    label.textContent=launcherVersion!=='unknown'&&editorVersion!=='unknown'&&launcherVersion!==editorVersion
+      ?`Editor ${editorVersion} · Launcher ${launcherVersion}`
+      :`Editor ${editorVersion!=='unknown'?editorVersion:launcherVersion}`;
+  }
+}
+
+(async function init(){try{state.config=await api('/api/config');await syncDisplayedVersion(); if(!state.config.tokenConfigured)showStatus('GitHub Token을 설정하면 편집/저장이 가능합니다.');await refreshIndex();await renderRoute();}catch(e){showStatus(e.message,true);$('#viewPage').innerHTML=`<div class="wiki-card"><h2>초기화 실패</h2><p>${escapeHtml(e.message)}</p><p>우측 상단 GitHub 설정에서 저장소와 토큰을 확인해주세요.</p></div>`}})();
 
 // 3.25: 모든 색 입력에 접이식 듀얼즈 캐릭터 색 프리셋을 연결한다.
 enhanceColorInputs(document);
