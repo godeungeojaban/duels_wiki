@@ -7,7 +7,7 @@
   "categorySlug": "캐릭터",
   "content": {
     "type": "wiki-sections-v3",
-    "introHtml": "<p></p>",
+    "introHtml": "<div data-duels-component=\"character-card\" class=\"duels-character-card\" contenteditable=\"false\" data-fade=\"normal\" data-align=\"left\" data-duels-data=\"%7B%22color%22%3A%22%23ffa500%22%2C%22image%22%3A%22https%3A%2F%2Fraw.githubusercontent.com%2FLyangNem%2FDuels%2Fmain%2Fcharacter%2Flian.png%22%2C%22text%22%3A%22%22%2C%22width%22%3A400%2C%22height%22%3A400%2C%22fade%22%3A%22normal%22%2C%22align%22%3A%22left%22%7D\" style=\"--duels-card-color: #ffa500; --duels-card-width: 400px; --duels-card-height: 400px;\"><div class=\"duels-character-card-image\" style=\"background-image:url(&quot;https://raw.githubusercontent.com/LyangNem/Duels/main/character/lian.png&quot;)\"></div><div class=\"duels-character-card-shade\"></div><div class=\"duels-character-card-copy\"><div><br></div></div></div><p></p>",
     "sections": [
       {
         "id": "sec_a3dc20e67a10480e842fab2c2461955f",
@@ -18,5 +18,5 @@
     ]
   },
   "createdAt": "2026-09-23T09:32:54+0900",
-  "updatedAt": "2026-09-23T09:32:54+0900"
+  "updatedAt": "2026-09-23T09:34:45+0900"
 }
