@@ -7,7 +7,7 @@ set "BRANCH=main"
 set "INITIAL_CONTENT=0"
 
 echo ========================================
-echo  Duels Wiki Git Sync 3.52
+echo  Duels Wiki Git Sync 3.53
 echo ========================================
 echo [POLICY] wiki/ and media/ are user content. Existing remote content is preserved.
 echo.

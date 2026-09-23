@@ -413,14 +413,43 @@ function componentAtWhitespaceClick(editable,e){
   if(!candidates.length)return null;
   return candidates.sort((a,b)=>Math.abs(e.clientY-a.getBoundingClientRect().bottom)-Math.abs(e.clientY-b.getBoundingClientRect().bottom))[0];
 }
+function footnoteSupFromNode(node){
+  const el=node?.nodeType===1?node:node?.parentElement;
+  const sup=el?.closest?.('sup');
+  return sup?.querySelector?.('a[data-footnote-ref]')?sup:null;
+}
+function caretIsAtFootnoteEnd(range,sup){
+  if(!range?.collapsed||!sup)return false;
+  const c=range.startContainer,o=range.startOffset;
+  if(c===sup)return o>=sup.childNodes.length;
+  if(!sup.contains(c))return false;
+  if(c.nodeType===3)return o>=c.data.length;
+  if(c.nodeType===1)return o>=c.childNodes.length;
+  return false;
+}
+function placeCaretOutsideFootnote(editable,sup){
+  if(!editable||!sup||!editable.contains(sup))return false;
+  let next=sup.nextSibling;
+  if(!next||next.nodeType!==3){next=document.createTextNode('');sup.after(next)}
+  const r=document.createRange();r.setStart(next,0);r.collapse(true);
+  const sel=getSelection();sel.removeAllRanges();sel.addRange(r);state.savedRange=r.cloneRange();return true;
+}
+function normalizeFootnoteCaretForInput(editable){
+  const sel=getSelection();if(!sel?.rangeCount)return false;
+  const r=sel.getRangeAt(0);if(!r.collapsed)return false;
+  const sup=footnoteSupFromNode(r.startContainer);
+  if(!sup||!editable.contains(sup)||!caretIsAtFootnoteEnd(r,sup))return false;
+  return placeCaretOutsideFootnote(editable,sup);
+}
 function bindEditable(el){
   el.addEventListener('focusin',()=>{state.lastEditable=el});
   el.addEventListener('mousedown',e=>{state.lastEditable=el;if(e.target!==el)clearComponentCaretAnchors(el)});
-  el.addEventListener('mouseup',rememberSelection);
-  el.addEventListener('keyup',rememberSelection);
+  el.addEventListener('mouseup',()=>{const sel=getSelection();if(sel?.rangeCount){const r=sel.getRangeAt(0),sup=footnoteSupFromNode(r.startContainer);if(sup&&caretIsAtFootnoteEnd(r,sup))placeCaretOutsideFootnote(el,sup)}rememberSelection()});
+  el.addEventListener('keyup',e=>{if(['ArrowRight','End'].includes(e.key))normalizeFootnoteCaretForInput(el);rememberSelection()});
   el.addEventListener('keydown',e=>handleProtectedDeletion(el,e));
-  el.addEventListener('compositionstart',()=>{const sel=getSelection();const anchor=(sel?.anchorNode?.nodeType===1?sel.anchorNode:sel?.anchorNode?.parentElement)?.closest?.('[data-component-caret-anchor]');if(anchor&&el.contains(anchor)){const ref=anchor.previousElementSibling;if(ref)paragraphAfterElement(el,ref,'')}});
+  el.addEventListener('compositionstart',()=>{normalizeFootnoteCaretForInput(el);const sel=getSelection();const anchor=(sel?.anchorNode?.nodeType===1?sel.anchorNode:sel?.anchorNode?.parentElement)?.closest?.('[data-component-caret-anchor]');if(anchor&&el.contains(anchor)){const ref=anchor.previousElementSibling;if(ref)paragraphAfterElement(el,ref,'')}});
   el.addEventListener('beforeinput',e=>{
+    if(e.inputType?.startsWith('insert'))normalizeFootnoteCaretForInput(el);
     const sel=getSelection();if(!sel.rangeCount)return;
     const anchor=(sel.anchorNode?.nodeType===1?sel.anchorNode:sel.anchorNode?.parentElement)?.closest?.('[data-component-caret-anchor]');
     if(!anchor||!el.contains(anchor))return;
@@ -593,7 +622,7 @@ function insertFootnoteReference(id){
   const editable=state.footnoteInsertionEditable;const stored=state.footnoteInsertionRange;if(!editable||!stored||!editable.isConnected||!$('#editPage')?.contains(editable)){clearFootnoteInsertionPoint();alert('본문의 각주를 넣을 위치에 커서를 놓아주세요.');return false}
   let r;try{r=stored.cloneRange()}catch{clearFootnoteInsertionPoint();return false}if(!editable.contains(r.commonAncestorContainer)){clearFootnoteInsertionPoint();return false}
   editable.focus({preventScroll:true});const sel=getSelection();sel.removeAllRanges();sel.addRange(r);
-  const a=document.createElement('a');a.className='footnote-ref';a.dataset.footnoteRef=id;a.contentEditable='false';const n=footnoteNumber(editingContent,id);a.href=`#${footnoteAnchor(id)}`;a.textContent=`[${n??'?'}]`;a.removeAttribute('title');const sup=document.createElement('sup');sup.append(a);r.deleteContents();r.insertNode(sup);const caret=document.createTextNode('\u200B');sup.after(caret);r.setStart(caret,1);r.collapse(true);sel.removeAllRanges();sel.addRange(r);state.savedRange=r.cloneRange();clearFootnoteInsertionPoint();editable.dispatchEvent(new Event('input',{bubbles:true}));return true;
+  const a=document.createElement('a');a.className='footnote-ref';a.dataset.footnoteRef=id;a.contentEditable='false';const n=footnoteNumber(editingContent,id);a.href=`#${footnoteAnchor(id)}`;a.textContent=`[${n??'?'}]`;a.removeAttribute('title');const sup=document.createElement('sup');sup.append(a);r.deleteContents();r.insertNode(sup);placeCaretOutsideFootnote(editable,sup);clearFootnoteInsertionPoint();editable.dispatchEvent(new Event('input',{bubbles:true}));return true;
 }
 function openFootnoteDialog(){
   if(!captureFootnoteInsertionPoint()){alert('본문의 각주를 넣을 위치에 커서를 놓은 뒤 다시 눌러주세요.');return}
