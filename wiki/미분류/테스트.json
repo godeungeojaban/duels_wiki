@@ -12,11 +12,17 @@
       {
         "id": "sec_b2381d4ae39f479f9fd910d9150cab5f",
         "title": "개요",
-        "contentHtml": "<p></p>",
+        "contentHtml": "ㅁㄴㅇㄹ<sup><a class=\"footnote-ref\" data-footnote-ref=\"fn_3799456f086343ffbbe3c23b2ede5532\" contenteditable=\"false\" href=\"#footnote-fn_3799456f086343ffbbe3c23b2ede5532\" title=\"각주 1\">[1]</a></sup><p></p>",
         "children": []
+      }
+    ],
+    "footnotes": [
+      {
+        "id": "fn_3799456f086343ffbbe3c23b2ede5532",
+        "contentHtml": "<p>테스트</p>"
       }
     ]
   },
   "createdAt": "2026-09-23T14:36:03+0900",
-  "updatedAt": "2026-09-23T14:36:03+0900"
+  "updatedAt": "2026-09-23T14:41:15+0900"
 }
