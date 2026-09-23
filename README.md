@@ -1,11 +1,11 @@
-# Duels Wiki 3.45
+# Duels Wiki 3.47
 
-Duels Wiki 3.45는 Python 표준 라이브러리 기반 로컬 편집기 + GitHub 저장소 + GitHub Pages 정적 열람 사이트 구조다. Node.js/Next.js/npm은 사용하지 않는다.
+Duels Wiki 3.47는 Python 표준 라이브러리 기반 로컬 편집기 + GitHub 저장소 + GitHub Pages 정적 열람 사이트 구조다. Node.js/Next.js/npm은 사용하지 않는다.
 
 ## 실행
 
-1. `DuelsWikiEditor.py`를 PC에 둔다.
-2. `python DuelsWikiEditor.py`로 실행한다.
+1. `DuelsWikiEditor.py`와 `run_editor.bat`을 PC에 둔다.
+2. Windows에서는 `run_editor.bat`을 실행한다. GitHub의 `DuelsWikiEditor.py`가 로컬보다 새 버전이면 런처를 먼저 교체한 뒤 실행한다. 직접 실행하려면 `python DuelsWikiEditor.py`를 사용할 수 있다.
 3. 첫 실행 시 우측 상단 `GitHub 설정`에서 Fine-grained PAT를 입력한다.
    - Repository access: `godeungeojaban/duels_wiki`
    - Contents: Read and write
@@ -13,10 +13,10 @@ Duels Wiki 3.45는 Python 표준 라이브러리 기반 로컬 편집기 + GitHu
 
 토큰은 저장소에 올라가지 않는다. 기본적으로 PC의 로컬 설정(`config.json`)에 저장된다. 실행 파일 옆의 `token.txt`는 다른 PC나 새 설치에 토큰을 한 번 전달하기 위한 일회성 가져오기 파일이다.
 
-에디터 실행 시 `DuelsWikiEditor.py`와 같은 폴더에 `token.txt`가 있더라도 `config.json`에 이미 GitHub 토큰이 저장되어 있으면 `token.txt`의 내용은 읽지 않고 즉시 삭제한다. `config.json`에 토큰이 없을 때만 `token.txt`의 첫 번째 유효한 토큰을 읽어 로컬 설정에 저장하며, 저장에 성공한 뒤 `token.txt`를 삭제한다. 읽기 또는 로컬 저장에 실패한 경우에는 파일을 남겨 다음 실행에서 다시 시도할 수 있게 한다. GitHub 설정 화면에서 저장한 토큰은 `config.json`에만 저장되며 `token.txt`를 다시 만들지 않는다.
+에디터 실행 시 `DuelsWikiEditor.py`와 같은 폴더에 `token.txt`가 있으면 `config.json`의 기존 토큰보다 항상 우선한다. `token.txt`의 첫 번째 유효한 토큰을 `config.json`에 덮어써 저장한 뒤 저장에 성공한 경우에만 `token.txt`를 삭제한다. 읽기 또는 로컬 저장에 실패한 경우에는 파일을 남겨 다음 실행에서 다시 시도할 수 있게 한다. GitHub 설정 화면에서 저장한 토큰은 `config.json`에만 저장되며 `token.txt`를 다시 만들지 않는다.
 
 
-## 3.44 편집 동작
+## 현재 편집 동작
 
 - 그림/캐릭터 카드/설명 상자/표는 Backspace/Delete로 직접 삭제되지 않는다. 각 요소의 삭제 버튼을 사용한다.
 - 캐릭터 카드, 설명 상자, 표를 한 번 클릭하거나 같은 높이의 빈 여백을 클릭하면 요소 오른쪽 아래의 편집용 텍스트 커서가 활성화된다. 실제 입력을 시작할 때만 요소 아래 새 문단이 생긴다.
@@ -24,13 +24,13 @@ Duels Wiki 3.45는 Python 표준 라이브러리 기반 로컬 편집기 + GitHu
 - 글머리와 번호 매기기는 줄 단위로 적용된다.
 - 목차에서는 번호만 섹션 하이퍼링크로 동작한다.
 
-## 3.44 표
+## 현재 표
 
 표 삽입 시 행/열 개수, 테두리 색상, 기본 가로 너비를 지정한다. 높이는 직접 지정하지 않는다. 기본 가로 너비 프리셋은 `400px`이다. 처음 생성된 열의 최소 너비는 동일하게 배분된다.
 
 셀은 명시적으로 개행하지 않는 한 한 줄 높이를 유지하며, 긴 한 줄은 줄바꿈 대신 열을 넓혀 표의 실제 가로 폭을 증가시킨다. 내용이 짧아지면 실제 폭도 다시 줄지만 설정된 기본 가로 너비 및 열 최소 너비 아래로는 줄지 않는다. 편집 창에서 현재 실제 가로 폭을 기본 가로 폭으로 동기화할 수 있다.
 
-표 편집 창에서는 셀별 텍스트/배경색, 열 최소 너비, 행/열 추가·제거, 사각형 셀 병합/병합 해제를 지원한다.
+표 편집 창에서는 셀별 텍스트/배경색, 열 최소 너비, 행/열 추가·제거, 사각형 셀 병합/병합 해제를 지원한다. 행/열 전체선택과 다중 선택 셀의 배경색 일괄 적용도 가능하다. `열 균등`은 병합 전의 실제 열 기준으로 전체 열을 같은 너비로 배분하되 표의 기본 가로 크기는 바꾸지 않는다. `너비 맞춤`은 열 비율을 유지한 채 표를 편집 블록 폭에 맞추는 토글이며, 끄면 저장된 픽셀 기본 너비로 돌아간다.
 
 ## 캐릭터 카드 / 색 프리셋
 
@@ -85,27 +85,31 @@ Duels Wiki 3.45는 Python 표준 라이브러리 기반 로컬 편집기 + GitHu
 
 ## 저장소 구조
 
-`repository/` 내부가 그대로 GitHub 저장소 루트가 된다. `README.md`와 `VERSION.md`도 이 안에 있으므로 함께 commit된다.
+ZIP의 최상위 폴더가 그대로 GitHub 저장소 루트가 된다. `README.md`와 `VERSION.md`도 이 안에 있으므로 함께 commit된다.
 
 ```text
-repository/
+duels_wiki_3.47/
+├─ DuelsWikiEditor.py     GitHub에 저장되는 로컬 런처 최신본
+├─ run_editor.bat         로컬 실행/런처 업데이트용 (.gitignore)
+├─ git_sync.bat           Windows Git 동기화
+├─ git_sync.sh            POSIX Git 동기화
 ├─ README.md              저장소 설명
 ├─ VERSION.md             버전 변경 내역
-├─ editor/                 GitHub에서 내려받는 편집기 UI
-├─ wiki/                   문서 JSON
-├─ media/images/           PNG/JPG
-├─ site/build.py           정적 위키 생성기
-├─ .github/workflows/      GitHub Pages 자동 배포
-└─ git_sync.bat            Git add/commit/pull --rebase/push 자동화
+├─ .gitignore
+├─ editor/                GitHub에서 내려받는 편집기 UI
+├─ wiki/                  문서 JSON
+├─ media/images/          PNG/JPG
+├─ site/build.py          정적 위키 생성기
+└─ .github/workflows/     GitHub Pages 자동 배포
 ```
 
-GitHub에 올릴 때는 `repository/` 폴더 자체가 아니라 **그 안의 내용**을 저장소 루트에 둔다.
+ZIP 최상위 폴더 자체가 GitHub 저장소 작업 폴더다. `run_editor.bat`만 로컬 전용으로 Git 추적에서 제외한다.
 
 ## Git 자동화 / 버전 업데이트
 
 저장소 루트의 `git_sync.bat`(Windows) 또는 `git_sync.sh`를 실행하면 기존 GitHub `main` 이력을 먼저 연결한 뒤 **제품 파일만 업데이트**한다.
 
-- 업데이트 대상: `editor/`, `site/`, `.github/workflows/`, `README.md`, `VERSION.md`, 동기화 스크립트와 `.gitignore`
+- 업데이트 대상: `DuelsWikiEditor.py`, `editor/`, `site/`, `.github/workflows/`, `README.md`, `VERSION.md`, 동기화 스크립트와 `.gitignore`
 - 사용자 데이터: `wiki/`, `media/`는 기존 원격 저장소 내용을 그대로 유지
 - 새 버전 ZIP을 새 폴더에 풀어 실행해도 원격의 `wiki/`와 `media/`를 먼저 복원하므로, 패키지에 없는 기존 문서/이미지가 삭제 대상으로 잡히지 않는다.
 - 완전히 새 저장소일 때만 패키지의 기본 `wiki/_root.json`, `wiki/categories.json`, `media/images/.gitkeep`을 초기 데이터로 올린다.

@@ -7,7 +7,7 @@ set "BRANCH=main"
 set "INITIAL_CONTENT=0"
 
 echo ========================================
-echo  Duels Wiki Git Sync 3.45
+echo  Duels Wiki Git Sync 3.47
 echo ========================================
 echo [POLICY] wiki/ and media/ are user content. Existing remote content is preserved.
 echo.
@@ -120,7 +120,7 @@ exit /b 0
 echo [SYNC] Staging editor/site product files only...
 rem IMPORTANT: Never use plain git add -A here. Update ZIPs intentionally do not contain
 rem the user's complete wiki/media tree, so doing so would stage their records as deletions.
-git add -A -- editor site .github/workflows git_sync.bat git_sync.sh .gitignore || goto :fail
+git add -A -- editor site .github/workflows DuelsWikiEditor.py git_sync.bat git_sync.sh .gitignore || goto :fail
 rem README.md and VERSION.md are staged explicitly so documentation/version changes are never skipped.
 git add -- README.md || goto :fail
 git add -- VERSION.md || goto :fail

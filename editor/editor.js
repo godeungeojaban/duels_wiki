@@ -206,7 +206,16 @@ function bindWikiLinks(root){ $$('a[data-wiki-link]',root).forEach(a=>a.addEvent
 async function renderRoute(){ state.editing=false; hideToolbar(); state.selectedImage=null; updateOverlay(); const route=parseRoute(); if(!route){await renderHome();return} try{const r=await api(`/api/document?category=${encodeURIComponent(route.category)}${route.doc?`&doc=${encodeURIComponent(route.doc)}`:''}`); state.current=r.document; state.currentPath=r.path; renderDocument(r.document,route);}catch(e){$('#viewPage').innerHTML=`<div class="wiki-card"><h2>문서를 불러올 수 없습니다.</h2><p>${escapeHtml(e.message)}</p></div>`;} }
 async function renderHome(){ try{const r=await api('/api/root'); state.current=r.document; state.currentPath=r.path; renderRootDocument(r.document);}catch(e){state.current=null;state.currentPath='';$('#viewPage').innerHTML=`<div class="wiki-card"><h2>Duels Wiki</h2><p>${escapeHtml(e.message)}</p></div>`;$('#editPage').classList.add('hidden');$('#viewPage').classList.remove('hidden');} }
 function renderRootDocument(doc){ const c=normalizeContent(doc.content); const self='#/'; $('#viewPage').innerHTML=`<div class="wiki-card"><div class="doc-head"><div><h1>${escapeHtml(doc.title||'Duels Wiki')}</h1></div><div class="doc-actions"><button id="editBtn">문서 편집</button><button id="historyBtn">문서 역사</button></div></div><div class="intro wiki-body">${viewHtml(c.introHtml)}</div>${c.sections.length?`<nav class="toc"><div class="toc-title">목차</div>${renderToc(c.sections)}</nav>`:''}${renderSections(c.sections,self)}</div>`; $('#editPage').classList.add('hidden');$('#viewPage').classList.remove('hidden');bindWikiLinks($('#viewPage'));$('#editBtn').onclick=()=>startRootEdit(doc);$('#historyBtn').onclick=()=>showHistory(); }
-function renderDocument(doc,route){ const c=normalizeContent(doc.content); const self=routeFor(route.category,route.doc); $('#viewPage').innerHTML=`<div class="wiki-card"><div class="doc-head"><div><h1>${escapeHtml(doc.title)}</h1></div><div class="doc-actions"><button id="editBtn">문서 편집</button><button id="historyBtn">문서 역사</button></div></div><div class="intro wiki-body">${viewHtml(c.introHtml)}</div>${c.sections.length?`<nav class="toc"><div class="toc-title">목차</div>${renderToc(c.sections)}</nav>`:''}${renderSections(c.sections,self)}</div>`; $('#editPage').classList.add('hidden');$('#viewPage').classList.remove('hidden');bindWikiLinks($('#viewPage'));$('#editBtn').onclick=()=>startEdit(doc,route);$('#historyBtn').onclick=()=>showHistory(); }
+function renderDocument(doc,route){ const c=normalizeContent(doc.content); const self=routeFor(route.category,route.doc); const canDuplicate=doc.kind==='document'; $('#viewPage').innerHTML=`<div class="wiki-card"><div class="doc-head"><div><h1>${escapeHtml(doc.title)}</h1></div><div class="doc-actions">${canDuplicate?'<button id="duplicateBtn">문서 복제</button>':''}<button id="editBtn">문서 편집</button><button id="historyBtn">문서 역사</button></div></div><div class="intro wiki-body">${viewHtml(c.introHtml)}</div>${c.sections.length?`<nav class="toc"><div class="toc-title">목차</div>${renderToc(c.sections)}</nav>`:''}${renderSections(c.sections,self)}</div>`; $('#editPage').classList.add('hidden');$('#viewPage').classList.remove('hidden');bindWikiLinks($('#viewPage'));if(canDuplicate)$('#duplicateBtn').onclick=()=>duplicateDocumentModal(doc,route);$('#editBtn').onclick=()=>startEdit(doc,route);$('#historyBtn').onclick=()=>showHistory(); }
+function duplicateDocumentModal(doc,route){
+  const cats=sortedCategories(state.index?.categories||[]);
+  const suggested=`${doc.title} 복사본`;
+  openModal(`<div class="duplicate-doc-modal"><div class="duplicate-doc-icon">⧉</div><h2>문서 복제</h2><p class="muted duplicate-doc-help">현재 문서의 내용과 구성요소를 그대로 복사해 새 문서를 만듭니다. 원본 문서는 변경되지 않습니다.</p><div class="form-row"><label>복제할 카테고리</label><select id="duplicateDocCat">${cats.map(c=>`<option value="${escapeHtml(c.slug)}" ${c.slug===route.category?'selected':''}>${escapeHtml(c.name)}</option>`).join('')}</select></div><div class="form-row"><label>새 문서명</label><input id="duplicateDocTitle" value="${escapeHtml(suggested)}" autocomplete="off"></div><div class="modal-actions"><button id="cancelDuplicateDoc">취소</button><button id="confirmDuplicateDoc" class="primary">복제</button></div></div>`);
+  const title=$('#duplicateDocTitle');title.focus();title.select();
+  $('#cancelDuplicateDoc').onclick=closeModal;
+  const submit=async()=>{const button=$('#confirmDuplicateDoc');try{const nextCategory=$('#duplicateDocCat').value,newTitle=title.value.trim();if(!newTitle){title.focus();return}button.disabled=true;button.textContent='복제 중…';const r=await api('/api/document/duplicate',{method:'POST',body:JSON.stringify({category:route.category,doc:route.doc,nextCategory,title:newTitle})});closeModal();await refreshIndex();showStatus(`“${newTitle}” 문서를 복제했습니다.`);navigate(nextCategory,r.document.slug)}catch(e){button.disabled=false;button.textContent='복제';alert(e.message)}};
+  $('#confirmDuplicateDoc').onclick=submit;title.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();submit()}};
+}
 
 function createSectionEditor(section,parentArray,prefix,depth){ const wrap=document.createElement('div');wrap.className='section-edit';wrap.dataset.sectionId=section.id; const idx=parentArray.indexOf(section); const number=prefix?`${prefix}.${idx+1}`:`${idx+1}`; wrap.innerHTML=`<div class="section-edit-head"><span class="section-number">${number}.</span><input class="section-title-input" value="${escapeHtml(section.title)}"></div><div class="editable section-edit-body" contenteditable="true"></div><div class="children"></div><div class="section-controls"><button data-child>＋ 하위</button><button data-next>＋ 다음</button><button data-delete class="danger">삭제</button></div>`; const body=$('.section-edit-body',wrap);body.innerHTML=viewHtml(section.contentHtml,{expandInlineImages:false}); body.addEventListener('input',()=>section.contentHtml=storageHtml(body)); $('.section-title-input',wrap).addEventListener('input',e=>section.title=e.target.value); bindEditable(body);
   $('[data-child]',wrap).onclick=()=>{section.children.push({id:uid('sec'),title:'새 목차',contentHtml:'<p></p>',children:[]});renderSectionTree()}; $('[data-next]',wrap).onclick=()=>{parentArray.splice(parentArray.indexOf(section)+1,0,{id:uid('sec'),title:'새 목차',contentHtml:'<p></p>',children:[]});renderSectionTree()}; $('[data-delete]',wrap).onclick=()=>{if(confirm('이 목차 블록과 하위 블록을 삭제할까요?')){parentArray.splice(parentArray.indexOf(section),1);renderSectionTree()}}; return wrap; }
@@ -629,7 +638,7 @@ function normalizeTableData(raw={}){
     if(x===null)return null;
     return{html:tableCellHtmlValue(x||{}),color:tableColor(x?.color,'#0d1520'),align:tableAlign(x?.align),rowSpan:tableInt(x?.rowSpan,1,1,rows-r),colSpan:tableInt(x?.colSpan,1,1,cols-c)};
   }));
-  const out={rows,cols,baseWidth,borderColor:tableColor(raw.borderColor),colWidths:widths,cells};
+  const out={rows,cols,baseWidth,borderColor:tableColor(raw.borderColor),fitWidth:raw.fitWidth===true,colWidths:widths,cells};
   rebuildTableCoverage(out);
   return out;
 }
@@ -652,16 +661,18 @@ function rebuildTableCoverage(data){
 function tableCellMinWidth(data,c,span=1){return data.colWidths.slice(c,c+span).reduce((a,b)=>a+Number(b||0),0)}
 function renderTableElement(el,raw){
   const data=normalizeTableData(raw);const selected=el.classList.contains('selected-duels-component');
-  el.className='duels-table-component'+(selected?' selected-duels-component':'');el.setAttribute('contenteditable','false');
+  el.className='duels-table-component'+(data.fitWidth?' fit-width':'')+(selected?' selected-duels-component':'');el.setAttribute('contenteditable','false');
   el.style.setProperty('--duels-table-base-width',`${data.baseWidth}px`);el.style.setProperty('--duels-table-border',data.borderColor);setComponentPayload(el,data);
-  let html='<div class="duels-table-scroll"><table class="duels-table"><colgroup>'+data.colWidths.map(w=>`<col style="min-width:${w}px;width:${w}px">`).join('')+'</colgroup><tbody>';
+  const widthSum=Math.max(1,data.colWidths.reduce((a,b)=>a+Number(b||0),0));
+  const colgroup=data.fitWidth?data.colWidths.map(w=>`<col style="width:${(Number(w||0)/widthSum*100).toFixed(6)}%">`).join(''):data.colWidths.map(w=>`<col style="min-width:${w}px;width:${w}px">`).join('');
+  let html='<div class="duels-table-scroll"><table class="duels-table"><colgroup>'+colgroup+'</colgroup><tbody>';
   for(let r=0;r<data.rows;r++){
     html+='<tr>';
     for(let c=0;c<data.cols;c++){
       const cell=data.cells[r][c];if(cell===null)continue;
       const rs=cell.rowSpan>1?` rowspan="${cell.rowSpan}"`:'';const cs=cell.colSpan>1?` colspan="${cell.colSpan}"`:'';
       const mw=tableCellMinWidth(data,c,cell.colSpan);
-      html+=`<td${rs}${cs} style="background:${cell.color};min-width:${mw}px;text-align:${tableAlign(cell.align)}">${tableCellHtmlValue(cell)||'<br>'}</td>`;
+      html+=`<td${rs}${cs} style="background:${cell.color};${data.fitWidth?'min-width:0;':`min-width:${mw}px;`}text-align:${tableAlign(cell.align)}">${tableCellHtmlValue(cell)||'<br>'}</td>`;
     }
     html+='</tr>';
   }
@@ -675,6 +686,32 @@ function tableRootAt(data,r,c){
   return null;
 }
 function tableSelectedRoots(){return [...document.querySelectorAll('#tableEditGrid [data-table-select]:checked')].map(x=>[Number(x.dataset.r),Number(x.dataset.c)])}
+function tableSetSelection(predicate,checked=true){
+  $$('[data-table-select]').forEach(x=>{const r=Number(x.dataset.r),c=Number(x.dataset.c);x.checked=predicate(r,c,x)?checked:x.checked});
+  tableRefreshSelectionUi();
+}
+function tableClearSelection(){ $$('[data-table-select]').forEach(x=>x.checked=false);tableRefreshSelectionUi() }
+function tableToggleRowSelection(data,row){
+  const boxes=$$('[data-table-select]').filter(x=>{const r=Number(x.dataset.r),c=Number(x.dataset.c),cell=data.cells[r]?.[c];return cell&&r<=row&&r+cell.rowSpan>row});
+  const next=!boxes.length||boxes.some(x=>!x.checked);boxes.forEach(x=>x.checked=next);tableRefreshSelectionUi();
+}
+function tableToggleColSelection(data,col){
+  const boxes=$$('[data-table-select]').filter(x=>{const r=Number(x.dataset.r),c=Number(x.dataset.c),cell=data.cells[r]?.[c];return cell&&c<=col&&c+cell.colSpan>col});
+  const next=!boxes.length||boxes.some(x=>!x.checked);boxes.forEach(x=>x.checked=next);tableRefreshSelectionUi();
+}
+function tableRefreshSelectionUi(){
+  const count=tableSelectedRoots().length;const label=$('#tableSelectionCount');if(label)label.textContent=count?`${count}개 셀 선택`:'선택 없음';
+}
+function tableApplySelectedBackground(data,color){
+  const roots=tableSelectedRoots();if(!roots.length){alert('배경색을 바꿀 셀을 먼저 선택하세요.');return false}
+  color=tableColor(color,'#0d1520');for(const [r,c] of roots){if(data.cells[r]?.[c])data.cells[r][c].color=color}
+  return true;
+}
+function tableEqualizeColumns(data){
+  const total=Math.max(1,data.baseWidth);const each=Math.floor(total/data.cols),rest=total-each*data.cols;
+  data.colWidths=Array.from({length:data.cols},(_,i)=>each+(i<rest?1:0));
+  return data;
+}
 function tableMergeSelection(data){
   const roots=tableSelectedRoots();if(roots.length<2){alert('병합할 셀을 2개 이상 선택하세요.');return false}
   const selected=new Set(roots.map(([r,c])=>`${r}:${c}`));let minR=99,minC=99,maxR=-1,maxC=-1;
@@ -732,6 +769,7 @@ function applyTableBaseWidth(data,width){
 function syncTableFormToData(data){
   const base=$('#tableBaseWidth');if(base)applyTableBaseWidth(data,base.value);
   const bc=$('#tableBorderColor');if(bc)data.borderColor=tableColor(bc.value);
+  const fit=$('#tableFitWidth');if(fit)data.fitWidth=fit.checked;
   $$('[data-table-html]').forEach(x=>{const r=Number(x.dataset.r),c=Number(x.dataset.c);if(data.cells[r]?.[c])data.cells[r][c].html=x.innerHTML});
   $$('[data-table-color]').forEach(x=>{const r=Number(x.dataset.r),c=Number(x.dataset.c);if(data.cells[r]?.[c])data.cells[r][c].color=tableColor(x.value,'#0d1520')});
   $$('[data-table-align]').forEach(x=>{const r=Number(x.dataset.r),c=Number(x.dataset.c);if(data.cells[r]?.[c])data.cells[r][c].align=tableAlign(x.value)});
@@ -766,8 +804,10 @@ function tableCellSetAlign(value){
 }
 function tableEditorHtml(data,existing){
   let cells='';for(let r=0;r<data.rows;r++){for(let c=0;c<data.cols;c++){const x=data.cells[r][c];if(x===null)continue;cells+=`<div class="table-cell-editor" style="grid-column:span ${x.colSpan};grid-row:span ${x.rowSpan}"><div class="table-cell-head"><label><input type="checkbox" data-table-select data-r="${r}" data-c="${c}"> 셀 ${r+1}-${c+1}${x.rowSpan>1||x.colSpan>1?` · ${x.rowSpan}×${x.colSpan}`:''}</label><div class="table-cell-options"><select data-table-align data-r="${r}" data-c="${c}" title="셀 정렬"><option value="left" ${tableAlign(x.align)==='left'?'selected':''}>좌측</option><option value="center" ${tableAlign(x.align)==='center'?'selected':''}>중앙</option><option value="right" ${tableAlign(x.align)==='right'?'selected':''}>우측</option></select><input type="color" data-table-color data-r="${r}" data-c="${c}" value="${tableColor(x.color,'#0d1520')}" title="셀 배경색"></div></div><div class="table-cell-rich" data-table-html data-r="${r}" data-c="${c}" contenteditable="true" style="text-align:${tableAlign(x.align)}">${tableCellHtmlValue(x)||'<br>'}</div></div>`}}
-  const widths=data.colWidths.map((w,c)=>`<label class="table-col-width">열 ${c+1}<input type="number" min="40" max="2000" data-col-width data-c="${c}" value="${w}"></label>`).join('');
-  return `<div class="table-editor-shell"><h2>${existing?'표 수정':'표 삽입'}</h2><div class="table-edit-toolbar"><span class="table-tool-title">셀 텍스트</span><button type="button" data-table-cmd="bold"><b>B</b></button><button type="button" data-table-cmd="italic"><i>I</i></button><button type="button" data-table-cmd="underline"><u>U</u></button><button type="button" data-table-cmd="strikeThrough"><s>S</s></button><label>글자색 <input id="tableTextColor" type="color" value="#d7e6f2"></label><label>배경색 <input id="tableTextHighlight" type="color" value="#29435c"></label><span class="tool-divider"></span><button type="button" data-table-text-align="left">좌</button><button type="button" data-table-text-align="center">중앙</button><button type="button" data-table-text-align="right">우</button><button type="button" id="tableInternalLink">내부 링크</button><button type="button" id="tableClearFormat">서식 지우기</button></div><div class="component-form-grid"><div class="form-row"><label>기본 가로 너비</label><div class="inline-field"><select id="tableWidthPreset"><option value="400" ${data.baseWidth===400?'selected':''}>기본 · 400px</option><option value="custom" ${data.baseWidth!==400?'selected':''}>직접 입력</option></select><input id="tableBaseWidth" type="number" min="120" max="4000" value="${data.baseWidth}"></div></div><div class="form-row"><label>표 외곽선 색상</label><input id="tableBorderColor" type="color" value="${data.borderColor}"></div><div class="form-row"><label>행 개수</label><input id="tableRows" type="number" min="1" max="20" value="${data.rows}"></div><div class="form-row"><label>열 개수</label><input id="tableCols" type="number" min="1" max="20" value="${data.cols}"></div></div>${existing?`<div class="table-size-status">기본 크기 <b id="tableBaseWidthLabel">${data.baseWidth}px</b> · 현재 실제 크기 <b id="tableActualWidth">${Math.max(data.baseWidth,Number(existing.dataset.actualWidth)||Math.ceil(existing.getBoundingClientRect().width)||data.baseWidth)}px</b> <button id="syncTableActual" type="button">실제 크기를 기본 크기로 동기화</button></div>`:''}<div class="table-structure-tools"><label>기준 행 <input id="tableRowIndex" type="number" min="1" max="${data.rows}" value="1"></label><button id="rowBefore" type="button">위에 행 추가</button><button id="rowAfter" type="button">아래에 행 추가</button><button id="rowRemove" type="button">행 제거</button><span class="tool-divider"></span><label>기준 열 <input id="tableColIndex" type="number" min="1" max="${data.cols}" value="1"></label><button id="colBefore" type="button">왼쪽 열 추가</button><button id="colAfter" type="button">오른쪽 열 추가</button><button id="colRemove" type="button">열 제거</button></div><div class="table-column-widths">${widths}</div><div class="table-merge-tools"><button id="mergeTableCells" type="button">선택 셀 병합</button><button id="unmergeTableCell" type="button">병합 해제</button><span class="muted">셀 왼쪽 위의 체크박스로 병합할 셀을 선택합니다.</span></div><div id="tableEditGrid" class="table-edit-grid" style="grid-template-columns:repeat(${data.cols},minmax(130px,1fr))">${cells}</div><div class="modal-actions"><button id="cancelComponent">취소</button>${existing?'<button id="deleteComponent" class="danger">삭제</button>':''}<button id="saveComponent" class="primary">${existing?'수정':'삽입'}</button></div></div>`;
+  const widths=data.colWidths.map((w,c)=>`<label class="table-col-width">열 ${c+1}<input type="number" min="1" max="2000" data-col-width data-c="${c}" value="${w}"></label>`).join('');
+  const rowButtons=Array.from({length:data.rows},(_,r)=>`<button type="button" data-select-row="${r}">행 ${r+1}</button>`).join('');
+  const colButtons=Array.from({length:data.cols},(_,c)=>`<button type="button" data-select-col="${c}">열 ${c+1}</button>`).join('');
+  return `<div class="table-editor-shell"><h2>${existing?'표 수정':'표 삽입'}</h2><div class="table-edit-toolbar"><span class="table-tool-title">셀 텍스트</span><button type="button" data-table-cmd="bold"><b>B</b></button><button type="button" data-table-cmd="italic"><i>I</i></button><button type="button" data-table-cmd="underline"><u>U</u></button><button type="button" data-table-cmd="strikeThrough"><s>S</s></button><label>글자색 <input id="tableTextColor" type="color" value="#d7e6f2"></label><label>강조색 <input id="tableTextHighlight" type="color" value="#29435c"></label><span class="tool-divider"></span><button type="button" data-table-text-align="left">좌</button><button type="button" data-table-text-align="center">중앙</button><button type="button" data-table-text-align="right">우</button><button type="button" id="tableInternalLink">내부 링크</button><button type="button" id="tableClearFormat">서식 지우기</button></div><div class="component-form-grid"><div class="form-row"><label>기본 가로 너비</label><div class="inline-field"><select id="tableWidthPreset"><option value="400" ${data.baseWidth===400?'selected':''}>기본 · 400px</option><option value="custom" ${data.baseWidth!==400?'selected':''}>직접 입력</option></select><input id="tableBaseWidth" type="number" min="120" max="4000" value="${data.baseWidth}"></div></div><div class="form-row"><label>표 외곽선 색상</label><input id="tableBorderColor" type="color" value="${data.borderColor}"></div><div class="form-row"><label>행 개수</label><input id="tableRows" type="number" min="1" max="20" value="${data.rows}"></div><div class="form-row"><label>열 개수</label><input id="tableCols" type="number" min="1" max="20" value="${data.cols}"></div></div><div class="table-layout-options"><label class="table-toggle"><input id="tableFitWidth" type="checkbox" ${data.fitWidth?'checked':''}><span></span><b>너비 맞춤</b><small>열 비율을 유지한 채 편집 블록 너비에 맞춤</small></label><button id="equalizeTableColumns" type="button">열 균등</button><span class="muted">병합 셀이 아닌 원래 열 기준으로 같은 너비를 배분하며 기본 크기는 유지합니다.</span></div>${existing?`<div class="table-size-status">기본 크기 <b id="tableBaseWidthLabel">${data.baseWidth}px</b> · 현재 실제 크기 <b id="tableActualWidth">${Math.max(data.baseWidth,Number(existing.dataset.actualWidth)||Math.ceil(existing.getBoundingClientRect().width)||data.baseWidth)}px</b> <button id="syncTableActual" type="button">실제 크기를 기본 크기로 동기화</button></div>`:''}<div class="table-structure-tools"><label>기준 행 <input id="tableRowIndex" type="number" min="1" max="${data.rows}" value="1"></label><button id="rowBefore" type="button">위에 행 추가</button><button id="rowAfter" type="button">아래에 행 추가</button><button id="rowRemove" type="button">행 제거</button><span class="tool-divider"></span><label>기준 열 <input id="tableColIndex" type="number" min="1" max="${data.cols}" value="1"></label><button id="colBefore" type="button">왼쪽 열 추가</button><button id="colAfter" type="button">오른쪽 열 추가</button><button id="colRemove" type="button">열 제거</button></div><div class="table-column-widths">${widths}</div><div class="table-selection-tools"><div class="table-selection-title"><b>셀 선택</b><span id="tableSelectionCount">선택 없음</span><button id="clearTableSelection" type="button">전체 해제</button></div><div class="table-selection-row"><span>행</span>${rowButtons}</div><div class="table-selection-row"><span>열</span>${colButtons}</div><div class="table-selection-row table-selection-background"><span>선택 셀 배경</span><input id="selectedTableBackground" type="color" value="#0d1520"><button id="applySelectedTableBackground" type="button">적용</button></div></div><div class="table-merge-tools"><button id="mergeTableCells" type="button">선택 셀 병합</button><button id="unmergeTableCell" type="button">병합 해제</button><span class="muted">셀 체크박스 또는 행/열 버튼으로 여러 셀을 선택할 수 있습니다.</span></div><div id="tableEditGrid" class="table-edit-grid" style="grid-template-columns:repeat(${data.cols},minmax(130px,1fr))">${cells}</div><div class="modal-actions"><button id="cancelComponent">취소</button>${existing?'<button id="deleteComponent" class="danger">삭제</button>':''}<button id="saveComponent" class="primary">${existing?'수정':'삽입'}</button></div></div>`;
 }
 function measureTableActualColumns(data){
   const probe=makeTableComponent(normalizeTableData(data));
@@ -786,7 +826,7 @@ function syncTableActualToBase(data){
   return data;
 }
 function tableModal(existing=null){
-  if(!existing)captureComponentInsertionPoint();else rememberSelection();let data=normalizeTableData(existing?componentPayload(existing):{rows:2,cols:2,baseWidth:400,borderColor:'#2a4a6a'});
+  if(!existing)captureComponentInsertionPoint();else rememberSelection();let data=normalizeTableData(existing?componentPayload(existing):{rows:2,cols:2,baseWidth:400,borderColor:'#2a4a6a',fitWidth:false});
   const redraw=()=>{openModal(tableEditorHtml(data,existing));bind();};
   const bind=()=>{
     tableActiveCell=null;tableCellSelectionRange=null;
@@ -805,6 +845,13 @@ function tableModal(existing=null){
     $('#tableWidthPreset').onchange=e=>{if(e.target.value==='400'){$('#tableBaseWidth').value=400;applyTableBaseWidth(data,400);redraw()}};
     $('#tableBaseWidth').onchange=e=>{applyTableBaseWidth(data,e.target.value);redraw()};
     $('#tableBorderColor').oninput=e=>data.borderColor=tableColor(e.target.value);
+    $('#tableFitWidth').onchange=e=>{flush();data.fitWidth=e.target.checked;redraw()};
+    $('#equalizeTableColumns').onclick=()=>{flush();tableEqualizeColumns(data);redraw()};
+    $$('[data-table-select]').forEach(x=>x.onchange=tableRefreshSelectionUi);
+    $$('[data-select-row]').forEach(x=>x.onclick=()=>tableToggleRowSelection(data,Number(x.dataset.selectRow)));
+    $$('[data-select-col]').forEach(x=>x.onclick=()=>tableToggleColSelection(data,Number(x.dataset.selectCol)));
+    $('#clearTableSelection').onclick=tableClearSelection;
+    $('#applySelectedTableBackground').onclick=()=>{flush();if(tableApplySelectedBackground(data,$('#selectedTableBackground').value))redraw()};
     $('#tableRows').onchange=e=>{syncTableFormToData(data);resizeTableGrid(data,e.target.value,data.cols);redraw()};
     $('#tableCols').onchange=e=>{syncTableFormToData(data);resizeTableGrid(data,data.rows,e.target.value);redraw()};
     const flush=()=>syncTableFormToData(data);
