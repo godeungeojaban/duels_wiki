@@ -94,9 +94,26 @@ def expand_inline_images(src):
         out.append(INLINE_IMAGE_RE.sub(lambda m:f'<img class="inline-linked-image" src="{html.escape(m.group(1),quote=True)}" alt="" loading="lazy">',part))
     return ''.join(out)
 
-def rewrite_html(src,cur_parts):
+def rewrite_footnote_refs(src,notes):
+    if not src:return ''
+    ids={str(f.get('id','')):i for i,f in enumerate(notes or [],1)}
+    pat=re.compile(r'(<a\b[^>]*\bdata-footnote-ref=["\']([^"\']+)["\'][^>]*>)(.*?)(</a>)',re.I|re.S)
+    def repl(m):
+        head,fid,_,tail=m.groups();n=ids.get(fid)
+        head=re.sub(r'\s+title=(["\']).*?\1','',head,flags=re.I|re.S)
+        if n is None:
+            head=re.sub(r'\s+href=(["\']).*?\1','',head,flags=re.I|re.S)
+            return head+'[?]'+tail
+        href='#'+footnote_anchor(fid)
+        if re.search(r'\shref=',head,re.I):head=re.sub(r'\s+href=(["\']).*?\1',f' href="{href}"',head,flags=re.I|re.S)
+        else:head=head[:-1]+f' href="{href}">'
+        return head+f'[{n}]'+tail
+    return pat.sub(repl,src)
+
+def rewrite_html(src,cur_parts,notes=None):
     if not src:return''
     src=expand_inline_images(src)
+    src=rewrite_footnote_refs(src,notes or [])
     # Older editor versions stored a native title such as "각주 1" on footnote refs.
     # Strip only that generated title so the custom preview is the sole hover UI.
     src=re.sub(r'\s+title=(["\'])각주\s+\d+\1','',src)
@@ -114,19 +131,20 @@ def toc(sections,prefix='',depth=0):
         out.append(f'<div class="toc-line" style="--toc-depth:{depth}"><a class="toc-number" href="#{anchor(s.get("id"))}">{n}.</a><span class="toc-text">{esc(s.get("title","제목 없음"))}</span></div>')
         out.append(toc(s.get('children',[]),n,depth+1))
     return ''.join(out)
-def sections_html(sections,cur_parts,self_href,prefix='',depth=1):
+def sections_html(sections,cur_parts,self_href,notes,prefix='',depth=1):
     out=[]
     for i,s in enumerate(sections,1):
         n=f'{prefix}.{i}' if prefix else str(i); d=min(depth,3)
-        body=rewrite_html(s.get('contentHtml',''),cur_parts)
-        out.append(f'<section class="section depth-{d}"><h2 id="{anchor(s.get("id"))}" class="section-title"><a class="num" href="{self_href}">{n}.</a>{esc(s.get("title","제목 없음"))}</h2><div class="body">{body}</div>{sections_html(s.get("children",[]),cur_parts,self_href,n,depth+1)}</section>')
+        body=rewrite_html(s.get('contentHtml',''),cur_parts,notes)
+        title_html=rewrite_html(s.get('titleHtml') or esc(s.get('title','제목 없음')),cur_parts,notes)
+        out.append(f'<section class="section depth-{d}"><h2 id="{anchor(s.get("id"))}" class="section-title"><a class="num" href="{self_href}">{n}.</a>{title_html}</h2><div class="body">{body}</div>{sections_html(s.get("children",[]),cur_parts,self_href,notes,n,depth+1)}</section>')
     return ''.join(out)
 def footnote_anchor(i):return 'footnote-'+re.sub(r'[^A-Za-z0-9_-]','-',str(i))
 def footnotes_html(notes,cur_parts):
     if not notes:return ''
     out=['<section class="footnotes"><div class="footnotes-head"><span class="footnotes-kicker">NOTES</span><h2>각주</h2></div><div class="footnotes-list">']
     for i,f in enumerate(notes,1):
-        out.append(f'<div class="footnote-row" id="{footnote_anchor(f.get("id","fn"))}"><span class="footnote-number">[{i}]</span><div class="footnote-content body">{rewrite_html(f.get("contentHtml",""),cur_parts)}</div></div>')
+        out.append(f'<div class="footnote-row" id="{footnote_anchor(f.get("id","fn"))}"><span class="footnote-number">[{i}]</span><div class="footnote-content body">{rewrite_html(f.get("contentHtml",""),cur_parts,notes)}</div></div>')
     out.append('</div></section>')
     return ''.join(out)
 
@@ -205,10 +223,12 @@ def build():
 def write_doc(doc,parts,allcats):
     c=norm(doc.get('content'));dest=OUT.joinpath(*parts);dest.mkdir(parents=True,exist_ok=True)
     root='../'*(len(parts))+'index.html';self_href='index.html'
-    intro=rewrite_html(c.get('introHtml',''),parts)
-    body=f'<main class="page"><h1>{esc(doc.get("title"))}</h1><div class="intro body">{intro}</div>'
+    notes=c.get('footnotes',[])
+    intro=rewrite_html(c.get('introHtml',''),parts,notes)
+    title_html=rewrite_html(c.get('titleHtml') or esc(doc.get('title')),parts,notes)
+    body=f'<main class="page"><h1>{title_html}</h1><div class="intro body">{intro}</div>'
     if c.get('sections'):body+=f'<nav class="toc"><div class="toc-title">목차</div>{toc(c["sections"])}</nav>'
-    body+=sections_html(c.get('sections',[]),parts,self_href)+footnotes_html(c.get('footnotes',[]),parts)+'</main>'
+    body+=sections_html(c.get('sections',[]),parts,self_href,notes)+footnotes_html(notes,parts)+'</main>'
     (dest/'index.html').write_text(shell(doc.get('title','Duels Wiki'),body,root,sidebar_html(allcats,parts)),'utf-8')
 
 if __name__=='__main__':build()
