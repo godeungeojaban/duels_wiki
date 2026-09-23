@@ -260,15 +260,33 @@ function insertPlainTextAtSavedRange(text){
   const r=state.savedRange?.cloneRange();if(!r)return false;const el=r.commonAncestorContainer.nodeType===1?r.commonAncestorContainer:r.commonAncestorContainer.parentElement;const editable=el?.closest?.('.editable,[data-footnote-target="1"],.inline-title-editable');if(!editable||!$('#editPage')?.contains(editable))return false;
   r.deleteContents();const n=document.createTextNode(text);r.insertNode(n);r.setStartAfter(n);r.collapse(true);const sel=getSelection();sel.removeAllRanges();sel.addRange(r);state.savedRange=r.cloneRange();editable.dispatchEvent(new Event('input',{bubbles:true}));return true;
 }
+function duelsReferenceCharacters(){
+  const rows=state.duelsData?.characters||[];
+  const profileKeys=new Set(DUELS_CHARACTER_PROFILES.flatMap(p=>[duelsNormKey(p.id),duelsNormKey(p.name)]));
+  const matched=rows.filter(row=>profileKeys.has(duelsNormKey(row.id))||profileKeys.has(duelsNormKey(row.name)));
+  const source=matched.length?matched:rows.filter(row=>row&&String(row.name||row.id||'').trim()&&!['체력','스태미나','이동속도','난이도','공격력','방어력','스킬','가져올값'].includes(duelsNormKey(row.name||row.id)));
+  return [...source].sort((a,b)=>String(a.name||a.id||'').localeCompare(String(b.name||b.id||''),'ko'));
+}
+function duelsReferenceFields(row){
+  const out=[];const seen=new Set();
+  const add=(value,label=value,group='기본')=>{value=String(value||'').trim();if(!value||seen.has(value))return;seen.add(value);out.push({value,label:String(label||value),group})};
+  ['이름','이미지','체력','스태미나','이동속도','난이도','공격력','방어력','캐릭터타입','교전사거리','역할군'].forEach(x=>add(x,x,'기본'));
+  Object.keys(row?.fields||{}).filter(k=>!DUELS_NARRATIVE_FIELDS.has(duelsNormKey(k))).forEach(k=>add(k,k,'원본 능력치'));
+  (row?.skills||[]).forEach((sk,i)=>{
+    const n=i+1;add(`스킬.${n}.이름`,`스킬 ${n} · 이름`,'스킬');
+    Object.keys(sk||{}).filter(k=>!DUELS_NARRATIVE_FIELDS.has(duelsNormKey(k))).forEach(k=>add(`스킬.${n}.${k}`,`스킬 ${n} · ${k}`,'스킬'));
+  });
+  return out;
+}
 async function openDuelsReferenceDialog(){
-  rememberSelection();await ensureDuelsData();const chars=state.duelsData?.characters||[];
-  openModal(`<div class="duels-ref-modal"><h2>듀얼즈 참조</h2><p class="muted">Wiki에 값 자체를 저장하지 않고 Duels.html의 최신 캐릭터 데이터를 참조합니다.</p>${state.duelsDataError?`<div class="duels-ref-warning">${escapeHtml(state.duelsDataError)}</div>`:''}<div class="form-row"><label>캐릭터</label><select id="duelsRefCharacter">${chars.map(x=>`<option value="${escapeHtml(x.name||x.id)}">${escapeHtml(x.name||x.id)}${x.id&&x.id!==x.name?` · ${escapeHtml(x.id)}`:''}</option>`).join('')}</select></div><div class="form-row"><label>가져올 값</label><input id="duelsRefField" list="duelsRefFields" value="체력" placeholder="체력 / 캐릭터타입 / 교전사거리 / 역할군 / 스킬.1.피해"><datalist id="duelsRefFields"></datalist></div><div class="duels-ref-preview"><span>명령어</span><code id="duelsRefPreview"></code></div><div class="modal-actions"><button id="duelsRefRefresh">원본 새로고침</button><button id="duelsRefCancel">취소</button><button id="duelsRefInsert" class="primary">삽입</button></div></div>`);
-  const sel=$('#duelsRefCharacter'),field=$('#duelsRefField'),list=$('#duelsRefFields'),preview=$('#duelsRefPreview');
-  const redraw=()=>{const row=findDuelsCharacter(sel.value),common=['이름','이미지','체력','스태미나','이동속도','난이도','공격력','방어력','캐릭터타입','교전사거리','역할군','필드목록','스킬목록'];const actual=Object.keys(row?.fields||{});const skill=[];(row?.skills||[]).forEach((sk,i)=>{skill.push(`스킬.${i+1}.이름`,...Object.keys(sk).map(k=>`스킬.${i+1}.${k}`))});list.innerHTML=[...new Set([...common,...actual,...skill])].map(x=>`<option value="${escapeHtml(x)}"></option>`).join('');preview.textContent=duelsRefCommand(sel.value,field.value)};
-  sel.onchange=redraw;field.oninput=redraw;redraw();
+  rememberSelection();await ensureDuelsData();const chars=duelsReferenceCharacters();
+  openModal(`<div class="duels-ref-modal"><h2>듀얼즈 참조</h2><p class="muted">Wiki에 값 자체를 저장하지 않고 Duels.html의 최신 캐릭터 데이터를 참조합니다.</p>${state.duelsDataError?`<div class="duels-ref-warning">${escapeHtml(state.duelsDataError)}</div>`:''}${chars.length?'':`<div class="duels-ref-warning">원본에서 캐릭터 데이터를 찾지 못했습니다. 원본 새로고침을 시도하세요.</div>`}<div class="form-row"><label>캐릭터</label><select id="duelsRefCharacter">${chars.map(x=>`<option value="${escapeHtml(x.name||x.id)}">${escapeHtml(x.name||x.id)}${x.id&&x.id!==x.name?` · ${escapeHtml(x.id)}`:''}</option>`).join('')}</select></div><div class="form-row"><label>가져올 값</label><select id="duelsRefField"></select></div><div class="duels-ref-preview"><span>명령어</span><code id="duelsRefPreview"></code></div><div class="modal-actions"><button id="duelsRefRefresh">원본 새로고침</button><button id="duelsRefCancel">취소</button><button id="duelsRefInsert" class="primary">삽입</button></div></div>`);
+  const sel=$('#duelsRefCharacter'),field=$('#duelsRefField'),preview=$('#duelsRefPreview');
+  const redraw=()=>{const row=findDuelsCharacter(sel.value),items=duelsReferenceFields(row),groups=new Map();for(const item of items){if(!groups.has(item.group))groups.set(item.group,[]);groups.get(item.group).push(item)}field.innerHTML=[...groups].map(([g,xs])=>`<optgroup label="${escapeHtml(g)}">${xs.map(x=>`<option value="${escapeHtml(x.value)}">${escapeHtml(x.label)}</option>`).join('')}</optgroup>`).join('');if([...field.options].some(o=>o.value==='체력'))field.value='체력';preview.textContent=duelsRefCommand(sel.value,field.value)};
+  sel.onchange=redraw;field.onchange=()=>preview.textContent=duelsRefCommand(sel.value,field.value);redraw();
   $('#duelsRefCancel').onclick=closeModal;
   $('#duelsRefRefresh').onclick=async()=>{const old=sel.value;await ensureDuelsData(true);closeModal();await openDuelsReferenceDialog();const next=$('#duelsRefCharacter');if(next&&[...next.options].some(o=>o.value===old)){next.value=old;next.dispatchEvent(new Event('change'))}};
-  $('#duelsRefInsert').onclick=()=>{const cmd=duelsRefCommand(sel.value,field.value.trim());closeModal();if(!insertPlainTextAtSavedRange(cmd)){showStatus('참조 명령을 삽입할 텍스트 위치를 먼저 선택하세요.',true)}};
+  $('#duelsRefInsert').onclick=()=>{const cmd=duelsRefCommand(sel.value,field.value);closeModal();if(!insertPlainTextAtSavedRange(cmd)){showStatus('참조 명령을 삽입할 텍스트 위치를 먼저 선택하세요.',true)}};
 }
 
 function viewHtml(html,{expandInlineImages=true}={}){ const t=document.createElement('template'); t.innerHTML=html||''; $$('img',t.content).forEach(img=>{const src=img.getAttribute('src')||'';img.setAttribute('src',mediaSrc(src));}); $$('a',t.content).forEach(a=>{const h=a.getAttribute('href')||''; if(h.startsWith('wiki:/'))a.dataset.wikiLink=h;}); upgradeDuelsComponents(t.content); if(!state.editing)expandDuelsReferenceSyntax(t.content); if(expandInlineImages)expandInlineImageSyntax(t.content); return t.innerHTML; }
@@ -1058,7 +1076,7 @@ function tableModal(existing=null){
 }
 
 
-// 3.58: 표 요소 선택 / 포인터 드래그 다중 선택 / 더블클릭 직접 편집 / 선택 셀 일괄 삭제.
+// 3.59: 표 요소 선택 / 포인터 드래그 다중 선택 / 더블클릭 직접 편집 / 선택 셀 일괄 삭제.
 let inlineTable=null,inlineTableActiveCell=null,inlineTableSelected=new Set(),inlineTableDrag=null,inlineTableSuppressClick=false;
 function inlineCellKey(td){return td?`${Number(td.dataset.r)}:${Number(td.dataset.c)}`:''}
 function inlineTableCellByKey(table,key){const [r,c]=String(key).split(':');return table?.querySelector(`td[data-table-cell][data-r="${r}"][data-c="${c}"]`)||null}

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Duels Wiki Editor Launcher v3.55
+# Duels Wiki Editor Launcher v3.59
 # Standard library only. No npm / Node.js required.
 
 from __future__ import annotations
@@ -20,7 +20,7 @@ from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
-APP_VERSION = "3.58"
+APP_VERSION = "3.59"
 DEFAULT_OWNER = "godeungeojaban"
 DEFAULT_REPO = "duels_wiki"
 DEFAULT_BRANCH = "main"
