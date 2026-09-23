@@ -199,7 +199,7 @@ function viewHtml(html,{expandInlineImages=true}={}){ const t=document.createEle
 function footnoteAnchor(id){return 'footnote-'+String(id).replace(/[^a-zA-Z0-9_-]/g,'-')}
 function footnoteNumber(content,id){const i=(content?.footnotes||[]).findIndex(f=>f.id===id);return i>=0?i+1:null}
 function syncFootnoteRefs(root,content){
-  $$('[data-footnote-ref]',root).forEach(a=>{const id=a.dataset.footnoteRef,n=footnoteNumber(content,id);if(n==null){a.classList.add('missing-footnote');a.textContent='[?]';a.removeAttribute('href');return}a.classList.remove('missing-footnote');a.textContent=`[${n}]`;a.setAttribute('href',`#${footnoteAnchor(id)}`);a.setAttribute('title',`각주 ${n}`);});
+  $$('[data-footnote-ref]',root).forEach(a=>{const id=a.dataset.footnoteRef,n=footnoteNumber(content,id);if(n==null){a.classList.add('missing-footnote');a.textContent='[?]';a.removeAttribute('href');return}a.classList.remove('missing-footnote');a.textContent=`[${n}]`;a.setAttribute('href',`#${footnoteAnchor(id)}`);a.removeAttribute('title');});
 }
 function renderFootnotes(content,editable=false){
   const notes=content?.footnotes||[];if(!notes.length)return'';
@@ -224,7 +224,7 @@ function bindFootnoteEditors(){
 function refreshFootnoteBlock(){
   const host=$('#footnoteBlockHost');if(!host)return;host.innerHTML=renderFootnotes(editingContent,true);bindFootnoteEditors();
 }
-function storageHtml(el){ clearComponentCaretAnchors(el); const clone=el.cloneNode(true); $$('img',clone).forEach(img=>{let src=img.getAttribute('src')||''; if(src.startsWith('/__media__/')){src='/'+decodeURIComponent(src.slice('/__media__/'.length));img.setAttribute('src',src);} img.classList.remove('selected-image');}); $$('.selected-duels-component',clone).forEach(x=>x.classList.remove('selected-duels-component')); $$('[data-editor-only]',clone).forEach(x=>x.remove()); return clone.innerHTML; }
+function storageHtml(el){ clearComponentCaretAnchors(el); const clone=el.cloneNode(true); $$('img',clone).forEach(img=>{let src=img.getAttribute('src')||''; if(src.startsWith('/__media__/')){src='/'+decodeURIComponent(src.slice('/__media__/'.length));img.setAttribute('src',src);} img.classList.remove('selected-image');}); $$('.selected-duels-component',clone).forEach(x=>x.classList.remove('selected-duels-component')); $$('[data-editor-only]',clone).forEach(x=>x.remove()); return clone.innerHTML.replace(/\u200B/g,''); }
 
 function sectionAnchor(id){return 'section-'+String(id).replace(/[^a-zA-Z0-9_-]/g,'-')}
 function renderToc(sections,prefix='',depth=0){return sections.map((s,i)=>{const n=prefix?`${prefix}.${i+1}`:`${i+1}`;return `<div class="toc-line" style="--toc-depth:${depth}"><a class="toc-number" href="#" data-section-anchor="${sectionAnchor(s.id)}">${n}.</a><span class="toc-text">${escapeHtml(s.title||'제목 없음')}</span></div>${renderToc(s.children||[],n,depth+1)}`}).join('')}
@@ -248,7 +248,7 @@ function positionFootnotePopover(a){
   p.style.right='auto';p.style.bottom='auto';const r=a.getBoundingClientRect();const w=Math.min(380,window.innerWidth-24);p.style.width=w+'px';let left=Math.min(Math.max(12,r.left),window.innerWidth-w-12);p.style.left=left+'px';p.style.top='0px';const ph=p.offsetHeight||150;let top=r.bottom+9;if(top+ph>window.innerHeight-12)top=Math.max(12,r.top-ph-9);p.style.top=top+'px';
 }
 function showFootnotePopover(a){
-  const target=footnoteTargetFor(a);if(!target)return;clearTimeout(footnoteHideTimer);const p=ensureFootnotePopover();const body=$('.footnote-content,.footnote-edit-body',target);const n=(a.textContent||'').trim();$('.footnote-popover-label',p).textContent=`각주 ${n}`;$('.footnote-popover-body',p).innerHTML=body?.innerHTML||'<p>내용이 없습니다.</p>';footnotePopoverAnchor?.classList.remove('footnote-ref-active');footnotePopoverAnchor=a;a.classList.add('footnote-ref-active');p.classList.remove('hidden');positionFootnotePopover(a);
+  const target=footnoteTargetFor(a);if(!target)return;clearTimeout(footnoteHideTimer);const p=ensureFootnotePopover();const body=$('.footnote-content,.footnote-edit-body',target);const n=(a.textContent||'').trim();$('.footnote-popover-label',p).textContent=n;$('.footnote-popover-body',p).innerHTML=body?.innerHTML||'<p>내용이 없습니다.</p>';footnotePopoverAnchor?.classList.remove('footnote-ref-active');footnotePopoverAnchor=a;a.classList.add('footnote-ref-active');p.classList.remove('hidden');positionFootnotePopover(a);
 }
 function hideFootnotePopover(){clearTimeout(footnoteHideTimer);if(footnotePopover)footnotePopover.classList.add('hidden');footnotePopoverAnchor?.classList.remove('footnote-ref-active');footnotePopoverAnchor=null}
 function scheduleFootnotePopoverHide(){clearTimeout(footnoteHideTimer);footnoteHideTimer=setTimeout(()=>hideFootnotePopover(),130)}
@@ -593,7 +593,7 @@ function insertFootnoteReference(id){
   const editable=state.footnoteInsertionEditable;const stored=state.footnoteInsertionRange;if(!editable||!stored||!editable.isConnected||!$('#editPage')?.contains(editable)){clearFootnoteInsertionPoint();alert('본문의 각주를 넣을 위치에 커서를 놓아주세요.');return false}
   let r;try{r=stored.cloneRange()}catch{clearFootnoteInsertionPoint();return false}if(!editable.contains(r.commonAncestorContainer)){clearFootnoteInsertionPoint();return false}
   editable.focus({preventScroll:true});const sel=getSelection();sel.removeAllRanges();sel.addRange(r);
-  const a=document.createElement('a');a.className='footnote-ref';a.dataset.footnoteRef=id;a.contentEditable='false';const n=footnoteNumber(editingContent,id);a.href=`#${footnoteAnchor(id)}`;a.textContent=`[${n??'?'}]`;a.title=`각주 ${n??''}`.trim();const sup=document.createElement('sup');sup.append(a);r.deleteContents();r.insertNode(sup);r.setStartAfter(sup);r.collapse(true);sel.removeAllRanges();sel.addRange(r);state.savedRange=r.cloneRange();clearFootnoteInsertionPoint();editable.dispatchEvent(new Event('input',{bubbles:true}));return true;
+  const a=document.createElement('a');a.className='footnote-ref';a.dataset.footnoteRef=id;a.contentEditable='false';const n=footnoteNumber(editingContent,id);a.href=`#${footnoteAnchor(id)}`;a.textContent=`[${n??'?'}]`;a.removeAttribute('title');const sup=document.createElement('sup');sup.append(a);r.deleteContents();r.insertNode(sup);const caret=document.createTextNode('\u200B');sup.after(caret);r.setStart(caret,1);r.collapse(true);sel.removeAllRanges();sel.addRange(r);state.savedRange=r.cloneRange();clearFootnoteInsertionPoint();editable.dispatchEvent(new Event('input',{bubbles:true}));return true;
 }
 function openFootnoteDialog(){
   if(!captureFootnoteInsertionPoint()){alert('본문의 각주를 넣을 위치에 커서를 놓은 뒤 다시 눌러주세요.');return}
