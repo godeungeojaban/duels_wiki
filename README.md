@@ -1,6 +1,6 @@
-# Duels Wiki 3.49
+# Duels Wiki 3.50
 
-Duels Wiki 3.49는 Python 표준 라이브러리 기반 로컬 편집기 + GitHub 저장소 + GitHub Pages 정적 열람 사이트 구조다. Node.js/Next.js/npm은 사용하지 않는다.
+Duels Wiki 3.50는 Python 표준 라이브러리 기반 로컬 편집기 + GitHub 저장소 + GitHub Pages 정적 열람 사이트 구조다. Node.js/Next.js/npm은 사용하지 않는다.
 
 ## 실행
 
@@ -83,12 +83,18 @@ Duels Wiki 3.49는 Python 표준 라이브러리 기반 로컬 편집기 + GitHu
 
 글꼴 종류 선택은 의도적으로 넣지 않았다.
 
+
+### 각주 동작
+
+- 각주가 없는 문서에는 각주 블록이 존재하지 않는다. 첫 각주 추가 시 문서 최하단에 고정 `각주` 블록이 자동 생성된다.
+- 각주 항목을 삭제하면 본문의 해당 참조도 함께 제거되며 남은 각주는 다시 번호가 매겨진다. 마지막 각주 삭제 시 `각주` 블록도 자동으로 사라진다.
+
 ## 저장소 구조
 
 ZIP의 최상위 폴더가 그대로 GitHub 저장소 루트가 된다. `README.md`와 `VERSION.md`도 이 안에 있으므로 함께 commit된다.
 
 ```text
-duels_wiki_3.49/
+duels_wiki_3.50/
 ├─ DuelsWikiEditor.py     GitHub에 저장되는 로컬 런처 최신본
 ├─ run_editor.bat         로컬 실행/런처 업데이트용 (.gitignore)
 ├─ git_sync.bat           Windows Git 동기화

@@ -203,11 +203,22 @@ function syncFootnoteRefs(root,content){
 }
 function renderFootnotes(content,editable=false){
   const notes=content?.footnotes||[];if(!notes.length)return'';
-  if(editable)return `<section class="footnotes-block footnotes-edit-block" data-footnotes-block><div class="footnotes-fixed-head"><span class="footnotes-kicker">NOTES</span><h2>각주</h2><span class="footnotes-lock">고정 블록</span></div><div class="footnotes-edit-list">${notes.map((f,i)=>`<div class="footnote-edit-row" id="${footnoteAnchor(f.id)}" data-footnote-id="${escapeHtml(f.id)}"><span class="footnote-number">[${i+1}]</span><div class="editable footnote-edit-body" contenteditable="true" data-footnote-editor="1">${viewHtml(f.contentHtml,{expandInlineImages:false})}</div></div>`).join('')}</div></section>`;
+  if(editable)return `<section class="footnotes-block footnotes-edit-block" data-footnotes-block><div class="footnotes-fixed-head"><span class="footnotes-kicker">NOTES</span><h2>각주</h2><span class="footnotes-lock">고정 블록</span></div><div class="footnotes-edit-list">${notes.map((f,i)=>`<div class="footnote-edit-row" id="${footnoteAnchor(f.id)}" data-footnote-id="${escapeHtml(f.id)}"><span class="footnote-number">[${i+1}]</span><div class="editable footnote-edit-body" contenteditable="true" data-footnote-editor="1">${viewHtml(f.contentHtml,{expandInlineImages:false})}</div><button type="button" class="footnote-delete-btn" data-footnote-delete="${escapeHtml(f.id)}" title="이 각주 삭제" aria-label="각주 ${i+1} 삭제">삭제</button></div>`).join('')}</div></section>`;
   return `<section class="footnotes-block" data-footnotes-block><div class="footnotes-fixed-head"><span class="footnotes-kicker">NOTES</span><h2>각주</h2></div><div class="footnotes-list">${notes.map((f,i)=>`<div class="footnote-row" id="${footnoteAnchor(f.id)}"><span class="footnote-number">[${i+1}]</span><div class="footnote-content wiki-body">${viewHtml(f.contentHtml)}</div></div>`).join('')}</div></section>`;
+}
+function deleteFootnote(id){
+  const notes=editingContent?.footnotes||[],idx=notes.findIndex(f=>f.id===id);if(idx<0)return;
+  const n=idx+1,refs=$$(`[data-footnote-ref="${CSS.escape(id)}"]`,$('#editPage')).length;
+  const msg=refs?`각주 [${n}]을 삭제할까요?\n본문의 이 각주 참조 ${refs}개도 함께 제거됩니다.`:`각주 [${n}]을 삭제할까요?`;
+  if(!confirm(msg))return;
+  $$(`[data-footnote-ref="${CSS.escape(id)}"]`,$('#editPage')).forEach(a=>{
+    const editable=a.closest('.editable'),sup=a.closest('sup');(sup||a).remove();editable?.dispatchEvent(new Event('input',{bubbles:true}));
+  });
+  notes.splice(idx,1);hideFootnotePopover();refreshFootnoteBlock();syncFootnoteRefs($('#editPage'),editingContent);
 }
 function bindFootnoteEditors(){
   $$('.footnote-edit-row',$('#editPage')).forEach(row=>{const f=(editingContent.footnotes||[]).find(x=>x.id===row.dataset.footnoteId),body=$('.footnote-edit-body',row);if(!f||!body)return;bindEditable(body);body.addEventListener('input',()=>f.contentHtml=storageHtml(body));});
+  $$('[data-footnote-delete]',$('#editPage')).forEach(b=>b.onclick=()=>deleteFootnote(b.dataset.footnoteDelete));
   syncFootnoteRefs($('#editPage'),editingContent);
 }
 function refreshFootnoteBlock(){
