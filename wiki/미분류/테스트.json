@@ -1,0 +1,22 @@
+{
+  "id": "doc_f7c903c4707346b081a009ab69531e41",
+  "kind": "document",
+  "title": "테스트",
+  "slug": "테스트",
+  "categoryId": "uncategorized",
+  "categorySlug": "미분류",
+  "content": {
+    "type": "wiki-sections-v3",
+    "introHtml": "<p></p>",
+    "sections": [
+      {
+        "id": "sec_b2381d4ae39f479f9fd910d9150cab5f",
+        "title": "개요",
+        "contentHtml": "<p></p>",
+        "children": []
+      }
+    ]
+  },
+  "createdAt": "2026-09-23T14:36:03+0900",
+  "updatedAt": "2026-09-23T14:36:03+0900"
+}
