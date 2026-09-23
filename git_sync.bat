@@ -7,7 +7,7 @@ set "BRANCH=main"
 set "INITIAL_CONTENT=0"
 
 echo ========================================
-echo  Duels Wiki Git Sync 3.41
+echo  Duels Wiki Git Sync 3.43
 echo ========================================
 echo [POLICY] wiki/ and media/ are user content. Existing remote content is preserved.
 echo.
@@ -120,8 +120,9 @@ exit /b 0
 echo [SYNC] Staging editor/site product files only...
 rem IMPORTANT: Never use plain git add -A here. Update ZIPs intentionally do not contain
 rem the user's complete wiki/media tree, so doing so would stage their records as deletions.
-git add -A -- editor site .github/workflows README.md git_sync.bat git_sync.sh .gitignore || goto :fail
-rem VERSION.md is intentionally staged explicitly so every packaged version marker is pushed.
+git add -A -- editor site .github/workflows git_sync.bat git_sync.sh .gitignore || goto :fail
+rem README.md and VERSION.md are staged explicitly so documentation/version changes are never skipped.
+git add -- README.md || goto :fail
 git add -- VERSION.md || goto :fail
 if "!INITIAL_CONTENT!"=="1" git add -A -- wiki media || goto :fail
 
@@ -129,6 +130,12 @@ git ls-files --error-unmatch README.md >nul 2>nul
 if errorlevel 1 goto :fail
 git ls-files --error-unmatch VERSION.md >nul 2>nul
 if errorlevel 1 goto :fail
+git diff --cached --name-only -- README.md | findstr /x /c:"README.md" >nul
+if errorlevel 1 (
+  echo [INFO] README.md has no content change; tracked remote copy is already current.
+) else (
+  echo [CHECK] README.md staged for this update.
+)
 git diff --cached --name-only -- VERSION.md | findstr /x /c:"VERSION.md" >nul
 if errorlevel 1 (
   echo [INFO] VERSION.md has no content change; tracked remote copy is already current.
