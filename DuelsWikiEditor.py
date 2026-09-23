@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Duels Wiki Editor Launcher v3.54
+# Duels Wiki Editor Launcher v3.55
 # Standard library only. No npm / Node.js required.
 
 from __future__ import annotations
@@ -20,7 +20,7 @@ from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
-APP_VERSION = "3.54"
+APP_VERSION = "3.57"
 DEFAULT_OWNER = "godeungeojaban"
 DEFAULT_REPO = "duels_wiki"
 DEFAULT_BRANCH = "main"
@@ -29,6 +29,537 @@ DEFAULT_MEDIA_ROOT = "media"
 EDITOR_FILES = ("index.html", "editor.css", "editor.js", "version.json")
 UNCAT_ID = "uncategorized"
 UNCAT_SLUG = "미분류"
+
+
+# External game source used by the inline reference command.
+# Values are never copied into wiki documents: the launcher/build resolves them
+# from the current Duels source when rendering.
+DUELS_SOURCE_URL = "https://raw.githubusercontent.com/LyangNem/Duels/main/Duels.html"
+DUELS_ASSET_API = "https://api.github.com/repos/LyangNem/Duels/contents/character?ref=main"
+DUELS_ASSET_RAW_BASE = "https://raw.githubusercontent.com/LyangNem/Duels/main/character/"
+DUELS_CACHE_TTL = 300
+_DUELS_CATALOG_CACHE = {"at": 0.0, "catalog": None}
+
+_DUELS_NAME_KEYS = ("name", "displayname", "charactername", "charname", "title", "이름")
+_DUELS_ID_KEYS = ("id", "key", "slug", "characterid", "charid")
+_DUELS_IMAGE_KEYS = ("image", "img", "imageurl", "portrait", "portraiturl", "icon", "iconurl", "sprite", "profile", "thumbnail")
+_DUELS_SKILL_KEYS = ("skills", "skillset", "skillsets", "abilities", "moves", "skill", "스킬", "스킬셋")
+_DUELS_CHARACTER_MARKERS = {
+    "hp", "maxhp", "health", "maxhealth", "stamina", "maxstamina", "speed", "movespeed", "movementspeed",
+    "difficulty", "attack", "atk", "defense", "def", "range", "weight", "체력", "스태미나", "이동속도", "난이도",
+}
+_DUELS_SKILL_MARKERS = {
+    "damage", "dmg", "cooldown", "cd", "range", "duration", "cost", "stamina", "knockback", "delay", "casttime",
+    "피해", "데미지", "쿨다운", "사거리", "지속시간", "비용", "넉백", "선딜", "후딜",
+}
+_DUELS_FIELD_ALIASES = {
+    "이름": ("name", "displayname", "charactername", "charname", "title", "이름"),
+    "name": ("name", "displayname", "charactername", "charname", "title", "이름"),
+    "이미지": ("image", "img", "imageurl", "portrait", "portraiturl", "icon", "iconurl", "sprite", "profile", "thumbnail"),
+    "image": ("image", "img", "imageurl", "portrait", "portraiturl", "icon", "iconurl", "sprite", "profile", "thumbnail"),
+    "체력": ("hp", "maxhp", "health", "maxhealth", "체력"), "hp": ("hp", "maxhp", "health", "maxhealth", "체력"),
+    "스태미나": ("stamina", "maxstamina", "energy", "maxenergy", "스태미나"), "stamina": ("stamina", "maxstamina", "energy", "maxenergy", "스태미나"),
+    "이동속도": ("speed", "movespeed", "movementspeed", "walkspeed", "이동속도"), "속도": ("speed", "movespeed", "movementspeed", "walkspeed", "이동속도"), "speed": ("speed", "movespeed", "movementspeed", "walkspeed", "이동속도"),
+    "난이도": ("difficulty", "difficultyvalue", "난이도"), "difficulty": ("difficulty", "difficultyvalue", "난이도"),
+    "공격력": ("attack", "atk", "power", "공격력"), "attack": ("attack", "atk", "power", "공격력"),
+    "방어력": ("defense", "def", "armor", "방어력"), "defense": ("defense", "def", "armor", "방어력"),
+    "캐릭터타입": ("charactertype", "character_type", "type", "combatstyle", "style", "타입", "캐릭터타입"),
+    "교전사거리": ("engagementrange", "engagement_range", "combatrange", "combat_range", "rangeclass", "거리", "교전사거리"),
+    "역할군": ("role", "class", "archetype", "roleclass", "역할", "역할군"),
+}
+_NARRATIVE_FIELD_KEYS = {"description","desc","summary","lore","background","story","flavor","설명","배경","배경설정","스토리","소개"}
+_ROLE_SOURCE_ALIASES = ("classification","classify","characterclass","character_class","roletext","type","class","role","style","position","분류","역할","타입")
+_ROLE_RANGES = ("초근거리","근거리","중근거리","중거리","중원거리","원거리","초원거리")
+
+_DUELS_SKILL_FIELD_ALIASES = {
+    "이름": ("name", "displayname", "skillname", "title", "이름"),
+    "name": ("name", "displayname", "skillname", "title", "이름"),
+    "피해": ("damage", "dmg", "basedamage", "damagevalue", "피해", "데미지"),
+    "데미지": ("damage", "dmg", "basedamage", "damagevalue", "피해", "데미지"),
+    "damage": ("damage", "dmg", "basedamage", "damagevalue", "피해", "데미지"),
+    "쿨다운": ("cooldown", "cd", "cooldowntime", "쿨다운"),
+    "cooldown": ("cooldown", "cd", "cooldowntime", "쿨다운"),
+    "사거리": ("range", "attackrange", "skillrange", "사거리"),
+    "range": ("range", "attackrange", "skillrange", "사거리"),
+    "지속시간": ("duration", "time", "지속시간"),
+    "duration": ("duration", "time", "지속시간"),
+    "비용": ("cost", "staminacost", "energycost", "비용"),
+    "cost": ("cost", "staminacost", "energycost", "비용"),
+}
+
+
+def _duels_norm_key(value: object) -> str:
+    return re.sub(r"[^0-9a-z가-힣]+", "", str(value or "").lower())
+
+
+def _duels_decode_js_string(raw: str) -> str:
+    raw = raw.strip()
+    if len(raw) < 2 or raw[0] not in "\"'`" or raw[-1] != raw[0]:
+        return raw
+    body = raw[1:-1]
+    # JSON handles most double quoted JS strings; the fallback covers single/backtick strings.
+    if raw[0] == '"':
+        try:
+            return json.loads(raw)
+        except Exception:
+            pass
+    def repl(m):
+        x=m.group(1)
+        if x.startswith('u') and len(x)==5:
+            try:return chr(int(x[1:],16))
+            except Exception:return m.group(0)
+        return {"n":"\n","r":"\r","t":"\t","b":"\b","f":"\f"}.get(x,x)
+    return re.sub(r"\\(u[0-9a-fA-F]{4}|.)", repl, body)
+
+
+def _duels_split_top_level(text: str, delimiter: str = ',') -> list[str]:
+    out=[];start=0;stack=[];quote=None;esc=False;line_comment=False;block_comment=False;i=0
+    pairs={')':'(',']':'[','}':'{'}
+    while i < len(text):
+        ch=text[i];nxt=text[i+1] if i+1<len(text) else ''
+        if line_comment:
+            if ch in '\r\n':line_comment=False
+            i+=1;continue
+        if block_comment:
+            if ch=='*' and nxt=='/':block_comment=False;i+=2;continue
+            i+=1;continue
+        if quote:
+            if esc:esc=False;i+=1;continue
+            if ch=='\\':esc=True;i+=1;continue
+            if ch==quote:quote=None
+            i+=1;continue
+        if ch=='/' and nxt=='/':line_comment=True;i+=2;continue
+        if ch=='/' and nxt=='*':block_comment=True;i+=2;continue
+        if ch in "\"'`":quote=ch;i+=1;continue
+        if ch in '([{':stack.append(ch);i+=1;continue
+        if ch in ')]}':
+            if stack and stack[-1]==pairs[ch]:stack.pop()
+            i+=1;continue
+        if ch==delimiter and not stack:
+            out.append(text[start:i]);start=i+1
+        i+=1
+    out.append(text[start:])
+    return out
+
+
+def _duels_find_top_level_colon(text: str) -> int:
+    stack=[];quote=None;esc=False;line_comment=False;block_comment=False;i=0
+    pairs={')':'(',']':'[','}':'{'}
+    while i < len(text):
+        ch=text[i];nxt=text[i+1] if i+1<len(text) else ''
+        if line_comment:
+            if ch in '\r\n':line_comment=False
+            i+=1;continue
+        if block_comment:
+            if ch=='*' and nxt=='/':block_comment=False;i+=2;continue
+            i+=1;continue
+        if quote:
+            if esc:esc=False;i+=1;continue
+            if ch=='\\':esc=True;i+=1;continue
+            if ch==quote:quote=None
+            i+=1;continue
+        if ch=='/' and nxt=='/':line_comment=True;i+=2;continue
+        if ch=='/' and nxt=='*':block_comment=True;i+=2;continue
+        if ch in "\"'`":quote=ch;i+=1;continue
+        if ch in '([{':stack.append(ch);i+=1;continue
+        if ch in ')]}':
+            if stack and stack[-1]==pairs[ch]:stack.pop()
+            i+=1;continue
+        if ch==':' and not stack:return i
+        i+=1
+    return -1
+
+
+def _duels_parse_number_expr(raw: str):
+    import ast, operator
+    if not re.fullmatch(r"[0-9eE+\-*/%().\s]+", raw):return None
+    try:node=ast.parse(raw,mode='eval')
+    except Exception:return None
+    ops={ast.Add:operator.add,ast.Sub:operator.sub,ast.Mult:operator.mul,ast.Div:operator.truediv,ast.FloorDiv:operator.floordiv,ast.Mod:operator.mod,ast.Pow:operator.pow,ast.USub:operator.neg,ast.UAdd:operator.pos}
+    def ev(n):
+        if isinstance(n,ast.Expression):return ev(n.body)
+        if isinstance(n,ast.Constant) and isinstance(n.value,(int,float)):return n.value
+        if isinstance(n,ast.BinOp) and type(n.op) in ops:return ops[type(n.op)](ev(n.left),ev(n.right))
+        if isinstance(n,ast.UnaryOp) and type(n.op) in ops:return ops[type(n.op)](ev(n.operand))
+        raise ValueError
+    try:
+        value=ev(node)
+        if isinstance(value,float) and value.is_integer():return int(value)
+        return value
+    except Exception:return None
+
+
+def _duels_parse_value(raw: str, depth: int = 0):
+    raw=raw.strip().rstrip(';')
+    if not raw:return ''
+    if raw[0] in "\"'`" and raw[-1:]==raw[0]:return _duels_decode_js_string(raw)
+    low=raw.lower()
+    if low=='true':return True
+    if low=='false':return False
+    if low in ('null','undefined'):return None
+    num=_duels_parse_number_expr(raw)
+    if num is not None:return num
+    if depth<4 and raw.startswith('{') and raw.endswith('}'):
+        return _duels_parse_object(raw,depth+1)
+    if depth<4 and raw.startswith('[') and raw.endswith(']'):
+        return [_duels_parse_value(x,depth+1) for x in _duels_split_top_level(raw[1:-1]) if x.strip()]
+    # Preserve simple identifiers/expressions as source text. This still lets the
+    # reference UI expose fields even when a value is computed elsewhere.
+    return re.sub(r"\s+", " ", raw)[:500]
+
+
+def _duels_parse_object(raw: str, depth: int = 0) -> dict:
+    body=raw.strip()
+    if body.startswith('{') and body.endswith('}'):body=body[1:-1]
+    out={}
+    for chunk in _duels_split_top_level(body):
+        chunk=chunk.strip()
+        if not chunk or chunk.startswith('...'):continue
+        ci=_duels_find_top_level_colon(chunk)
+        if ci<0:continue
+        key=chunk[:ci].strip()
+        if key.startswith('['):continue
+        if len(key)>=2 and key[0] in "\"'`" and key[-1]==key[0]:key=_duels_decode_js_string(key)
+        key=re.sub(r"\s+", "", key)
+        if not key or len(key)>80:continue
+        out[str(key)]=_duels_parse_value(chunk[ci+1:],depth)
+    return out
+
+
+def _duels_brace_pairs(source: str) -> tuple[dict[int,int], list[int]]:
+    pairs={};opens=[];stack=[];quote=None;esc=False;line_comment=False;block_comment=False;i=0
+    while i<len(source):
+        ch=source[i];nxt=source[i+1] if i+1<len(source) else ''
+        if line_comment:
+            if ch in '\r\n':line_comment=False
+            i+=1;continue
+        if block_comment:
+            if ch=='*' and nxt=='/':block_comment=False;i+=2;continue
+            i+=1;continue
+        if quote:
+            if esc:esc=False;i+=1;continue
+            if ch=='\\':esc=True;i+=1;continue
+            if ch==quote:quote=None
+            i+=1;continue
+        if ch=='/' and nxt=='/':line_comment=True;i+=2;continue
+        if ch=='/' and nxt=='*':block_comment=True;i+=2;continue
+        if ch in "\"'`":quote=ch;i+=1;continue
+        if ch=='{':stack.append(i);opens.append(i)
+        elif ch=='}' and stack:
+            op=stack.pop();pairs[op]=i
+        i+=1
+    return pairs,opens
+
+
+def _duels_enclosing_object(pos: int, pairs: dict[int,int], opens: list[int]) -> tuple[int,int] | None:
+    import bisect
+    idx=bisect.bisect_left(opens,pos)-1;best=None;seen=0
+    while idx>=0 and seen<3000:
+        op=opens[idx];cl=pairs.get(op)
+        if cl is not None and cl>=pos:
+            if best is None or cl-op<best[1]-best[0]:best=(op,cl)
+        elif best is not None and pos-op>best[1]-best[0]+2000:
+            break
+        idx-=1;seen+=1
+    return best
+
+
+def _duels_lookup_key(mapping: dict, aliases) -> tuple[str|None, object]:
+    norm={_duels_norm_key(k):k for k in mapping}
+    for a in aliases:
+        k=norm.get(_duels_norm_key(a))
+        if k is not None:return k,mapping.get(k)
+    return None,None
+
+
+def _duels_object_score(fields: dict) -> int:
+    keys={_duels_norm_key(k) for k in fields}
+    score=sum(2 for k in keys if k in _DUELS_CHARACTER_MARKERS)
+    if any(k in keys for k in _DUELS_SKILL_KEYS):score+=4
+    if any(k in keys for k in _DUELS_IMAGE_KEYS):score+=2
+    if any(k in keys for k in _DUELS_ID_KEYS):score+=1
+    # Base attributes are often grouped under a nested stats/status object.
+    nested_stat_keys={"stats","basestats","attributes","status","abilitystats","능력치"}
+    for k,v in fields.items():
+        if _duels_norm_key(k) in nested_stat_keys and isinstance(v,dict):
+            child_keys={_duels_norm_key(x) for x in v}
+            score+=sum(2 for x in child_keys if x in _DUELS_CHARACTER_MARKERS)
+            if child_keys:score+=1
+    return score
+
+
+def _duels_skill_score(fields: dict) -> int:
+    keys={_duels_norm_key(k) for k in fields}
+    return sum(1 for k in keys if k in _DUELS_SKILL_MARKERS)
+
+
+def _duels_skill_list(fields: dict) -> list[dict]:
+    norm={_duels_norm_key(k):k for k in fields}
+    candidates=[]
+    for alias in _DUELS_SKILL_KEYS:
+        k=norm.get(_duels_norm_key(alias))
+        if k is not None:candidates.append(fields.get(k))
+    # Also support skill1/rmb/lmb style object properties.
+    for k,v in fields.items():
+        nk=_duels_norm_key(k)
+        if isinstance(v,dict) and (nk.startswith('skill') or nk.startswith('ability') or _duels_skill_score(v)>=2):candidates.append(v)
+    out=[]
+    def add(v,label=None):
+        if isinstance(v,list):
+            for x in v:add(x)
+        elif isinstance(v,dict):
+            # A map of named skills can either be one skill or many child skills.
+            if _duels_skill_score(v)>=1 or _duels_lookup_key(v,_DUELS_NAME_KEYS)[0]:
+                blocked={_duels_norm_key(x) for x in _NARRATIVE_FIELD_KEYS}
+                item={k:val for k,val in v.items() if _duels_norm_key(k) not in blocked and not (isinstance(val,str) and len(val)>180)}
+                if label and _duels_lookup_key(item,_DUELS_NAME_KEYS)[0] is None:item['name']=label
+                out.append(item)
+            else:
+                for kk,vv in v.items():
+                    if isinstance(vv,dict):add(vv,kk)
+        elif isinstance(v,str) and v.strip():out.append({'name':v.strip()})
+    for c in candidates:add(c)
+    # Stable de-duplication by a compact JSON representation.
+    seen=set();result=[]
+    for x in out:
+        sig=json.dumps(x,ensure_ascii=False,sort_keys=True,default=str)
+        if sig in seen:continue
+        seen.add(sig);result.append(x)
+    return result
+
+
+def _duels_image_url(value, char_id: str|None, assets: dict[str,str]) -> str:
+    if isinstance(value,str) and value.strip():
+        v=value.strip()
+        if v.startswith(('http://','https://')):return v
+        v=v.lstrip('./')
+        if v.startswith('character/'):return f"https://raw.githubusercontent.com/LyangNem/Duels/main/{v}"
+        if re.search(r"\.(?:png|jpe?g|webp|gif|svg)(?:\?|$)",v,re.I):return DUELS_ASSET_RAW_BASE+v.split('/')[-1]
+    if char_id:
+        nk=_duels_norm_key(char_id)
+        if nk in assets:return assets[nk]
+        for ext in ('png','jpg','jpeg','webp'):
+            k=_duels_norm_key(f'{char_id}.{ext}')
+            if k in assets:return assets[k]
+    return ''
+
+
+def parse_duels_catalog(source: str, assets: dict[str,str] | None = None) -> dict:
+    assets=assets or {}
+    pairs,opens=_duels_brace_pairs(source)
+    candidates={}
+    # Objects with an explicit display/name field.
+    name_re=re.compile(r'''(?i)(?:["']?(?:name|displayname|charactername|charname|이름|id|characterid|charid|slug)["']?)\s*:\s*((?:"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'))''')
+    for m in name_re.finditer(source):
+        span=_duels_enclosing_object(m.start(),pairs,opens)
+        if not span:continue
+        op,cl=span
+        if cl-op>120000:continue
+        try:fields=_duels_parse_object(source[op:cl+1])
+        except Exception:continue
+        if _duels_object_score(fields)<3:continue
+        candidates[(op,cl)]=(None,fields)
+    # Standalone declarations/assignments can carry the character id outside the object.
+    # Examples: const runef = {...}, characters["runef"] = {...}.
+    decl_patterns=(
+        re.compile(r'(?m)\b(?:const|let|var)\s+([A-Za-z_$][\w$]{1,63})\s*=\s*\{'),
+        re.compile(r'''(?m)\b[A-Za-z_$][\w$]*\s*\[\s*(["'])([^"']+)\1\s*\]\s*=\s*\{'''),
+    )
+    for drx in decl_patterns:
+        for m in drx.finditer(source):
+            outer=(m.group(2) if m.lastindex and m.lastindex>=2 else m.group(1)).strip()
+            op=source.find('{',m.end()-1,m.end()+2);cl=pairs.get(op)
+            if op<0 or cl is None or cl-op>120000:continue
+            try:fields=_duels_parse_object(source[op:cl+1])
+            except Exception:continue
+            if _duels_object_score(fields)<4:continue
+            candidates.setdefault((op,cl),(outer,fields))
+
+    # Objects keyed by id/name, e.g. runef: { hp: ..., skills: ... }.
+    key_re=re.compile(r'''(?m)(["']?)([A-Za-z가-힣_][A-Za-z0-9가-힣 _-]{1,39})\1\s*:\s*\{''')
+    generic={"style","data","options","config","state","stats","status","player","enemy","skill","skills","ability","abilities","character","characters"}
+    for m in key_re.finditer(source):
+        op=source.find('{',m.end()-1,m.end()+2)
+        cl=pairs.get(op)
+        if op<0 or cl is None or cl-op>120000:continue
+        key=m.group(2).strip()
+        if _duels_norm_key(key) in generic:continue
+        try:fields=_duels_parse_object(source[op:cl+1])
+        except Exception:continue
+        if _duels_object_score(fields)<4:continue
+        candidates.setdefault((op,cl),(key,fields))
+    rows=[]
+    for (op,cl),(outer_key,fields) in sorted(candidates.items()):
+        _,name=_duels_lookup_key(fields,_DUELS_NAME_KEYS)
+        _,cid=_duels_lookup_key(fields,_DUELS_ID_KEYS)
+        name=name if isinstance(name,(str,int,float)) else ''
+        cid=cid if isinstance(cid,(str,int,float)) else outer_key or ''
+        if not name and outer_key and re.search(r'[가-힣]',outer_key):name=outer_key
+        if not name and not cid:continue
+        name=str(name or cid).strip();cid=str(cid or '').strip()
+        _,image_val=_duels_lookup_key(fields,_DUELS_IMAGE_KEYS)
+        image=_duels_image_url(image_val,cid or outer_key,assets)
+        skills=_duels_skill_list(fields)
+        stat_fields={}
+        reserved={_duels_norm_key(x) for x in (*_DUELS_NAME_KEYS,*_DUELS_ID_KEYS,*_DUELS_IMAGE_KEYS,*_DUELS_SKILL_KEYS)}
+        nested_stat_keys={"stats","basestats","attributes","status","abilitystats","능력치"}
+        blocked_fields={_duels_norm_key(x) for x in _NARRATIVE_FIELD_KEYS}
+        for k,v in fields.items():
+            nk=_duels_norm_key(k)
+            if nk in reserved or nk in blocked_fields:continue
+            if isinstance(v,str) and len(v)>180:continue
+            if isinstance(v,(str,int,float,bool)) or v is None:
+                stat_fields[k]=v
+            elif nk in nested_stat_keys and isinstance(v,dict):
+                for child_key,child_value in v.items():
+                    if _duels_norm_key(child_key) in blocked_fields:continue
+                    if isinstance(child_value,str) and len(child_value)>180:continue
+                    if isinstance(child_value,(str,int,float,bool)) or child_value is None:
+                        stat_fields.setdefault(child_key,child_value)
+                        stat_fields[f"{k}.{child_key}"]=child_value
+        rows.append({'name':name,'id':cid,'image':image,'fields':stat_fields,'skills':skills,'sourceOffset':op})
+    # Merge duplicate objects by id/name, preferring the richer object.
+    merged={}
+    for row in rows:
+        keys=[_duels_norm_key(row.get('id')),_duels_norm_key(row.get('name'))]
+        key=next((k for k in keys if k),f"offset{row['sourceOffset']}")
+        old=merged.get(key)
+        richness=len(row['fields'])+4*len(row['skills'])+(2 if row['image'] else 0)
+        old_rich=(len(old['fields'])+4*len(old['skills'])+(2 if old['image'] else 0)) if old else -1
+        if old is None or richness>old_rich:merged[key]=row
+        elif old:
+            for k,v in row['fields'].items():old['fields'].setdefault(k,v)
+            if not old['image'] and row['image']:old['image']=row['image']
+            if not old['skills'] and row['skills']:old['skills']=row['skills']
+    chars=sorted(merged.values(),key=lambda x:(str(x.get('name','')),str(x.get('id',''))))
+    return {'source':DUELS_SOURCE_URL,'characters':chars,'count':len(chars)}
+
+
+def _duels_fetch_assets(timeout=20) -> dict[str,str]:
+    req=urllib.request.Request(DUELS_ASSET_API,headers={'Accept':'application/vnd.github+json','User-Agent':f'DuelsWikiEditor/{APP_VERSION}'})
+    try:
+        with urllib.request.urlopen(req,timeout=timeout) as r:data=json.loads(r.read().decode('utf-8'))
+    except Exception:return {}
+    out={}
+    for item in data if isinstance(data,list) else []:
+        if item.get('type')!='file':continue
+        name=str(item.get('name') or '')
+        if not re.search(r'\.(?:png|jpe?g|webp|gif|svg)$',name,re.I):continue
+        url=str(item.get('download_url') or (DUELS_ASSET_RAW_BASE+urllib.parse.quote(name)))
+        stem=re.sub(r'\.[^.]+$','',name)
+        out[_duels_norm_key(stem)]=url
+        out[_duels_norm_key(name)]=url
+    return out
+
+
+def fetch_duels_catalog(force: bool = False, timeout: int = 30) -> dict:
+    now=time.time()
+    if not force and _DUELS_CATALOG_CACHE.get('catalog') and now-float(_DUELS_CATALOG_CACHE.get('at') or 0)<DUELS_CACHE_TTL:
+        return _DUELS_CATALOG_CACHE['catalog']
+    cache_file=APP_HOME/'duels-source-cache.json'
+    try:
+        req=urllib.request.Request(DUELS_SOURCE_URL,headers={'User-Agent':f'DuelsWikiEditor/{APP_VERSION}','Accept':'text/html,*/*'})
+        with urllib.request.urlopen(req,timeout=timeout) as r:source=r.read().decode('utf-8','replace')
+        catalog=parse_duels_catalog(source,_duels_fetch_assets(timeout=min(timeout,20)))
+        catalog['fetchedAt']=int(now)
+        catalog['stale']=False
+        ensure_dirs();cache_file.write_text(json.dumps(catalog,ensure_ascii=False,separators=(',',':')),'utf-8')
+    except Exception as e:
+        if cache_file.exists():
+            try:
+                catalog=json.loads(cache_file.read_text('utf-8'));catalog['stale']=True;catalog['warning']=f'최신 Duels 원본 조회 실패: {e}'
+            except Exception:raise RuntimeError(f'Duels 원본 조회 실패: {e}') from e
+        else:raise RuntimeError(f'Duels 원본 조회 실패: {e}') from e
+    _DUELS_CATALOG_CACHE.update({'at':now,'catalog':catalog})
+    return catalog
+
+
+def _duels_casefold_lookup(mapping: dict, key: str, aliases: dict | None = None):
+    aliases=aliases or {}
+    norm={_duels_norm_key(k):k for k in mapping}
+    wanted=[key]
+    wanted.extend(aliases.get(_duels_norm_key(key),aliases.get(key,())))
+    for w in wanted:
+        real=norm.get(_duels_norm_key(w))
+        if real is not None:return mapping.get(real)
+    return None
+
+
+def _duels_role_parts(fields: dict) -> dict:
+    out={}; source=None
+    aliases={_duels_norm_key(k):v for k,v in _DUELS_FIELD_ALIASES.items()}
+    for label in ("캐릭터타입","교전사거리","역할군"):
+        val=_duels_casefold_lookup(fields,label,aliases)
+        if val in (None,""):continue
+        if isinstance(val,str):
+            text=val.strip()
+            looks_combined=any(r in text for r in _ROLE_RANGES) and (" " in text or "/" in text or "·" in text)
+            if looks_combined:
+                source=source or text;continue
+            if label=="캐릭터타입" and len(text.split())>1:
+                source=source or text;continue
+        out[label]=val
+    if len(out)==3:return out
+    if not source:
+        for key in _ROLE_SOURCE_ALIASES:
+            v=_duels_casefold_lookup(fields,key)
+            if isinstance(v,str) and 2<=len(v.strip())<=80:
+                source=v.strip();break
+    if not source:return out
+    tokens=re.sub(r"[\s/·,|>]+"," ",source).strip().split()
+    if "교전사거리" not in out:
+        for r in _ROLE_RANGES:
+            if r in source:out["교전사거리"]=r;break
+    if "캐릭터타입" not in out:
+        for t in tokens:
+            if t.endswith("형") and t not in _ROLE_RANGES:out["캐릭터타입"]=t;break
+    if "역할군" not in out:
+        left=[t for t in tokens if t!=out.get("캐릭터타입") and t!=out.get("교전사거리") and t not in _ROLE_RANGES]
+        if left:out["역할군"]=left[-1]
+    return out
+
+def resolve_duels_reference(catalog: dict, character: str, field: str):
+    target=_duels_norm_key(character)
+    found=None
+    for row in catalog.get('characters') or []:
+        if target in {_duels_norm_key(row.get('name')),_duels_norm_key(row.get('id'))}:
+            found=row;break
+    if not found:return {'ok':False,'error':f'캐릭터를 찾을 수 없음: {character}'}
+    path=str(field or '').strip()
+    if not path:return {'ok':False,'error':'조회 필드가 비어 있음'}
+    if _duels_norm_key(path) in ('필드','필드목록','fields'):
+        return {'ok':True,'kind':'text','value':', '.join(found.get('fields',{}).keys())}
+    if _duels_norm_key(path) in ('스킬목록','skills','skilllist'):
+        names=[]
+        for i,sk in enumerate(found.get('skills') or [],1):
+            v=_duels_casefold_lookup(sk,'이름',{_duels_norm_key(k):v for k,v in _DUELS_SKILL_FIELD_ALIASES.items()})
+            names.append(str(v if v not in (None,'') else f'스킬 {i}'))
+        return {'ok':True,'kind':'text','value':', '.join(names)}
+    skill_match=re.match(r'^(?:스킬|skill)\s*\.?\s*(\d+)(?:\.(.+))?$',path,re.I)
+    if skill_match:
+        idx=int(skill_match.group(1))-1;sub=(skill_match.group(2) or '이름').strip();skills=found.get('skills') or []
+        if idx<0 or idx>=len(skills):return {'ok':False,'error':f'스킬 {idx+1}을 찾을 수 없음'}
+        sk=skills[idx]
+        if _duels_norm_key(sub) in {_duels_norm_key(x) for x in _NARRATIVE_FIELD_KEYS}:return {'ok':False,'error':'문장형 스킬 설명은 참조 대상이 아닙니다.'}
+        alias_map={_duels_norm_key(k):v for k,v in _DUELS_SKILL_FIELD_ALIASES.items()}
+        v=_duels_casefold_lookup(sk,sub,alias_map)
+        if v is None:return {'ok':False,'error':f'스킬 {idx+1} 필드를 찾을 수 없음: {sub}'}
+        return {'ok':True,'kind':'text','value':v}
+    nk=_duels_norm_key(path)
+    if nk in {_duels_norm_key(x) for x in _NARRATIVE_FIELD_KEYS}:return {'ok':False,'error':'문장형 설명 필드는 참조 대상이 아닙니다.'}
+    for wanted in ('캐릭터타입','교전사거리','역할군'):
+        if nk==_duels_norm_key(wanted):
+            v=_duels_role_parts(found.get('fields') or {}).get(wanted)
+            return {'ok':True,'kind':'text','value':v} if v not in (None,'') else {'ok':False,'error':f'{wanted} 정보를 찾을 수 없음: {character}'}
+    if nk in ('이름','name'):return {'ok':True,'kind':'text','value':found.get('name','')}
+    if nk in ('이미지','image','img','portrait'):
+        if found.get('image'):return {'ok':True,'kind':'image','value':found['image']}
+        return {'ok':False,'error':f'이미지를 찾을 수 없음: {character}'}
+    alias_map={_duels_norm_key(k):v for k,v in _DUELS_FIELD_ALIASES.items()}
+    value=_duels_casefold_lookup(found.get('fields') or {},path,alias_map)
+    if value is None:
+        return {'ok':False,'error':f'필드를 찾을 수 없음: {field}'}
+    return {'ok':True,'kind':'text','value':value}
 
 if os.name == "nt":
     APP_HOME = Path(os.environ.get("APPDATA", Path.home())) / "DuelsWikiEditor"
@@ -651,6 +1182,9 @@ class Handler(BaseHTTPRequestHandler):
                     "data_root": self.cfg["data_root"], "media_root": self.cfg["media_root"],
                     "tokenConfigured": bool(self.cfg.get("token")), "launcherVersion": APP_VERSION,
                 }); return
+            if u.path == "/api/duels-data":
+                force=q.get("refresh", ["0"])[0] in {"1", "true", "yes"}
+                self.send_json(fetch_duels_catalog(force=force)); return
             if u.path == "/api/index":
                 self.send_json(build_index(self.cfg)); return
             if u.path == "/api/root":

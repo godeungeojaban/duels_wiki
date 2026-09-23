@@ -20,6 +20,7 @@
     <div class="ribbon-tabs" role="tablist">
       <button class="ribbon-tab active" data-ribbon-tab="home">홈</button>
       <button class="ribbon-tab" data-ribbon-tab="insert">삽입</button>
+      <button id="tableTabBtn" class="ribbon-tab contextual table-context hidden" data-ribbon-tab="table">표</button>
       <button id="pictureTabBtn" class="ribbon-tab contextual picture-context hidden" data-ribbon-tab="picture">그림</button>
     </div>
 
@@ -88,10 +89,31 @@
             <button id="descriptionBoxBtn" class="big-tool"><span class="big-icon">▤</span><span>설명 상자</span></button>
             <button id="tableBtn" class="big-tool"><span class="big-icon">▦</span><span>표</span></button>
             <button id="footnoteBtn" class="big-tool"><span class="big-icon">¹</span><span>각주</span></button>
+            <button id="duelsRefBtn" class="big-tool"><span class="big-icon">ƒ</span><span>듀얼즈 참조</span></button>
             <button id="insertLinkBtn" class="big-tool"><span class="big-icon">🔗</span><span>내부 링크</span></button>
           </div>
           <span class="ribbon-group-title">삽입</span>
         </div>
+      </div>
+
+      <div class="ribbon-panel" data-ribbon-panel="table">
+        <div class="ribbon-group"><div class="ribbon-buttons wrap-buttons">
+          <label class="ribbon-field">표 너비 <input id="tableRibbonWidth" type="number" min="120" max="4000">px</label>
+          <label class="color-tool" title="표 전체 테두리"><span>선</span><input id="tableRibbonBorder" type="color" value="#2a4a6a"></label>
+          <label class="table-ribbon-toggle"><input id="tableRibbonFit" type="checkbox"><span>너비 맞춤</span></label>
+          <button id="tableRibbonEqualize">열 균등</button>
+        </div><span class="ribbon-group-title">표</span></div>
+        <div class="ribbon-group"><div class="ribbon-buttons wrap-buttons">
+          <span id="tableRibbonSelection" class="table-ribbon-selection">셀 선택 없음</span>
+          <label class="ribbon-field">셀 너비 <input id="tableRibbonCellWidth" type="number" min="40" max="2000">px</label>
+          <label class="color-tool" title="선택 셀 배경색"><span>셀</span><input id="tableRibbonCellBg" type="color" value="#0d1520"></label>
+          <button data-table-ribbon-align="left">왼쪽</button><button data-table-ribbon-align="center">가운데</button><button data-table-ribbon-align="right">오른쪽</button>
+        </div><span class="ribbon-group-title">선택 셀</span></div>
+        <div class="ribbon-group"><div class="ribbon-buttons wrap-buttons">
+          <button id="tableRowBefore">위 행 +</button><button id="tableRowAfter">아래 행 +</button><button id="tableRowRemove">행 삭제</button>
+          <button id="tableColBefore">왼쪽 열 +</button><button id="tableColAfter">오른쪽 열 +</button><button id="tableColRemove">열 삭제</button>
+          <button id="tableMergeCells">셀 병합</button><button id="tableUnmergeCell">병합 해제</button><button id="tableDelete" class="danger">표 삭제</button>
+        </div><span class="ribbon-group-title">구조</span></div>
       </div>
 
       <div class="ribbon-panel" data-ribbon-panel="picture">

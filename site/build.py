@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 from __future__ import annotations
-import html, json, re, shutil
+import html, json, re, shutil, sys
 from pathlib import Path
 from urllib.parse import quote, unquote
 
 ROOT=Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:sys.path.insert(0,str(ROOT))
+from DuelsWikiEditor import fetch_duels_catalog, resolve_duels_reference
 WIKI=ROOT/'wiki'; MEDIA=ROOT/'media'; OUT=ROOT/'site'/'dist'
 UNCAT='미분류'
 
@@ -18,7 +20,7 @@ CSS='''
 
 .duels-character-card{--duels-card-color:#44aaff;--duels-card-width:138px;--duels-card-height:222px;position:relative;isolation:isolate;display:inline-block;vertical-align:top;width:min(var(--duels-card-width),100%);height:var(--duels-card-height);margin:6px 10px 6px 0;overflow:hidden;border:2px solid color-mix(in srgb,var(--duels-card-color) 62%,#34485b);border-radius:4px;background:#0d1015;box-shadow:0 0 8px color-mix(in srgb,var(--duels-card-color) 24%,transparent),inset 0 0 8px rgba(255,255,255,.025);cursor:default;user-select:none}.duels-character-card[data-align="left"]{display:inline-block;margin:6px 10px 6px 0}.duels-character-card[data-align="center"]{display:block;margin:6px auto}.duels-character-card[data-align="right"]{display:block;margin:6px 0 6px auto}.duels-character-card-image{position:absolute;inset:0;z-index:-2;background-repeat:no-repeat;background-size:cover;background-position:center center;filter:saturate(.88) brightness(.68) contrast(1.05)}.duels-character-card-image.empty{background:linear-gradient(145deg,#111b25,#081019)}.duels-character-card-shade{position:absolute;inset:0;z-index:-1;pointer-events:none;background:linear-gradient(180deg,rgba(7,10,15,.03) 0%,rgba(7,10,15,.10) 42%,rgba(9,13,19,.58) 62%,rgba(10,14,20,.95) 78%,rgba(10,14,20,.99) 100%)}.duels-character-card[data-fade="none"] .duels-character-card-shade{display:none}.duels-character-card[data-fade="soft"] .duels-character-card-shade{background:linear-gradient(180deg,rgba(7,10,15,0) 0%,rgba(7,10,15,.03) 52%,rgba(9,13,19,.28) 72%,rgba(10,14,20,.62) 100%)}.duels-character-card[data-fade="strong"] .duels-character-card-shade{background:linear-gradient(180deg,rgba(7,10,15,.08) 0%,rgba(7,10,15,.22) 36%,rgba(9,13,19,.72) 58%,rgba(10,14,20,.98) 76%,#0a0e14 100%)}.duels-character-card-copy{position:absolute;left:9px;right:9px;bottom:9px;z-index:1;max-height:48%;overflow:hidden;color:#9aa9b6;font-size:11px;line-height:1.38;text-align:left;overflow-wrap:anywhere;word-break:keep-all;text-shadow:0 1px 2px #000}.duels-character-card-copy>div:first-child{color:#e0edf7;font-size:13px;font-weight:700;letter-spacing:.7px}.duels-character-card-copy>div+div{margin-top:3px}.duels-character-card>.duels-character-portrait{position:absolute!important;inset:0!important;z-index:-2!important;width:100%!important;height:100%!important;margin:0!important;border:0!important;border-radius:0!important;background:#091018!important}.duels-character-card>.duels-character-portrait img{width:100%!important;height:100%!important;max-width:none!important;object-fit:cover!important;object-position:center center!important;margin:0!important;border:0!important;border-radius:0!important}.duels-character-card>.duels-character-name{position:absolute!important;left:9px!important;right:9px!important;bottom:9px!important;width:auto!important;margin:0!important;color:#e0edf7!important;font-size:13px!important;font-weight:700!important;line-height:1.38!important;text-align:left!important;letter-spacing:.7px!important;white-space:normal!important}.duels-character-card>.duels-character-title,.duels-character-card>.duels-character-mini-stats,.duels-character-card>.duels-character-tooltip{display:none!important}.duels-description-box{--duels-box-color:#44aaff;position:relative;margin:6px 0;border:1px solid #2a4a6a;border-left:2px solid var(--duels-box-color);border-radius:3px;background:linear-gradient(180deg,#0d1520,#091019);box-shadow:0 8px 24px rgba(0,0,0,.34),0 0 12px color-mix(in srgb,var(--duels-box-color) 12%,transparent);color:#7a8998;font-size:11px;line-height:1.55;text-align:left}.duels-description-box-title{padding:8px 12px 7px;border-bottom:1px solid #1d3042;color:var(--duels-box-color);font-weight:700;letter-spacing:1.4px;text-shadow:0 0 8px color-mix(in srgb,var(--duels-box-color) 34%,transparent)}.duels-description-box-body{padding:10px 12px 11px;color:#7b8795;overflow-wrap:anywhere;word-break:keep-all}.duels-description-box-title:only-child{border-bottom:0}.duels-description-box-body:empty{display:none}
 @media(max-width:720px){.duels-character-card{margin:5px 6px 5px 0}.duels-description-box{max-width:100%}}
-@media(max-width:420px){.duels-character-card{max-width:100%}}.inline-linked-image{display:inline-block!important;width:auto!important;height:1.55em!important;max-width:8em!important;max-height:1.55em!important;margin:0 .14em;vertical-align:-.34em;object-fit:contain!important;border:0!important;border-radius:2px;background:transparent;box-shadow:none!important}.duels-table-component{--duels-table-base-width:400px;--duels-table-border:#2a4a6a;display:block;position:relative;width:max-content;min-width:min(var(--duels-table-base-width),100%);max-width:none;margin:6px 0}.duels-table-scroll{display:block;overflow:visible;max-width:none}.duels-table{border-collapse:separate;border-spacing:0;table-layout:auto;width:max-content;min-width:var(--duels-table-base-width);background:#091019;color:#b8c7d3;font-family:var(--font-ui);font-size:12px;line-height:1.35;border:1px solid var(--duels-table-border)}.duels-table td{box-sizing:border-box;height:29px;padding:5px 8px;border-right:1px solid #20384d;border-bottom:1px solid #20384d;vertical-align:middle;white-space:nowrap;overflow:visible;font-family:inherit;text-align:center}.duels-table tr:last-child td{border-bottom:0}.duels-table td:last-child{border-right:0}.duels-table-component.fit-width{width:100%;min-width:0;max-width:100%}.duels-table-component.fit-width .duels-table-scroll{width:100%;max-width:100%;overflow:visible}.duels-table-component.fit-width .duels-table{table-layout:fixed;width:100%;min-width:0;max-width:100%}.duels-table-component.fit-width .duels-table td{min-width:0!important;white-space:normal;overflow-wrap:anywhere}@media(max-width:720px){.duels-table-component{max-width:100%}.duels-table-scroll{max-width:100%;overflow-x:auto}.duels-table-component.fit-width .duels-table-scroll{overflow:visible}}
+@media(max-width:420px){.duels-character-card{max-width:100%}}.duels-ref-value{display:inline;color:inherit}.duels-ref-error{display:inline;padding:0 3px;border-bottom:1px dotted #d66;color:#ef8c8c;background:#35191b}.duels-ref-image{vertical-align:-.34em}.inline-linked-image{display:inline-block!important;width:auto!important;height:1.55em!important;max-width:8em!important;max-height:1.55em!important;margin:0 .14em;vertical-align:-.34em;object-fit:contain!important;border:0!important;border-radius:2px;background:transparent;box-shadow:none!important}.duels-table-component{--duels-table-base-width:400px;--duels-table-border:#2a4a6a;display:block;position:relative;width:max-content;min-width:min(var(--duels-table-base-width),100%);max-width:none;margin:6px 0}.duels-table-scroll{display:block;overflow:visible;max-width:none}.duels-table{border-collapse:separate;border-spacing:0;table-layout:fixed;width:var(--duels-table-base-width);min-width:var(--duels-table-base-width);background:#091019;color:#b8c7d3;font-family:var(--font-ui);font-size:12px;line-height:1.35;border:1px solid var(--duels-table-border)}.duels-table td{box-sizing:border-box;height:29px;padding:5px 8px;border-right:1px solid #20384d;border-bottom:1px solid #20384d;vertical-align:middle;white-space:normal;overflow:hidden;overflow-wrap:anywhere;word-break:break-word;font-family:inherit;text-align:center}.duels-table tr:last-child td{border-bottom:0}.duels-table td:last-child{border-right:0}.duels-table-component.fit-width{width:100%;min-width:0;max-width:100%}.duels-table-component.fit-width .duels-table-scroll{width:100%;max-width:100%;overflow:visible}.duels-table-component.fit-width .duels-table{table-layout:fixed;width:100%;min-width:0;max-width:100%}.duels-table-component.fit-width .duels-table td{min-width:0!important;white-space:normal;overflow-wrap:anywhere}@media(max-width:720px){.duels-table-component{max-width:100%}.duels-table-scroll{max-width:100%;overflow-x:auto}.duels-table-component.fit-width .duels-table-scroll{overflow:visible}}
 *{scrollbar-width:thin;scrollbar-color:#29435c #080d13}*::-webkit-scrollbar{width:8px;height:8px}*::-webkit-scrollbar-track{background:#080d13}*::-webkit-scrollbar-thumb{background:#162b3b;border:1px solid #29435c;border-radius:2px}*::-webkit-scrollbar-thumb:hover{background:#21415a;border-color:#4af}*::-webkit-scrollbar-corner{background:#080d13}
 '''
 
@@ -78,6 +80,43 @@ def internal_href(cur_parts,target):
     import os
     return Path(os.path.relpath(target_file,cur_dir)).as_posix()
 
+
+DUELS_REF_RE=re.compile(r'''\{\{=\s*duels\s*\(\s*(["'])(.*?)\1\s*,\s*(["'])(.*?)\3\s*\)\s*\}\}''',re.I)
+_DUELS_BUILD_CATALOG=None
+
+def _duels_catalog():
+    global _DUELS_BUILD_CATALOG
+    if _DUELS_BUILD_CATALOG is not None:return _DUELS_BUILD_CATALOG
+    try:_DUELS_BUILD_CATALOG=fetch_duels_catalog()
+    except Exception as e:
+        print(f'[duels-ref] 원본 조회 실패: {e}')
+        _DUELS_BUILD_CATALOG={'characters':[],'error':str(e)}
+    return _DUELS_BUILD_CATALOG
+
+def expand_duels_refs(src):
+    if not src or '{{=' not in src:return src or ''
+    parts=re.split(r'(<[^>]+>)',src)
+    blocked=0;out=[]
+    for part in parts:
+        if part.startswith('<'):
+            low=part.lower()
+            if re.match(r'<\s*(code|pre|script|style|textarea)\b',low):blocked+=1
+            elif re.match(r'<\s*/\s*(code|pre|script|style|textarea)\s*>',low):blocked=max(0,blocked-1)
+            out.append(part);continue
+        if blocked:out.append(part);continue
+        def repl(m):
+            character,field=m.group(2),m.group(4)
+            result=resolve_duels_reference(_duels_catalog(),character,field)
+            if not result.get('ok'):
+                return f'<span class="duels-ref-error" data-duels-ref-error="{html.escape(str(result.get("error") or "참조 실패"),quote=True)}">[참조 오류]</span>'
+            value=result.get('value','')
+            if result.get('kind')=='image':
+                return f'<img class="inline-linked-image duels-ref-image" src="{html.escape(str(value),quote=True)}" alt="{html.escape(character,quote=True)}" loading="lazy">'
+            if isinstance(value,(dict,list)):value=json.dumps(value,ensure_ascii=False,separators=(',',':'))
+            return f'<span class="duels-ref-value">{html.escape(str(value))}</span>'
+        out.append(DUELS_REF_RE.sub(repl,part))
+    return ''.join(out)
+
 INLINE_IMAGE_RE=re.compile(r'`((?:https?://|/media/|/__media__/)[^`\s]+?\.(?:png|jpe?g|webp|gif|svg)(?:\?[^`\s]*)?)`',re.I)
 def expand_inline_images(src):
     if not src:return ''
@@ -112,6 +151,7 @@ def rewrite_footnote_refs(src,notes):
 
 def rewrite_html(src,cur_parts,notes=None):
     if not src:return''
+    src=expand_duels_refs(src)
     src=expand_inline_images(src)
     src=rewrite_footnote_refs(src,notes or [])
     # Older editor versions stored a native title such as "각주 1" on footnote refs.

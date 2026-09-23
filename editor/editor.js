@@ -2,7 +2,7 @@
 
 const $ = (s, r=document) => r.querySelector(s);
 const $$ = (s, r=document) => [...r.querySelectorAll(s)];
-const state = { index:null, current:null, currentPath:'', editing:false, savedRange:null, componentInsertionRange:null, footnoteInsertionRange:null, footnoteInsertionEditable:null, lastEditable:null, selectedImage:null, activeRibbon:'home', config:null };
+const state = { index:null, current:null, currentPath:'', editing:false, savedRange:null, componentInsertionRange:null, footnoteInsertionRange:null, footnoteInsertionEditable:null, lastEditable:null, selectedImage:null, activeRibbon:'home', config:null, duelsData:null, duelsDataError:'' };
 const escapeHtml = s => String(s??'').replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
 const uid = p => `${p}_${crypto.randomUUID().replaceAll('-','')}`;
 const DUELS_CHARACTER_PROFILES=Object.freeze([
@@ -195,7 +195,83 @@ function expandInlineImageSyntax(root){
     if(last<text.length)frag.append(document.createTextNode(text.slice(last)));node.replaceWith(frag);
   });
 }
-function viewHtml(html,{expandInlineImages=true}={}){ const t=document.createElement('template'); t.innerHTML=html||''; $$('img',t.content).forEach(img=>{const src=img.getAttribute('src')||'';img.setAttribute('src',mediaSrc(src));}); $$('a',t.content).forEach(a=>{const h=a.getAttribute('href')||''; if(h.startsWith('wiki:/'))a.dataset.wikiLink=h;}); upgradeDuelsComponents(t.content); if(expandInlineImages)expandInlineImageSyntax(t.content); return t.innerHTML; }
+
+const DUELS_REF_COMMAND_RE=/\{\{=\s*duels\s*\(\s*(["'])(.*?)\1\s*,\s*(["'])(.*?)\3\s*\)\s*\}\}/gi;
+const DUELS_FIELD_ALIASES={
+  '이름':['name','displayname','charactername','charname','title','이름'],'name':['name','displayname','charactername','charname','title','이름'],
+  '이미지':['image','img','imageurl','portrait','portraiturl','icon','iconurl','sprite','profile','thumbnail'],'image':['image','img','imageurl','portrait','portraiturl','icon','iconurl','sprite','profile','thumbnail'],
+  '체력':['hp','maxhp','health','maxhealth','체력'],'hp':['hp','maxhp','health','maxhealth','체력'],
+  '스태미나':['stamina','maxstamina','energy','maxenergy','스태미나'],'stamina':['stamina','maxstamina','energy','maxenergy','스태미나'],
+  '이동속도':['speed','movespeed','movementspeed','walkspeed','이동속도'],'속도':['speed','movespeed','movementspeed','walkspeed','이동속도'],'speed':['speed','movespeed','movementspeed','walkspeed','이동속도'],
+  '난이도':['difficulty','difficultyvalue','난이도'],'difficulty':['difficulty','difficultyvalue','난이도'],
+  '공격력':['attack','atk','power','공격력'],'attack':['attack','atk','power','공격력'],
+  '방어력':['defense','def','armor','방어력'],'defense':['defense','def','armor','방어력'],
+  '캐릭터타입':['charactertype','character_type','type','combatstyle','style','타입','캐릭터타입'],
+  '교전사거리':['engagementrange','engagement_range','combatrange','combat_range','rangeclass','거리','교전사거리'],
+  '역할군':['role','class','archetype','roleclass','역할','역할군']
+};
+const DUELS_NARRATIVE_FIELDS=new Set(['description','desc','summary','lore','background','story','flavor','설명','배경','배경설정','스토리','소개'].map(duelsNormKey));
+const DUELS_ROLE_RANGES=['초근거리','근거리','중근거리','중거리','중원거리','원거리','초원거리'];
+const DUELS_ROLE_SOURCE=['classification','classify','characterclass','character_class','roletext','type','class','role','style','position','분류','역할','타입'];
+const DUELS_SKILL_FIELD_ALIASES={
+  '이름':['name','displayname','skillname','title','이름'],'name':['name','displayname','skillname','title','이름'],
+  '피해':['damage','dmg','basedamage','damagevalue','피해','데미지'],'데미지':['damage','dmg','basedamage','damagevalue','피해','데미지'],'damage':['damage','dmg','basedamage','damagevalue','피해','데미지'],
+  '쿨다운':['cooldown','cd','cooldowntime','쿨다운'],'cooldown':['cooldown','cd','cooldowntime','쿨다운'],
+  '사거리':['range','attackrange','skillrange','사거리'],'range':['range','attackrange','skillrange','사거리'],
+  '지속시간':['duration','time','지속시간'],'duration':['duration','time','지속시간'],
+  '비용':['cost','staminacost','energycost','비용'],'cost':['cost','staminacost','energycost','비용']
+};
+function duelsNormKey(v){return String(v??'').toLowerCase().replace(/[^0-9a-z가-힣]+/g,'')}
+function duelsMapValue(map,key,aliases={}){const keys=new Map(Object.keys(map||{}).map(k=>[duelsNormKey(k),k]));const wanted=[key,...(aliases[key]||aliases[duelsNormKey(key)]||[])];for(const w of wanted){const k=keys.get(duelsNormKey(w));if(k!==undefined)return map[k]}return undefined}
+function findDuelsCharacter(name){const key=duelsNormKey(name);return (state.duelsData?.characters||[]).find(x=>[x.name,x.id].some(v=>duelsNormKey(v)===key))||null}
+function duelsRoleParts(fields){
+  const out={};let source='';
+  for(const label of ['캐릭터타입','교전사거리','역할군']){const v=duelsMapValue(fields,label,DUELS_FIELD_ALIASES);if(v===undefined||v===null||v==='')continue;if(typeof v==='string'){const text=v.trim(),combined=DUELS_ROLE_RANGES.some(r=>text.includes(r))&&/[\s/·]/.test(text);if(combined||(label==='캐릭터타입'&&text.split(/\s+/).length>1)){source=source||text;continue}}out[label]=v}
+  if(Object.keys(out).length===3)return out;if(!source){for(const key of DUELS_ROLE_SOURCE){const v=duelsMapValue(fields,key);if(typeof v==='string'&&v.trim().length>=2&&v.trim().length<=80){source=v.trim();break}}}
+  if(!source)return out;const tokens=source.replace(/[\s/·,|>]+/g,' ').trim().split(' ').filter(Boolean);
+  if(!out['교전사거리'])out['교전사거리']=DUELS_ROLE_RANGES.find(x=>source.includes(x))||'';
+  if(!out['캐릭터타입'])out['캐릭터타입']=tokens.find(x=>x.endsWith('형')&&!DUELS_ROLE_RANGES.includes(x))||'';
+  if(!out['역할군'])out['역할군']=[...tokens].reverse().find(x=>x!==out['캐릭터타입']&&x!==out['교전사거리']&&!DUELS_ROLE_RANGES.includes(x))||'';
+  return out;
+}
+function resolveDuelsReferenceClient(character,field){
+  const row=findDuelsCharacter(character);if(!row)return{ok:false,error:`캐릭터를 찾을 수 없음: ${character}`};const path=String(field||'').trim(),nk=duelsNormKey(path);
+  if(['필드','필드목록','fields'].includes(nk))return{ok:true,kind:'text',value:Object.keys(row.fields||{}).filter(k=>!DUELS_NARRATIVE_FIELDS.has(duelsNormKey(k))).join(', ')};
+  if(['스킬목록','skills','skilllist'].includes(nk)){const names=(row.skills||[]).map((sk,i)=>duelsMapValue(sk,'이름',DUELS_SKILL_FIELD_ALIASES)??`스킬 ${i+1}`);return{ok:true,kind:'text',value:names.join(', ')}}
+  const sm=path.match(/^(?:스킬|skill)\s*\.?\s*(\d+)(?:\.(.+))?$/i);if(sm){const i=Number(sm[1])-1,sk=(row.skills||[])[i];if(!sk)return{ok:false,error:`스킬 ${i+1}을 찾을 수 없음`};const sub=(sm[2]||'이름').trim();if(DUELS_NARRATIVE_FIELDS.has(duelsNormKey(sub)))return{ok:false,error:'문장형 스킬 설명은 참조 대상이 아닙니다.'};const v=duelsMapValue(sk,sub,DUELS_SKILL_FIELD_ALIASES);return v===undefined||v===null?{ok:false,error:`스킬 ${i+1} 필드를 찾을 수 없음: ${sub}`}:{ok:true,kind:'text',value:v}}
+  if(DUELS_NARRATIVE_FIELDS.has(nk))return{ok:false,error:'문장형 설명 필드는 참조 대상이 아닙니다.'};
+  if(['캐릭터타입','교전사거리','역할군'].some(x=>duelsNormKey(x)===nk)){const parts=duelsRoleParts(row.fields||{});const key=['캐릭터타입','교전사거리','역할군'].find(x=>duelsNormKey(x)===nk);return parts[key]?{ok:true,kind:'text',value:parts[key]}:{ok:false,error:`${key} 정보를 찾을 수 없음: ${character}`}}
+  if(['이름','name'].includes(nk))return{ok:true,kind:'text',value:row.name||''};
+  if(['이미지','image','img','portrait'].includes(nk))return row.image?{ok:true,kind:'image',value:row.image}:{ok:false,error:`이미지를 찾을 수 없음: ${character}`};
+  const v=duelsMapValue(row.fields||{},path,DUELS_FIELD_ALIASES);return v===undefined||v===null?{ok:false,error:`필드를 찾을 수 없음: ${field}`}:{ok:true,kind:'text',value:v};
+}
+function duelsRefMatchParts(m){return [m[2],m[4]]}
+function expandDuelsReferenceSyntax(root){
+  const walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT,{acceptNode(node){const p=node.parentElement;if(!p||p.closest('code,pre,script,style,textarea'))return NodeFilter.FILTER_REJECT;DUELS_REF_COMMAND_RE.lastIndex=0;return DUELS_REF_COMMAND_RE.test(node.nodeValue||'')?NodeFilter.FILTER_ACCEPT:NodeFilter.FILTER_REJECT;}});
+  const nodes=[];while(walker.nextNode())nodes.push(walker.currentNode);
+  nodes.forEach(node=>{const text=node.nodeValue||'';let last=0,m;DUELS_REF_COMMAND_RE.lastIndex=0;const frag=document.createDocumentFragment();while((m=DUELS_REF_COMMAND_RE.exec(text))){if(m.index>last)frag.append(document.createTextNode(text.slice(last,m.index)));const [character,field]=duelsRefMatchParts(m),result=resolveDuelsReferenceClient(character,field);if(result.ok&&result.kind==='image'){const img=document.createElement('img');img.className='inline-linked-image duels-ref-image';img.src=String(result.value||'');img.alt=character;img.loading='lazy';img.decoding='async';frag.append(img)}else if(result.ok){const span=document.createElement('span');span.className='duels-ref-value';span.dataset.duelsRef=`${character}:${field}`;span.textContent=typeof result.value==='object'?JSON.stringify(result.value):String(result.value??'');frag.append(span)}else{const span=document.createElement('span');span.className='duels-ref-error';span.textContent='[참조 오류]';span.dataset.duelsRefError=result.error||'참조 실패';frag.append(span)}last=m.index+m[0].length}if(last<text.length)frag.append(document.createTextNode(text.slice(last)));node.replaceWith(frag)});
+}
+async function ensureDuelsData(force=false){
+  if(state.duelsData&&!force)return state.duelsData;
+  try{state.duelsData=await api(`/api/duels-data${force?'?refresh=1':''}`);state.duelsDataError='';return state.duelsData}catch(e){state.duelsData=state.duelsData||{characters:[]};state.duelsDataError=e.message||String(e);return state.duelsData}
+}
+function duelsRefCommand(character,field){return `{{=duels(${JSON.stringify(String(character||''))},${JSON.stringify(String(field||''))})}}`}
+function insertPlainTextAtSavedRange(text){
+  const r=state.savedRange?.cloneRange();if(!r)return false;const el=r.commonAncestorContainer.nodeType===1?r.commonAncestorContainer:r.commonAncestorContainer.parentElement;const editable=el?.closest?.('.editable,[data-footnote-target="1"],.inline-title-editable');if(!editable||!$('#editPage')?.contains(editable))return false;
+  r.deleteContents();const n=document.createTextNode(text);r.insertNode(n);r.setStartAfter(n);r.collapse(true);const sel=getSelection();sel.removeAllRanges();sel.addRange(r);state.savedRange=r.cloneRange();editable.dispatchEvent(new Event('input',{bubbles:true}));return true;
+}
+async function openDuelsReferenceDialog(){
+  rememberSelection();await ensureDuelsData();const chars=state.duelsData?.characters||[];
+  openModal(`<div class="duels-ref-modal"><h2>듀얼즈 참조</h2><p class="muted">Wiki에 값 자체를 저장하지 않고 Duels.html의 최신 캐릭터 데이터를 참조합니다.</p>${state.duelsDataError?`<div class="duels-ref-warning">${escapeHtml(state.duelsDataError)}</div>`:''}<div class="form-row"><label>캐릭터</label><select id="duelsRefCharacter">${chars.map(x=>`<option value="${escapeHtml(x.name||x.id)}">${escapeHtml(x.name||x.id)}${x.id&&x.id!==x.name?` · ${escapeHtml(x.id)}`:''}</option>`).join('')}</select></div><div class="form-row"><label>가져올 값</label><input id="duelsRefField" list="duelsRefFields" value="체력" placeholder="체력 / 캐릭터타입 / 교전사거리 / 역할군 / 스킬.1.피해"><datalist id="duelsRefFields"></datalist></div><div class="duels-ref-preview"><span>명령어</span><code id="duelsRefPreview"></code></div><div class="modal-actions"><button id="duelsRefRefresh">원본 새로고침</button><button id="duelsRefCancel">취소</button><button id="duelsRefInsert" class="primary">삽입</button></div></div>`);
+  const sel=$('#duelsRefCharacter'),field=$('#duelsRefField'),list=$('#duelsRefFields'),preview=$('#duelsRefPreview');
+  const redraw=()=>{const row=findDuelsCharacter(sel.value),common=['이름','이미지','체력','스태미나','이동속도','난이도','공격력','방어력','캐릭터타입','교전사거리','역할군','필드목록','스킬목록'];const actual=Object.keys(row?.fields||{});const skill=[];(row?.skills||[]).forEach((sk,i)=>{skill.push(`스킬.${i+1}.이름`,...Object.keys(sk).map(k=>`스킬.${i+1}.${k}`))});list.innerHTML=[...new Set([...common,...actual,...skill])].map(x=>`<option value="${escapeHtml(x)}"></option>`).join('');preview.textContent=duelsRefCommand(sel.value,field.value)};
+  sel.onchange=redraw;field.oninput=redraw;redraw();
+  $('#duelsRefCancel').onclick=closeModal;
+  $('#duelsRefRefresh').onclick=async()=>{const old=sel.value;await ensureDuelsData(true);closeModal();await openDuelsReferenceDialog();const next=$('#duelsRefCharacter');if(next&&[...next.options].some(o=>o.value===old)){next.value=old;next.dispatchEvent(new Event('change'))}};
+  $('#duelsRefInsert').onclick=()=>{const cmd=duelsRefCommand(sel.value,field.value.trim());closeModal();if(!insertPlainTextAtSavedRange(cmd)){showStatus('참조 명령을 삽입할 텍스트 위치를 먼저 선택하세요.',true)}};
+}
+
+function viewHtml(html,{expandInlineImages=true}={}){ const t=document.createElement('template'); t.innerHTML=html||''; $$('img',t.content).forEach(img=>{const src=img.getAttribute('src')||'';img.setAttribute('src',mediaSrc(src));}); $$('a',t.content).forEach(a=>{const h=a.getAttribute('href')||''; if(h.startsWith('wiki:/'))a.dataset.wikiLink=h;}); upgradeDuelsComponents(t.content); if(!state.editing)expandDuelsReferenceSyntax(t.content); if(expandInlineImages)expandInlineImageSyntax(t.content); return t.innerHTML; }
 function footnoteAnchor(id){return 'footnote-'+String(id).replace(/[^a-zA-Z0-9_-]/g,'-')}
 function footnoteNumber(content,id){const i=(content?.footnotes||[]).findIndex(f=>f.id===id);return i>=0?i+1:null}
 function syncFootnoteRefs(root,content){
@@ -226,7 +302,7 @@ function bindFootnoteEditors(){
 function refreshFootnoteBlock(){
   const host=$('#footnoteBlockHost');if(!host)return;host.innerHTML=renderFootnotes(editingContent,true);bindFootnoteEditors();
 }
-function storageHtml(el){ clearComponentCaretAnchors(el); const clone=el.cloneNode(true); $$('img',clone).forEach(img=>{let src=img.getAttribute('src')||''; if(src.startsWith('/__media__/')){src='/'+decodeURIComponent(src.slice('/__media__/'.length));img.setAttribute('src',src);} img.classList.remove('selected-image');}); $$('.selected-duels-component',clone).forEach(x=>x.classList.remove('selected-duels-component')); $$('[data-editor-only]',clone).forEach(x=>x.remove()); return clone.innerHTML.replace(/\u200B/g,''); }
+function storageHtml(el){ clearComponentCaretAnchors(el); const clone=el.cloneNode(true); $$('img',clone).forEach(img=>{let src=img.getAttribute('src')||''; if(src.startsWith('/__media__/')){src='/'+decodeURIComponent(src.slice('/__media__/'.length));img.setAttribute('src',src);} img.classList.remove('selected-image');}); $$('.selected-duels-component',clone).forEach(x=>x.classList.remove('selected-duels-component')); $$('.table-cell-selected,.table-cell-editing',clone).forEach(x=>x.classList.remove('table-cell-selected','table-cell-editing')); $$('[data-table-cell]',clone).forEach(x=>{x.removeAttribute('contenteditable');x.removeAttribute('data-table-cell-editing');x.removeAttribute('data-footnote-target')}); $$('[data-editor-only]',clone).forEach(x=>x.remove()); return clone.innerHTML.replace(/\u200B/g,''); }
 
 function sectionAnchor(id){return 'section-'+String(id).replace(/[^a-zA-Z0-9_-]/g,'-')}
 function renderToc(sections,prefix='',depth=0){return sections.map((s,i)=>{const n=prefix?`${prefix}.${i+1}`:`${i+1}`;return `<div class="toc-line" style="--toc-depth:${depth}"><a class="toc-number" href="#" data-section-anchor="${sectionAnchor(s.id)}">${n}.</a><span class="toc-text">${escapeHtml(s.title||'제목 없음')}</span></div>${renderToc(s.children||[],n,depth+1)}`}).join('')}
@@ -268,8 +344,8 @@ function bindFootnotePreview(root){
 }
 function bindWikiLinks(root){ bindFootnotePreview(root); $$('a[data-wiki-link]',root).forEach(a=>a.addEventListener('click',e=>{e.preventDefault(); const x=a.dataset.wikiLink.slice(6); if(!x||x==='/'){location.hash='#/';return} const p=x.replace(/^\//,'').split('/').map(decodeURIComponent); navigate(p[0],p[1]||null);})); $$('[data-section-anchor]',root).forEach(a=>a.addEventListener('click',e=>{e.preventDefault();document.getElementById(a.dataset.sectionAnchor)?.scrollIntoView({behavior:'smooth',block:'start'});})); }
 
-async function renderRoute(){ state.editing=false; hideToolbar(); state.selectedImage=null; updateOverlay(); const route=parseRoute(); if(!route){await renderHome();return} try{const r=await api(`/api/document?category=${encodeURIComponent(route.category)}${route.doc?`&doc=${encodeURIComponent(route.doc)}`:''}`); state.current=r.document; state.currentPath=r.path; renderDocument(r.document,route);}catch(e){$('#viewPage').innerHTML=`<div class="wiki-card"><h2>문서를 불러올 수 없습니다.</h2><p>${escapeHtml(e.message)}</p></div>`;} }
-async function renderHome(){ try{const r=await api('/api/root'); state.current=r.document; state.currentPath=r.path; renderRootDocument(r.document);}catch(e){state.current=null;state.currentPath='';$('#viewPage').innerHTML=`<div class="wiki-card"><h2>Duels Wiki</h2><p>${escapeHtml(e.message)}</p></div>`;$('#editPage').classList.add('hidden');$('#viewPage').classList.remove('hidden');} }
+async function renderRoute(){ state.editing=false; hideToolbar(); state.selectedImage=null; updateOverlay(); const route=parseRoute(); if(!route){await renderHome();return} await ensureDuelsData(); try{const r=await api(`/api/document?category=${encodeURIComponent(route.category)}${route.doc?`&doc=${encodeURIComponent(route.doc)}`:''}`); state.current=r.document; state.currentPath=r.path; renderDocument(r.document,route);}catch(e){$('#viewPage').innerHTML=`<div class="wiki-card"><h2>문서를 불러올 수 없습니다.</h2><p>${escapeHtml(e.message)}</p></div>`;} }
+async function renderHome(){ await ensureDuelsData(); try{const r=await api('/api/root'); state.current=r.document; state.currentPath=r.path; renderRootDocument(r.document);}catch(e){state.current=null;state.currentPath='';$('#viewPage').innerHTML=`<div class="wiki-card"><h2>Duels Wiki</h2><p>${escapeHtml(e.message)}</p></div>`;$('#editPage').classList.add('hidden');$('#viewPage').classList.remove('hidden');} }
 function renderRootDocument(doc){ const c=normalizeContent(doc.content); const self='#/'; $('#viewPage').innerHTML=`<div class="wiki-card"><div class="doc-head"><div><h1>${displayTitleHtml(c.titleHtml,doc.title||'Duels Wiki')}</h1></div><div class="doc-actions"><button id="editBtn">문서 편집</button><button id="historyBtn">문서 역사</button></div></div><div class="intro wiki-body">${viewHtml(c.introHtml)}</div>${c.sections.length?`<nav class="toc"><div class="toc-title">목차</div>${renderToc(c.sections)}</nav>`:''}${renderSections(c.sections,self)}${renderFootnotes(c)}</div>`; $('#editPage').classList.add('hidden');$('#viewPage').classList.remove('hidden');syncFootnoteRefs($('#viewPage'),c);bindWikiLinks($('#viewPage'));$('#editBtn').onclick=()=>startRootEdit(doc);$('#historyBtn').onclick=()=>showHistory(); }
 function renderDocument(doc,route){ const c=normalizeContent(doc.content); const self=routeFor(route.category,route.doc); const canDuplicate=doc.kind==='document'; $('#viewPage').innerHTML=`<div class="wiki-card"><div class="doc-head"><div><h1>${displayTitleHtml(c.titleHtml,doc.title)}</h1></div><div class="doc-actions">${canDuplicate?'<button id="duplicateBtn">문서 복제</button>':''}<button id="editBtn">문서 편집</button><button id="historyBtn">문서 역사</button></div></div><div class="intro wiki-body">${viewHtml(c.introHtml)}</div>${c.sections.length?`<nav class="toc"><div class="toc-title">목차</div>${renderToc(c.sections)}</nav>`:''}${renderSections(c.sections,self)}${renderFootnotes(c)}</div>`; $('#editPage').classList.add('hidden');$('#viewPage').classList.remove('hidden');syncFootnoteRefs($('#viewPage'),c);bindWikiLinks($('#viewPage'));if(canDuplicate)$('#duplicateBtn').onclick=()=>duplicateDocumentModal(doc,route);$('#editBtn').onclick=()=>startEdit(doc,route);$('#historyBtn').onclick=()=>showHistory(); }
 function duplicateDocumentModal(doc,route){
@@ -393,6 +469,8 @@ function caretAtParagraphBoundary(range,p,side){
 }
 function handleProtectedDeletion(el,e){
   if(!['Backspace','Delete'].includes(e.key))return false;
+  if(e.target?.closest?.('td[data-table-cell][data-table-cell-editing="1"]'))return false;
+  if(inlineTable?.isConnected&&inlineTableSelected.size){e.preventDefault();clearSelectedInlineTableCellContents();return true}
   if(state.selectedImage?.isConnected||selectedCharacterCard()||$('.selected-duels-component',$('#editPage'))){e.preventDefault();return true}
   const sel=getSelection();if(!sel.rangeCount)return false;const range=sel.getRangeAt(0);
   const here=(range.startContainer.nodeType===1?range.startContainer:range.startContainer.parentElement)?.closest?.('p');
@@ -478,10 +556,15 @@ function bindEditable(el){
     }
     const component=e.target.closest('[data-duels-component]');
     if(component&&el.contains(component)){
+      const tableCell=e.target.closest('td[data-table-cell]');
+      if(component.dataset.duelsComponent==='table'&&tableCell?.dataset.tableCellEditing==='1'){state.lastEditable=tableCell;rememberSelection();return}
       e.preventDefault();
-      clearObjectSelection(true);
-      $$('.selected-duels-component').forEach(x=>x.classList.remove('selected-duels-component'));
-      placeComponentSideCaret(el,component);
+      clearImageSelection();
+      if(component.dataset.duelsComponent==='table'){
+        if(inlineTableSuppressClick)return;
+        selectInlineTable(component,true);if(tableCell)selectSingleInlineTableCell(component,tableCell);
+      }else{$$('.selected-duels-component').forEach(x=>x.classList.remove('selected-duels-component'));clearInlineTableSelection()}
+      clearComponentCaretAnchors(el);
       return;
     }
     if(e.target.tagName==='IMG'){ selectImage(e.target); return; }
@@ -493,10 +576,11 @@ function bindEditable(el){
     if(component&&el.contains(component)){
       e.preventDefault();
       clearComponentCaretAnchors(el);
-      clearObjectSelection(true);
+      clearImageSelection();
       $$('.selected-duels-component').forEach(x=>x.classList.remove('selected-duels-component'));
       component.classList.add('selected-duels-component');
-      openComponentEditor(component);
+      if(component.dataset.duelsComponent==='table'){const td=e.target.closest('td[data-table-cell]');selectInlineTable(component,true);if(td)beginInlineTableCellEdit(component,td,e);return}
+      clearInlineTableSelection();openComponentEditor(component);
     }
   });
 }
@@ -582,7 +666,7 @@ function exec(cmd,value=null){
     return;
   }
   restoreSelection();
-  const editable=(getSelection()?.anchorNode?.nodeType===1?getSelection()?.anchorNode:getSelection()?.anchorNode?.parentElement)?.closest?.('.editable');
+  const editable=(getSelection()?.anchorNode?.nodeType===1?getSelection()?.anchorNode:getSelection()?.anchorNode?.parentElement)?.closest?.('[data-table-cell-editing="1"],.editable');
   if(editable)editable.focus({preventScroll:true});
   document.execCommand(cmd,false,value);
   rememberSelection();
@@ -597,7 +681,7 @@ $('#fontSizeInput').onchange=e=>applyFontSize(Number(e.target.value)||16);
 $('#clearFormatBtn').onclick=()=>{exec('removeFormat');exec('unlink');};
 function applyFontSize(px){ restoreSelection(); document.execCommand('fontSize',false,'7'); $$('font[size="7"]',$('#editPage')).forEach(f=>{const span=document.createElement('span');span.style.fontSize=`${Math.max(8,Math.min(96,px))}px`;span.innerHTML=f.innerHTML;f.replaceWith(span)}); rememberSelection(); }
 function currentBlocks(){
-  const sel=getSelection(); if(!sel.rangeCount)return[]; const range=sel.getRangeAt(0); const root=range.commonAncestorContainer.nodeType===1?range.commonAncestorContainer:range.commonAncestorContainer.parentElement; const editable=root?.closest?.('.editable'); if(!editable)return[];
+  const sel=getSelection(); if(!sel.rangeCount)return[]; const range=sel.getRangeAt(0); const root=range.commonAncestorContainer.nodeType===1?range.commonAncestorContainer:range.commonAncestorContainer.parentElement; const editable=root?.closest?.('[data-table-cell-editing="1"],.editable'); if(!editable)return[];
   const candidates=$$('p,div,li,blockquote',editable).filter(x=>{try{return range.intersectsNode(x)}catch{return false}});
   if(candidates.length)return candidates.filter(x=>!candidates.some(y=>y!==x&&y.contains(x)));
   const n=(sel.anchorNode?.nodeType===1?sel.anchorNode:sel.anchorNode?.parentElement)?.closest('p,div,li,blockquote'); return n?[n]:[editable];
@@ -641,6 +725,7 @@ function openFootnoteDialog(){
   $('#newFootnoteText').focus();
 }
 $('#footnoteBtn').onclick=openFootnoteDialog;
+$('#duelsRefBtn').onclick=openDuelsReferenceDialog;
 
 function normalizeImageUrl(url){try{const u=new URL(url);if(u.hostname==='github.com'){const p=u.pathname.split('/').filter(Boolean),bi=p.indexOf('blob');if(bi>=2&&p[bi+1])return `https://raw.githubusercontent.com/${p[0]}/${p[1]}/${p[bi+1]}/${p.slice(bi+2).join('/')}`;}return url}catch{return url}}
 $('#imageUrlBtn').onclick=()=>{openModal(`<h2>그림 링크 삽입</h2><div class="form-row"><label>PNG/JPG 이미지 URL</label><input id="imageUrl" data-character-image-presets="1" placeholder="https://github.com/.../blob/.../image.png"></div><div class="modal-actions"><button id="cancelImage">취소</button><button id="insertImage" class="primary">삽입</button></div>`);$('#cancelImage').onclick=closeModal;$('#insertImage').onclick=()=>{const url=normalizeImageUrl($('#imageUrl').value.trim());if(!/\.(png|jpe?g)(\?|$)/i.test(url)){alert('PNG/JPG 링크만 사용할 수 있습니다.');return}insertImage(url);closeModal()}};
@@ -793,11 +878,12 @@ function renderTableElement(el,raw){
       const cell=data.cells[r][c];if(cell===null)continue;
       const rs=cell.rowSpan>1?` rowspan="${cell.rowSpan}"`:'';const cs=cell.colSpan>1?` colspan="${cell.colSpan}"`:'';
       const mw=tableCellMinWidth(data,c,cell.colSpan);
-      html+=`<td${rs}${cs} style="background:${cell.color};${data.fitWidth?'min-width:0;':`min-width:${mw}px;`}text-align:${tableAlign(cell.align)}">${tableCellHtmlValue(cell)||'<br>'}</td>`;
+      html+=`<td${rs}${cs} data-table-cell data-r="${r}" data-c="${c}" style="background:${cell.color};${data.fitWidth?'min-width:0;':`min-width:${mw}px;`}text-align:${tableAlign(cell.align)}">${tableCellHtmlValue(cell)||'<br>'}</td>`;
     }
     html+='</tr>';
   }
   html+='</tbody></table></div>';el.innerHTML=html;
+  if(state.editing&&$('#editPage')?.contains(el))bindInlineTableInteractions(el);
   requestAnimationFrame(()=>{const table=$('.duels-table',el);if(table)el.dataset.actualWidth=String(Math.ceil(table.getBoundingClientRect().width))});
 }
 function makeTableComponent(data){const el=document.createElement('div');el.dataset.duelsComponent='table';renderTableElement(el,data);return el}
@@ -806,7 +892,7 @@ function tableRootAt(data,r,c){
   for(let rr=0;rr<=r;rr++)for(let cc=0;cc<=c;cc++){const x=data.cells[rr]?.[cc];if(x&&rr+x.rowSpan>r&&cc+x.colSpan>c)return[rr,cc]}
   return null;
 }
-function tableSelectedRoots(){return [...document.querySelectorAll('#tableEditGrid [data-table-select]:checked')].map(x=>[Number(x.dataset.r),Number(x.dataset.c)])}
+function tableSelectedRoots(){const modal=[...document.querySelectorAll('#tableEditGrid [data-table-select]:checked')].map(x=>[Number(x.dataset.r),Number(x.dataset.c)]);return modal.length?modal:inlineTableSelectedRoots()}
 function tableSetSelection(predicate,checked=true){
   $$('[data-table-select]').forEach(x=>{const r=Number(x.dataset.r),c=Number(x.dataset.c);x.checked=predicate(r,c,x)?checked:x.checked});
   tableRefreshSelectionUi();
@@ -964,46 +1050,75 @@ function openTableFootnotePanel(){
   $('#tableNewFootnoteText')?.focus();
 }
 function tableModal(existing=null){
-  if(!existing)captureComponentInsertionPoint();else rememberSelection();let data=normalizeTableData(existing?componentPayload(existing):{rows:2,cols:2,baseWidth:400,borderColor:'#2a4a6a',fitWidth:false});
-  const redraw=()=>{openModal(tableEditorHtml(data,existing));bind();};
-  const bind=()=>{
-    tableActiveCell=null;tableCellSelectionRange=null;
-    $('#cancelComponent').onclick=closeModal;
-    $$('[data-table-html]').forEach(cell=>{
-      const activate=()=>{tableActiveCell=cell;rememberTableCellSelection()};
-      cell.addEventListener('focus',activate);cell.addEventListener('mouseup',()=>{const sel=getSelection();if(sel?.rangeCount){const r=sel.getRangeAt(0),sup=footnoteSupFromNode(r.startContainer);if(sup&&caretIsAtFootnoteEnd(r,sup))placeCaretOutsideFootnote(cell,sup)}rememberTableCellSelection()});cell.addEventListener('keyup',e=>{if(['ArrowRight','End'].includes(e.key))normalizeFootnoteCaretForInput(cell);rememberTableCellSelection()});cell.addEventListener('compositionstart',()=>normalizeFootnoteCaretForInput(cell));cell.addEventListener('beforeinput',e=>{if(e.inputType?.startsWith('insert'))normalizeFootnoteCaretForInput(cell)});cell.addEventListener('input',rememberTableCellSelection);
-    });
-    $$('[data-table-cmd]').forEach(button=>{button.onmousedown=e=>e.preventDefault();button.onclick=()=>tableInlineCommand(button.dataset.tableCmd)});
-    $$('[data-table-text-align]').forEach(button=>{button.onmousedown=e=>e.preventDefault();button.onclick=()=>tableCellSetAlign(button.dataset.tableTextAlign)});
-    $('#tableTextColor').addEventListener('mousedown',rememberTableCellSelection);$('#tableTextColor').oninput=e=>tableInlineCommand('foreColor',e.target.value);
-    $('#tableTextHighlight').addEventListener('mousedown',rememberTableCellSelection);$('#tableTextHighlight').oninput=e=>tableInlineCommand('hiliteColor',e.target.value);
-    $('#tableClearFormat').onmousedown=e=>e.preventDefault();$('#tableClearFormat').onclick=()=>{tableInlineCommand('removeFormat');tableInlineCommand('unlink')};
-    $('#tableInternalLink').onmousedown=e=>e.preventDefault();$('#tableInternalLink').onclick=()=>{if(!tableActiveCell){alert('먼저 셀 안의 링크로 만들 텍스트를 선택하세요.');return}const href=prompt('내부 링크 경로를 입력하세요. 예: wiki:/캐릭터/루네프','wiki:/');if(!href)return;tableInlineCommand('createLink',href.startsWith('wiki:/')?href:`wiki:/${href.replace(/^\/+/, '')}`)};$('#tableFootnoteBtn').onmousedown=e=>e.preventDefault();$('#tableFootnoteBtn').onclick=openTableFootnotePanel;
-    $$('[data-table-align]').forEach(select=>select.onchange=()=>{const r=Number(select.dataset.r),c=Number(select.dataset.c),cell=document.querySelector(`[data-table-html][data-r=\"${r}\"][data-c=\"${c}\"]`);if(cell)cell.style.textAlign=tableAlign(select.value)});
-    $('#tableWidthPreset').onchange=e=>{if(e.target.value==='400'){$('#tableBaseWidth').value=400;applyTableBaseWidth(data,400);redraw()}};
-    $('#tableBaseWidth').onchange=e=>{applyTableBaseWidth(data,e.target.value);redraw()};
-    $('#tableBorderColor').oninput=e=>data.borderColor=tableColor(e.target.value);
-    $('#tableFitWidth').onchange=e=>{flush();data.fitWidth=e.target.checked;redraw()};
-    $('#equalizeTableColumns').onclick=()=>{flush();tableEqualizeColumns(data);redraw()};
-    $$('[data-table-select]').forEach(x=>x.onchange=tableRefreshSelectionUi);
-    $$('[data-select-row]').forEach(x=>x.onclick=()=>tableToggleRowSelection(data,Number(x.dataset.selectRow)));
-    $$('[data-select-col]').forEach(x=>x.onclick=()=>tableToggleColSelection(data,Number(x.dataset.selectCol)));
-    $('#clearTableSelection').onclick=tableClearSelection;
-    $('#applySelectedTableBackground').onclick=()=>{flush();if(tableApplySelectedBackground(data,$('#selectedTableBackground').value))redraw()};
-    $('#tableRows').onchange=e=>{syncTableFormToData(data);resizeTableGrid(data,e.target.value,data.cols);redraw()};
-    $('#tableCols').onchange=e=>{syncTableFormToData(data);resizeTableGrid(data,data.rows,e.target.value);redraw()};
-    const flush=()=>syncTableFormToData(data);
-    const rowIndex=()=>tableInt($('#tableRowIndex').value,1,1,data.rows)-1,colIndex=()=>tableInt($('#tableColIndex').value,1,1,data.cols)-1;
-    $('#rowBefore').onclick=()=>{flush();tableInsertRow(data,rowIndex());redraw()};$('#rowAfter').onclick=()=>{flush();tableInsertRow(data,rowIndex()+1);redraw()};$('#rowRemove').onclick=()=>{flush();if(tableRemoveRow(data,rowIndex()))redraw()};
-    $('#colBefore').onclick=()=>{flush();tableInsertCol(data,colIndex());redraw()};$('#colAfter').onclick=()=>{flush();tableInsertCol(data,colIndex()+1);redraw()};$('#colRemove').onclick=()=>{flush();if(tableRemoveCol(data,colIndex()))redraw()};
-    $('#mergeTableCells').onclick=()=>{flush();if(tableMergeSelection(data))redraw()};$('#unmergeTableCell').onclick=()=>{flush();if(tableUnmergeSelection(data))redraw()};
-    $$('[data-col-width]').forEach(x=>x.onchange=()=>{flush();redraw()});
-    if(existing){$('#syncTableActual').onclick=()=>{flush();syncTableActualToBase(data);redraw()};$('#deleteComponent').onclick=()=>{if(confirm('이 표를 삭제할까요?')){const host=existing.closest('.editable');existing.remove();host?.dispatchEvent(new Event('input',{bubbles:true}));closeModal()}}}
-    syncFootnoteRefs($('#tableEditGrid'),editingContent);
-    $('#saveComponent').onclick=()=>{flush();data=normalizeTableData(data);if(existing){renderTableElement(existing,data);existing.closest('.editable')?.dispatchEvent(new Event('input',{bubbles:true}));closeModal()}else{const node=makeTableComponent(data);if(insertBlockComponent(node))closeModal()}};
-  };
-  redraw();
+  if(existing){selectInlineTable(existing,true);return}
+  captureComponentInsertionPoint();
+  openModal(`<div class="table-create-modal"><h2>표 삽입</h2><p class="muted">표 생성 후 셀을 더블클릭하면 문서 위에서 바로 내용을 수정할 수 있습니다.</p><div class="component-form-grid"><div class="form-row"><label>행 개수</label><input id="newTableRows" type="number" min="1" max="20" value="2"></div><div class="form-row"><label>열 개수</label><input id="newTableCols" type="number" min="1" max="20" value="2"></div><div class="form-row"><label>표 가로 크기</label><input id="newTableWidth" type="number" min="120" max="4000" value="400"></div><div class="form-row"><label>표 전체 테두리</label><input id="newTableBorder" type="color" value="#2a4a6a"></div></div><label class="table-ribbon-toggle table-create-fit"><input id="newTableFit" type="checkbox"><span>너비 맞춤</span></label><div class="modal-actions"><button id="cancelComponent">취소</button><button id="saveComponent" class="primary">삽입</button></div></div>`);
+  $('#cancelComponent').onclick=closeModal;
+  $('#saveComponent').onclick=()=>{const rows=tableInt($('#newTableRows').value,2,1,20),cols=tableInt($('#newTableCols').value,2,1,20),baseWidth=tableInt($('#newTableWidth').value,400,120,4000);const data=normalizeTableData({rows,cols,baseWidth,borderColor:$('#newTableBorder').value,fitWidth:$('#newTableFit').checked});const node=makeTableComponent(data);if(insertBlockComponent(node)){closeModal();requestAnimationFrame(()=>selectInlineTable(node,true))}};
 }
+
+
+// 3.57: 표 요소 선택 / 드래그 다중 선택 / 더블클릭 직접 편집 / 선택 셀 일괄 삭제.
+let inlineTable=null,inlineTableActiveCell=null,inlineTableSelected=new Set(),inlineTableDrag=null,inlineTableSuppressClick=false;
+function inlineCellKey(td){return td?`${Number(td.dataset.r)}:${Number(td.dataset.c)}`:''}
+function inlineTableCellByKey(table,key){const [r,c]=String(key).split(':');return table?.querySelector(`td[data-table-cell][data-r="${r}"][data-c="${c}"]`)||null}
+function inlineTableSelectedRoots(){if(!inlineTable)return[];return [...inlineTableSelected].map(k=>k.split(':').map(Number)).filter(([r,c])=>inlineTable.querySelector(`td[data-table-cell][data-r="${r}"][data-c="${c}"]`))}
+function clearInlineCellClasses(table=inlineTable){table?.querySelectorAll('.table-cell-selected').forEach(x=>x.classList.remove('table-cell-selected'))}
+function paintInlineTableSelection(){if(!inlineTable)return;clearInlineCellClasses(inlineTable);for(const key of inlineTableSelected)inlineTableCellByKey(inlineTable,key)?.classList.add('table-cell-selected');updateTableRibbonTools()}
+function endInlineTableCellEdit(){if(!inlineTableActiveCell)return;commitInlineTableCell(inlineTable,inlineTableActiveCell);inlineTableActiveCell.removeAttribute('contenteditable');inlineTableActiveCell.removeAttribute('data-table-cell-editing');inlineTableActiveCell.removeAttribute('data-footnote-target');inlineTableActiveCell.classList.remove('table-cell-editing');inlineTableActiveCell=null}
+function clearInlineTableSelection(){endInlineTableCellEdit();if(inlineTable){inlineTable.classList.remove('selected-duels-component');clearInlineCellClasses(inlineTable)}inlineTable=null;inlineTableSelected.clear();inlineTableDrag=null;$('#tableTabBtn')?.classList.add('hidden')}
+function selectInlineTable(table,switchTab=false){if(!table?.isConnected)return;if(inlineTable&&inlineTable!==table){endInlineTableCellEdit();inlineTable.classList.remove('selected-duels-component');clearInlineCellClasses(inlineTable);inlineTableSelected.clear()}inlineTable=table;table.classList.add('selected-duels-component');$('#tableTabBtn')?.classList.remove('hidden');if(switchTab)switchRibbon('table');updateTableRibbonTools()}
+function selectSingleInlineTableCell(table,td){selectInlineTable(table,false);inlineTableSelected=new Set([inlineCellKey(td)]);paintInlineTableSelection()}
+function tableCellsIntersectingRect(table,r1,c1,r2,c2){const data=normalizeTableData(componentPayload(table)),minR=Math.min(r1,r2),maxR=Math.max(r1,r2),minC=Math.min(c1,c2),maxC=Math.max(c1,c2),out=new Set();for(let r=0;r<data.rows;r++)for(let c=0;c<data.cols;c++){const cell=data.cells[r]?.[c];if(!cell)continue;const er=r+cell.rowSpan-1,ec=c+cell.colSpan-1;if(!(er<minR||r>maxR||ec<minC||c>maxC))out.add(`${r}:${c}`)}return out}
+function bindInlineTableInteractions(table){
+  table.querySelectorAll('td[data-table-cell]').forEach(td=>{
+    td.addEventListener('pointerdown',e=>{if(e.button!==0||td.dataset.tableCellEditing==='1'||inlineTable!==table)return;inlineTableDrag={table,startR:Number(td.dataset.r),startC:Number(td.dataset.c),lastR:Number(td.dataset.r),lastC:Number(td.dataset.c),moved:false}});
+    td.addEventListener('pointerenter',e=>{if(!inlineTableDrag||inlineTableDrag.table!==table||!(e.buttons&1)||td.dataset.tableCellEditing==='1')return;const r=Number(td.dataset.r),c=Number(td.dataset.c);if(r===inlineTableDrag.lastR&&c===inlineTableDrag.lastC)return;inlineTableDrag.lastR=r;inlineTableDrag.lastC=c;inlineTableDrag.moved=true;inlineTableSelected=tableCellsIntersectingRect(table,inlineTableDrag.startR,inlineTableDrag.startC,r,c);paintInlineTableSelection();e.preventDefault()});
+  });
+}
+document.addEventListener('pointerup',()=>{if(inlineTableDrag?.moved)inlineTableSuppressClick=true;inlineTableDrag=null;setTimeout(()=>inlineTableSuppressClick=false,0)});
+function caretRangeAtPoint(x,y){if(document.caretRangeFromPoint)return document.caretRangeFromPoint(x,y);const p=document.caretPositionFromPoint?.(x,y);if(!p)return null;const r=document.createRange();r.setStart(p.offsetNode,p.offset);r.collapse(true);return r}
+function beginInlineTableCellEdit(table,td,event){selectInlineTable(table,true);endInlineTableCellEdit();inlineTableActiveCell=td;inlineTableSelected=new Set([inlineCellKey(td)]);paintInlineTableSelection();td.contentEditable='true';td.dataset.tableCellEditing='1';td.dataset.footnoteTarget='1';td.classList.add('table-cell-editing');td.focus({preventScroll:true});const point=event?caretRangeAtPoint(event.clientX,event.clientY):null,sel=getSelection();sel.removeAllRanges();if(point&&td.contains(point.commonAncestorContainer))sel.addRange(point);else{const r=document.createRange();r.selectNodeContents(td);r.collapse(false);sel.addRange(r)}state.lastEditable=td;rememberSelection()}
+function commitInlineTableCell(table,td){if(!table||!td)return;const data=normalizeTableData(componentPayload(table)),r=Number(td.dataset.r),c=Number(td.dataset.c);if(data.cells[r]?.[c]){data.cells[r][c].html=storageInlineHtml(td);setComponentPayload(table,data);table.closest('.editable')?.dispatchEvent(new Event('input',{bubbles:true}))}}
+function selectedInlineCells(){if(!inlineTable)return[];let cells=[...inlineTableSelected].map(k=>inlineTableCellByKey(inlineTable,k)).filter(Boolean);if(!cells.length&&inlineTableActiveCell)cells=[inlineTableActiveCell];return cells}
+function selectedInlineRoots(){return selectedInlineCells().map(td=>[Number(td.dataset.r),Number(td.dataset.c)])}
+function clearSelectedInlineTableCellContents(){
+  if(!inlineTable?.isConnected||inlineTableActiveCell)return false;
+  const roots=selectedInlineRoots();if(!roots.length)return false;
+  const data=normalizeTableData(componentPayload(inlineTable));
+  for(const [r,c] of roots){if(data.cells[r]?.[c])data.cells[r][c].html=''}
+  refreshInlineTableAfterMutation(data,roots);return true;
+}
+document.addEventListener('keydown',e=>{
+  if(!state.editing||!inlineTable?.isConnected||inlineTableActiveCell||!['Backspace','Delete'].includes(e.key))return;
+  const target=e.target;
+  if(target?.closest?.('input,textarea,select,[contenteditable="true"]'))return;
+  if(clearSelectedInlineTableCellContents()){e.preventDefault();e.stopPropagation()}
+});
+function refreshInlineTableAfterMutation(data,roots=selectedInlineRoots()){if(!inlineTable)return;const table=inlineTable;endInlineTableCellEdit();renderTableElement(table,data);inlineTable=table;table.classList.add('selected-duels-component');$('#tableTabBtn')?.classList.remove('hidden');inlineTableSelected=new Set(roots.map(([r,c])=>`${r}:${c}`).filter(k=>inlineTableCellByKey(table,k)));if(!inlineTableSelected.size){const first=table.querySelector('td[data-table-cell]');if(first)inlineTableSelected.add(inlineCellKey(first))}paintInlineTableSelection();table.closest('.editable')?.dispatchEvent(new Event('input',{bubbles:true}))}
+function updateTableRibbonTools(){const tab=$('#tableTabBtn');if(!inlineTable?.isConnected){tab?.classList.add('hidden');return}tab?.classList.remove('hidden');const data=normalizeTableData(componentPayload(inlineTable)),roots=selectedInlineRoots();if($('#tableRibbonWidth'))$('#tableRibbonWidth').value=data.baseWidth;if($('#tableRibbonBorder'))$('#tableRibbonBorder').value=data.borderColor;if($('#tableRibbonFit'))$('#tableRibbonFit').checked=data.fitWidth;const label=$('#tableRibbonSelection');if(label)label.textContent=roots.length?`${roots.length}개 셀 선택`:'셀 선택 없음';if(roots.length){const [r,c]=roots[0],cell=data.cells[r]?.[c];if(cell){if($('#tableRibbonCellWidth'))$('#tableRibbonCellWidth').value=Math.round(tableCellMinWidth(data,c,cell.colSpan));if($('#tableRibbonCellBg'))$('#tableRibbonCellBg').value=tableColor(cell.color,'#0d1520')}}}
+function applyInlineCellBackground(color){if(!inlineTable)return;const data=normalizeTableData(componentPayload(inlineTable)),roots=selectedInlineRoots();if(!roots.length)return;for(const [r,c] of roots)if(data.cells[r]?.[c])data.cells[r][c].color=tableColor(color,'#0d1520');refreshInlineTableAfterMutation(data,roots)}
+function applyInlineCellAlign(align){if(!inlineTable)return;const data=normalizeTableData(componentPayload(inlineTable)),roots=selectedInlineRoots();if(!roots.length)return;for(const [r,c] of roots)if(data.cells[r]?.[c])data.cells[r][c].align=tableAlign(align);refreshInlineTableAfterMutation(data,roots)}
+function applyInlineCellWidth(width){if(!inlineTable)return;const data=normalizeTableData(componentPayload(inlineTable)),roots=selectedInlineRoots(),target=tableInt(width,120,40,2000);if(!roots.length)return;const touched=new Map();for(const [r,c] of roots){const cell=data.cells[r]?.[c];if(!cell)continue;const per=Math.max(40,Math.round(target/cell.colSpan));for(let cc=c;cc<c+cell.colSpan;cc++)touched.set(cc,per)}for(const [c,w] of touched)data.colWidths[c]=w;data.baseWidth=data.colWidths.reduce((a,b)=>a+b,0);refreshInlineTableAfterMutation(data,roots)}
+function activeInlineCellCoord(){const cell=selectedInlineCells()[0]||inlineTable?.querySelector('td[data-table-cell]');return cell?[Number(cell.dataset.r),Number(cell.dataset.c)]:[0,0]}
+function mutateInlineTable(fn){if(!inlineTable)return;const data=normalizeTableData(componentPayload(inlineTable)),roots=selectedInlineRoots();const ok=fn(data);if(ok===false)return;refreshInlineTableAfterMutation(data,roots)}
+$('#tableRibbonWidth').onchange=e=>mutateInlineTable(data=>applyTableBaseWidth(data,e.target.value));
+$('#tableRibbonBorder').onchange=e=>mutateInlineTable(data=>{data.borderColor=tableColor(e.target.value)});
+$('#tableRibbonFit').onchange=e=>mutateInlineTable(data=>{data.fitWidth=e.target.checked});
+$('#tableRibbonEqualize').onclick=()=>mutateInlineTable(data=>tableEqualizeColumns(data));
+$('#tableRibbonCellWidth').onchange=e=>applyInlineCellWidth(e.target.value);
+$('#tableRibbonCellBg').onchange=e=>applyInlineCellBackground(e.target.value);
+$$('[data-table-ribbon-align]').forEach(b=>b.onclick=()=>applyInlineCellAlign(b.dataset.tableRibbonAlign));
+$('#tableRowBefore').onclick=()=>{const [r]=activeInlineCellCoord();mutateInlineTable(data=>{tableInsertRow(data,r)})};
+$('#tableRowAfter').onclick=()=>{const [r]=activeInlineCellCoord();mutateInlineTable(data=>{tableInsertRow(data,r+1)})};
+$('#tableRowRemove').onclick=()=>{const [r]=activeInlineCellCoord();mutateInlineTable(data=>tableRemoveRow(data,r))};
+$('#tableColBefore').onclick=()=>{const [,c]=activeInlineCellCoord();mutateInlineTable(data=>{tableInsertCol(data,c)})};
+$('#tableColAfter').onclick=()=>{const [,c]=activeInlineCellCoord();mutateInlineTable(data=>{tableInsertCol(data,c+1)})};
+$('#tableColRemove').onclick=()=>{const [,c]=activeInlineCellCoord();mutateInlineTable(data=>tableRemoveCol(data,c))};
+$('#tableMergeCells').onclick=()=>mutateInlineTable(data=>tableMergeSelection(data));
+$('#tableUnmergeCell').onclick=()=>mutateInlineTable(data=>tableUnmergeSelection(data));
+$('#tableDelete').onclick=()=>{if(!inlineTable||!confirm('이 표를 삭제할까요?'))return;const table=inlineTable,host=table.closest('.editable');clearInlineTableSelection();table.remove();host?.dispatchEvent(new Event('input',{bubbles:true}));switchRibbon('home')};
+document.addEventListener('input',e=>{const td=e.target.closest?.('td[data-table-cell][data-table-cell-editing="1"]');if(td&&inlineTable?.contains(td)){normalizeFootnoteCaretForInput(td);commitInlineTableCell(inlineTable,td);rememberSelection()}});
 
 function validEditableRange(candidate){
   if(!candidate)return null;try{const r=candidate.cloneRange();const base=r.commonAncestorContainer.nodeType===1?r.commonAncestorContainer:r.commonAncestorContainer.parentElement;const editable=base?.closest?.('.editable');return editable&&document.contains(editable)?{range:r,editable}:null}catch{return null}
@@ -1052,7 +1167,7 @@ function descriptionBoxModal(existing=null){
   if(existing)$('#deleteComponent').onclick=()=>{if(confirm('이 설명 상자를 삭제할까요?')){const host=existing.closest('.editable');existing.remove();host?.dispatchEvent(new Event('input',{bubbles:true}));closeModal()}};
   $('#saveComponent').onclick=()=>{const data={title:$('#dbTitle').value.trim(),color:$('#dbColor').value,body:$('#dbBody').value};if(existing){renderDescriptionBoxElement(existing,data);existing.closest('.editable')?.dispatchEvent(new Event('input',{bubbles:true}));closeModal()}else{const node=makeDescriptionBox(data);if(insertBlockComponent(node))closeModal()}};
 }
-function openComponentEditor(el){const type=el.dataset.duelsComponent;if(type==='character-card')characterCardModal(el);else if(type==='description-box')descriptionBoxModal(el);else if(type==='table')tableModal(el)}
+function openComponentEditor(el){const type=el.dataset.duelsComponent;if(type==='character-card')characterCardModal(el);else if(type==='description-box')descriptionBoxModal(el);else if(type==='table')selectInlineTable(el,true)}
 $('#characterCardBtn').onclick=()=>characterCardModal();
 $('#descriptionBoxBtn').onclick=()=>descriptionBoxModal();
 $('#tableBtn').onclick=()=>tableModal();
@@ -1103,7 +1218,7 @@ function startImageResize(e){
 }
 
 function clearImageSelection(){if(state.selectedImage)state.selectedImage.classList.remove('selected-image');state.selectedImage=null;$('#pictureTabBtn').classList.add('hidden');updateOverlay()}
-function clearObjectSelection(switchHome=true){clearImageSelection();if(switchHome&&state.editing)switchRibbon('home')}
+function clearObjectSelection(switchHome=true){clearImageSelection();clearInlineTableSelection();if(switchHome&&state.editing)switchRibbon('home')}
 
 function clearObjectSelectionOnOutside(e){if(e.target.closest('.editable')||e.target.closest('#ribbon')||e.target.closest('#imageOverlay')||e.target.closest('.modal'))return;clearComponentCaretAnchors();clearObjectSelection();}
 document.addEventListener('mousedown',clearObjectSelectionOnOutside);
