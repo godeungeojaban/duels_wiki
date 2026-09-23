@@ -1058,7 +1058,7 @@ function tableModal(existing=null){
 }
 
 
-// 3.57: 표 요소 선택 / 드래그 다중 선택 / 더블클릭 직접 편집 / 선택 셀 일괄 삭제.
+// 3.58: 표 요소 선택 / 포인터 드래그 다중 선택 / 더블클릭 직접 편집 / 선택 셀 일괄 삭제.
 let inlineTable=null,inlineTableActiveCell=null,inlineTableSelected=new Set(),inlineTableDrag=null,inlineTableSuppressClick=false;
 function inlineCellKey(td){return td?`${Number(td.dataset.r)}:${Number(td.dataset.c)}`:''}
 function inlineTableCellByKey(table,key){const [r,c]=String(key).split(':');return table?.querySelector(`td[data-table-cell][data-r="${r}"][data-c="${c}"]`)||null}
@@ -1072,11 +1072,43 @@ function selectSingleInlineTableCell(table,td){selectInlineTable(table,false);in
 function tableCellsIntersectingRect(table,r1,c1,r2,c2){const data=normalizeTableData(componentPayload(table)),minR=Math.min(r1,r2),maxR=Math.max(r1,r2),minC=Math.min(c1,c2),maxC=Math.max(c1,c2),out=new Set();for(let r=0;r<data.rows;r++)for(let c=0;c<data.cols;c++){const cell=data.cells[r]?.[c];if(!cell)continue;const er=r+cell.rowSpan-1,ec=c+cell.colSpan-1;if(!(er<minR||r>maxR||ec<minC||c>maxC))out.add(`${r}:${c}`)}return out}
 function bindInlineTableInteractions(table){
   table.querySelectorAll('td[data-table-cell]').forEach(td=>{
-    td.addEventListener('pointerdown',e=>{if(e.button!==0||td.dataset.tableCellEditing==='1'||inlineTable!==table)return;inlineTableDrag={table,startR:Number(td.dataset.r),startC:Number(td.dataset.c),lastR:Number(td.dataset.r),lastC:Number(td.dataset.c),moved:false}});
-    td.addEventListener('pointerenter',e=>{if(!inlineTableDrag||inlineTableDrag.table!==table||!(e.buttons&1)||td.dataset.tableCellEditing==='1')return;const r=Number(td.dataset.r),c=Number(td.dataset.c);if(r===inlineTableDrag.lastR&&c===inlineTableDrag.lastC)return;inlineTableDrag.lastR=r;inlineTableDrag.lastC=c;inlineTableDrag.moved=true;inlineTableSelected=tableCellsIntersectingRect(table,inlineTableDrag.startR,inlineTableDrag.startC,r,c);paintInlineTableSelection();e.preventDefault()});
+    td.addEventListener('pointerdown',e=>{
+      if(e.button!==0||td.dataset.tableCellEditing==='1')return;
+      selectInlineTable(table,true);
+      endInlineTableCellEdit();
+      const r=Number(td.dataset.r),c=Number(td.dataset.c);
+      inlineTableSelected=new Set([inlineCellKey(td)]);
+      paintInlineTableSelection();
+      inlineTableDrag={table,pointerId:e.pointerId,startX:e.clientX,startY:e.clientY,startR:r,startC:c,lastR:r,lastC:c,moved:false};
+    });
   });
 }
-document.addEventListener('pointerup',()=>{if(inlineTableDrag?.moved)inlineTableSuppressClick=true;inlineTableDrag=null;setTimeout(()=>inlineTableSuppressClick=false,0)});
+function inlineTableCellAtPoint(table,x,y){
+  const el=document.elementFromPoint(x,y);
+  const td=el?.closest?.('td[data-table-cell]');
+  return td&&table?.contains(td)?td:null;
+}
+document.addEventListener('pointermove',e=>{
+  const drag=inlineTableDrag;if(!drag||drag.pointerId!==e.pointerId||!drag.table?.isConnected)return;
+  if(!(e.buttons&1)){inlineTableDrag=null;return}
+  const dist=Math.hypot(e.clientX-drag.startX,e.clientY-drag.startY);
+  if(!drag.moved&&dist<4)return;
+  const td=inlineTableCellAtPoint(drag.table,e.clientX,e.clientY);if(!td)return;
+  const r=Number(td.dataset.r),c=Number(td.dataset.c);
+  drag.moved=true;
+  if(r===drag.lastR&&c===drag.lastC)return;
+  drag.lastR=r;drag.lastC=c;
+  inlineTableSelected=tableCellsIntersectingRect(drag.table,drag.startR,drag.startC,r,c);
+  paintInlineTableSelection();
+  e.preventDefault();
+},{capture:true});
+document.addEventListener('pointerup',e=>{
+  if(!inlineTableDrag||inlineTableDrag.pointerId!==e.pointerId)return;
+  if(inlineTableDrag.moved)inlineTableSuppressClick=true;
+  inlineTableDrag=null;
+  setTimeout(()=>inlineTableSuppressClick=false,0);
+},{capture:true});
+document.addEventListener('pointercancel',()=>{inlineTableDrag=null},{capture:true});
 function caretRangeAtPoint(x,y){if(document.caretRangeFromPoint)return document.caretRangeFromPoint(x,y);const p=document.caretPositionFromPoint?.(x,y);if(!p)return null;const r=document.createRange();r.setStart(p.offsetNode,p.offset);r.collapse(true);return r}
 function beginInlineTableCellEdit(table,td,event){selectInlineTable(table,true);endInlineTableCellEdit();inlineTableActiveCell=td;inlineTableSelected=new Set([inlineCellKey(td)]);paintInlineTableSelection();td.contentEditable='true';td.dataset.tableCellEditing='1';td.dataset.footnoteTarget='1';td.classList.add('table-cell-editing');td.focus({preventScroll:true});const point=event?caretRangeAtPoint(event.clientX,event.clientY):null,sel=getSelection();sel.removeAllRanges();if(point&&td.contains(point.commonAncestorContainer))sel.addRange(point);else{const r=document.createRange();r.selectNodeContents(td);r.collapse(false);sel.addRange(r)}state.lastEditable=td;rememberSelection()}
 function commitInlineTableCell(table,td){if(!table||!td)return;const data=normalizeTableData(componentPayload(table)),r=Number(td.dataset.r),c=Number(td.dataset.c);if(data.cells[r]?.[c]){data.cells[r][c].html=storageInlineHtml(td);setComponentPayload(table,data);table.closest('.editable')?.dispatchEvent(new Event('input',{bubbles:true}))}}
@@ -1220,7 +1252,7 @@ function startImageResize(e){
 function clearImageSelection(){if(state.selectedImage)state.selectedImage.classList.remove('selected-image');state.selectedImage=null;$('#pictureTabBtn').classList.add('hidden');updateOverlay()}
 function clearObjectSelection(switchHome=true){clearImageSelection();clearInlineTableSelection();if(switchHome&&state.editing)switchRibbon('home')}
 
-function clearObjectSelectionOnOutside(e){if(e.target.closest('.editable')||e.target.closest('#ribbon')||e.target.closest('#imageOverlay')||e.target.closest('.modal'))return;clearComponentCaretAnchors();clearObjectSelection();}
+function clearObjectSelectionOnOutside(e){if(e.target.closest('.editable')||e.target.closest('#ribbon')||e.target.closest('#imageOverlay')||e.target.closest('.modal')||e.target.closest('.character-color-floating-grid,.character-image-floating-grid,.character-color-presets,.character-image-presets'))return;clearComponentCaretAnchors();clearObjectSelection();}
 document.addEventListener('mousedown',clearObjectSelectionOnOutside);
 
 async function showHistory(){try{const r=await api(`/api/history?path=${encodeURIComponent(state.currentPath)}`);openModal(`<h2>문서 역사</h2>${r.history.length?r.history.map(x=>`<div class="history-row"><div><code>${escapeHtml(x.sha)}</code> · ${escapeHtml(x.author)}</div><div>${escapeHtml(x.message)}</div><div class="muted">${escapeHtml(x.date)}</div></div>`).join(''):'<p>수정 이력이 없습니다.</p>'}<div class="modal-actions"><button id="closeHistory">닫기</button></div>`);$('#closeHistory').onclick=closeModal}catch(e){showStatus(e.message,true)}}

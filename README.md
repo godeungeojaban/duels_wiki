@@ -1,6 +1,6 @@
-# Duels Wiki 3.57
+# Duels Wiki 3.58
 
-Duels Wiki 3.57는 Python 표준 라이브러리 기반 로컬 편집기 + GitHub 저장소 + GitHub Pages 정적 열람 사이트 구조다. Node.js/Next.js/npm은 사용하지 않는다.
+Duels Wiki 3.58는 Python 표준 라이브러리 기반 로컬 편집기 + GitHub 저장소 + GitHub Pages 정적 열람 사이트 구조다. Node.js/Next.js/npm은 사용하지 않는다.
 
 ## 실행
 
@@ -197,7 +197,7 @@ ZIP 최상위 폴더 자체가 GitHub 저장소 작업 폴더다. `run_editor.ba
 
 
 
-## 3.57 변경
+## 3.58 변경
 
 - Duels 함수 문법은 `{{=duels("캐릭터","필드")}}` 한 가지로 통일했다. 함수명은 대소문자를 구분하지 않아 `duels`, `DUELS`, `Duels` 모두 해석되지만 편집 UI가 생성하는 표기는 항상 소문자 `duels`다.
 - 백틱 기반 함수 문법은 더 이상 함수로 해석하지 않는다. 백틱은 기존 인라인 이미지 병기 기능에만 사용한다.
