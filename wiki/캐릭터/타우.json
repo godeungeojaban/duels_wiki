@@ -7,7 +7,7 @@
   "categorySlug": "캐릭터",
   "content": {
     "type": "wiki-sections-v3",
-    "introHtml": "<p></p><div data-duels-component=\"character-card\" class=\"duels-character-card\" contenteditable=\"false\" data-fade=\"none\" data-align=\"left\" data-duels-data=\"%7B%22color%22%3A%22%2300ffff%22%2C%22image%22%3A%22https%3A%2F%2Fraw.githubusercontent.com%2FLyangNem%2FDuels%2Fmain%2Fcharacter%2Ftau.png%22%2C%22text%22%3A%22%22%2C%22width%22%3A400%2C%22height%22%3A400%2C%22fade%22%3A%22none%22%2C%22align%22%3A%22left%22%7D\" style=\"--duels-card-color: #00ffff; --duels-card-width: 400px; --duels-card-height: 400px;\"><div class=\"duels-character-card-image\" style=\"background-image:url(&quot;https://raw.githubusercontent.com/LyangNem/Duels/main/character/tau.png&quot;)\"></div><div class=\"duels-character-card-shade\"></div><div class=\"duels-character-card-copy\"><div><br></div></div></div><div data-duels-component=\"description-box\" class=\"duels-description-box\" contenteditable=\"false\" data-duels-data=\"%7B%22title%22%3A%22%ED%83%80%EC%9A%B0%22%2C%22color%22%3A%22%2300ffff%22%2C%22body%22%3A%22%5Cn%22%2C%22bodyHtml%22%3A%22%3Cbr%3E%22%7D\" style=\"--duels-box-color: #00ffff;\"><div class=\"duels-description-box-title\">타우</div><div class=\"duels-description-box-body\">{{=duels(\"타우\",\"프로필\",\"칭호\")}}<br></div></div>",
+    "introHtml": "<p></p><div data-duels-component=\"character-card\" class=\"duels-character-card\" contenteditable=\"false\" data-fade=\"none\" data-align=\"left\" data-duels-data=\"%7B%22color%22%3A%22%2300ffff%22%2C%22image%22%3A%22https%3A%2F%2Fraw.githubusercontent.com%2FLyangNem%2FDuels%2Fmain%2Fcharacter%2Ftau.png%22%2C%22text%22%3A%22%22%2C%22width%22%3A400%2C%22height%22%3A400%2C%22fade%22%3A%22none%22%2C%22align%22%3A%22left%22%7D\" style=\"--duels-card-color: #00ffff; --duels-card-width: 400px; --duels-card-height: 400px;\"><div class=\"duels-character-card-image\" style=\"background-image:url(&quot;https://raw.githubusercontent.com/LyangNem/Duels/main/character/tau.png&quot;)\"></div><div class=\"duels-character-card-shade\"></div><div class=\"duels-character-card-copy\"><div><br></div></div></div><div data-duels-component=\"description-box\" class=\"duels-description-box\" contenteditable=\"false\" data-duels-data=\"%7B%22title%22%3A%22%ED%83%80%EC%9A%B0%22%2C%22color%22%3A%22%2300ffff%22%2C%22body%22%3A%22%7B%7B%3Dduels(%5C%22%ED%83%80%EC%9A%B0%5C%22%2C%5C%22%ED%94%84%EB%A1%9C%ED%95%84%5C%22%2C%5C%22%EC%B9%AD%ED%98%B8%5C%22)%7D%7D%5Cn%22%2C%22bodyHtml%22%3A%22%7B%7B%3Dduels(%5C%22%ED%83%80%EC%9A%B0%5C%22%2C%5C%22%ED%94%84%EB%A1%9C%ED%95%84%5C%22%2C%5C%22%EC%B9%AD%ED%98%B8%5C%22)%7D%7D%3Cbr%3E%22%7D\" style=\"--duels-box-color: #00ffff;\"><div class=\"duels-description-box-title\">타우</div><div class=\"duels-description-box-body\">{{=duels(\"타우\",\"프로필\",\"칭호\")}}<br></div></div>",
     "sections": [
       {
         "id": "sec_a3dc20e67a10480e842fab2c2461955f",
@@ -94,5 +94,5 @@
     "titleHtml": "타우"
   },
   "createdAt": "2026-09-23T15:55:52+0900",
-  "updatedAt": "2026-09-25T04:12:37+0900"
+  "updatedAt": "2026-09-25T04:19:16+0900"
 }
