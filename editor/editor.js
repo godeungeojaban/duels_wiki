@@ -671,7 +671,7 @@ $('#internalLinkBtn').onclick=openInternalLink; $('#insertLinkBtn').onclick=open
 
 
 function currentFootnoteTarget(){
-  const r=state.savedRange;if(!r)return null;const el=r.commonAncestorContainer.nodeType===1?r.commonAncestorContainer:r.commonAncestorContainer.parentElement;const editable=el?.closest?.('.editable,[data-footnote-target="1"]');if(!editable||!editable.isConnected||!$('#editPage')?.contains(editable)||editable.dataset.footnoteEditor)return null;return editable;
+  const r=state.savedRange;if(!r)return null;const el=r.commonAncestorContainer.nodeType===1?r.commonAncestorContainer:r.commonAncestorContainer.parentElement;const editable=el?.closest?.('[data-table-cell-editing="1"],.duels-description-box-body[data-description-body-editing="1"],.editable,[data-footnote-target="1"]');if(!editable||!editable.isConnected||!$('#editPage')?.contains(editable)||editable.dataset.footnoteEditor)return null;return editable;
 }
 function captureFootnoteInsertionPoint(){
   rememberSelection();const editable=currentFootnoteTarget();if(!editable)return false;
@@ -685,7 +685,7 @@ function captureDuelsInsertionRange(){
   if(!range&&state.savedRange&&$('#editPage')?.contains(state.savedRange.commonAncestorContainer))range=state.savedRange.cloneRange();
   if(!range){state.duelsInsertionRange=null;state.duelsInsertionEditable=null;return false}
   const node=range.commonAncestorContainer.nodeType===1?range.commonAncestorContainer:range.commonAncestorContainer.parentElement;
-  const editable=node?.closest?.('[data-table-cell-editing="1"],.editable,.inline-title-editable');
+  const editable=node?.closest?.('[data-table-cell-editing="1"],.duels-description-box-body[data-description-body-editing="1"],.editable,.inline-title-editable');
   if(!editable||!$('#editPage')?.contains(editable)){state.duelsInsertionRange=null;state.duelsInsertionEditable=null;return false}
   state.duelsInsertionRange=range;state.duelsInsertionEditable=editable;return true;
 }
@@ -811,10 +811,15 @@ function renderCharacterCardElement(el,data){
 }
 function makeCharacterCard(data){const el=document.createElement('div');el.dataset.duelsComponent='character-card';renderCharacterCardElement(el,data);return el}
 function renderDescriptionBoxElement(el,data){
-  const color=componentColor(data.color),title=String(data.title??'').trim(),body=String(data.body||''),bodyHtml=typeof data.bodyHtml==='string'?data.bodyHtml:'',hasBody=bodyHtml.trim().length>0||body.trim().length>0;
+  const color=componentColor(data.color),title=String(data.title??'').trim(),legacyBody=String(data.body||'');
+  // Description-box content uses the same HTML content model as normal body text/table cells.
+  // Older documents that only have `body` are promoted to HTML once, then `bodyHtml` is canonical.
+  const bodyHtml=typeof data.bodyHtml==='string'?data.bodyHtml:textLinesHtml(legacyBody),hasBody=bodyHtml.trim().length>0;
   const selected=el.classList.contains('selected-duels-component'),editing=!!el.querySelector('.duels-description-box-body[data-description-body-editing="1"]');
-  el.className='duels-description-box'+(selected?' selected-duels-component':'')+(editing?' description-body-editing':'');el.setAttribute('contenteditable','false');el.style.setProperty('--duels-box-color',color);setComponentPayload(el,{title,color,body,...(bodyHtml?{bodyHtml}:{})});
-  el.innerHTML=`${title?`<div class="duels-description-box-title">${escapeHtml(title)}</div>`:''}${hasBody||editing?`<div class="duels-description-box-body"${editing?' data-description-body-editing="1" contenteditable="true"':''}>${bodyHtml||textLinesHtml(body)||'<br>'}</div>`:''}`;
+  el.className='duels-description-box'+(selected?' selected-duels-component':'')+(editing?' description-body-editing':'');el.setAttribute('contenteditable','false');el.style.setProperty('--duels-box-color',color);
+  const plainBody=(()=>{const t=document.createElement('template');t.innerHTML=bodyHtml;return (t.content.textContent||'').replace(/\u00a0/g,' ')})();
+  setComponentPayload(el,{title,color,body:plainBody,bodyHtml});
+  el.innerHTML=`${title?`<div class="duels-description-box-title">${escapeHtml(title)}</div>`:''}${hasBody||editing?`<div class="duels-description-box-body"${editing?' data-description-body-editing="1" contenteditable="true"':''}>${bodyHtml||'<br>'}</div>`:''}`;
 }
 function makeDescriptionBox(data){const el=document.createElement('div');el.dataset.duelsComponent='description-box';renderDescriptionBoxElement(el,data);return el}
 function upgradeDuelsComponents(root){

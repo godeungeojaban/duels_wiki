@@ -173,7 +173,7 @@
 .component-ribbon-input{width:220px;max-width:26vw}
 .duels-description-box.selected-duels-component{outline:2px solid #8ed1ff;outline-offset:2px}
 @media(max-width:720px){.modal:has(.duels-reference-modal){width:calc(100vw - 18px)}.component-ribbon-text{width:220px;max-width:70vw}.component-ribbon-input{max-width:60vw}}
-/* 3.72 description box direct body editing */
+/* 3.73 description box body uses normal rich-text content model */
 .duels-description-box.description-body-editing .duels-description-box-body{display:block;min-height:1.55em;cursor:text;user-select:text;outline:none}
 .duels-description-box .duels-description-box-body[data-description-body-editing="1"]{caret-color:#dcefff}
 .duels-description-box.description-body-editing .duels-description-box-title{user-select:none}
