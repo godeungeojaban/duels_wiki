@@ -1,3 +1,10 @@
+## 3.71
+
+- `git_sync.bat` 및 `run_editor.bat`에서 UTF-8 BOM 제거.
+- Windows CMD에서 BOM이 `癤?`로 표시되어 첫 `@echo off` 명령이 실패하고 이후 명령이 전부 출력되던 문제 수정.
+- 두 배치 파일을 BOM 없는 UTF-8 + CRLF로 정규화.
+- 실제 업데이트 비교 후 버전 표시는 유지.
+
 ## 3.70
 - `run_editor.bat`의 고정 `Duels Wiki Editor 3.53` 표기를 제거했습니다. GitHub 최신 런처 비교 후 실제 버전을 출력하는 기존 동작은 유지합니다.
 - `git_sync.bat`의 고정 `Duels Wiki Git Sync 3.53` 표기를 제거했습니다.

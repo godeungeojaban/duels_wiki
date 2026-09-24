@@ -1,6 +1,6 @@
-# Duels Wiki 3.70
+# Duels Wiki 3.71
 
-Duels Wiki 3.70은 Python 표준 라이브러리 기반 로컬 편집기 + GitHub 저장소 + GitHub Pages 정적 열람 사이트 구조다. Node.js/Next.js/npm은 사용하지 않는다.
+Duels Wiki 3.71은 Python 표준 라이브러리 기반 로컬 편집기 + GitHub 저장소 + GitHub Pages 정적 열람 사이트 구조다. Node.js/Next.js/npm은 사용하지 않는다.
 
 ## 실행
 
@@ -187,6 +187,12 @@ ZIP 최상위 폴더 자체가 GitHub 저장소 작업 폴더다. `run_editor.ba
 
 
 
+
+## 3.71 변경
+
+- `git_sync.bat`과 `run_editor.bat`의 UTF-8 BOM을 제거했다. Windows `cmd.exe`에서 첫 줄이 `癤?echo off`로 해석되어 `@echo off`가 실패하던 문제를 수정했다.
+- 두 배치 파일은 BOM 없는 UTF-8(ASCII 호환) + CRLF 줄바꿈으로 저장한다.
+- 배치 파일의 고정 버전 문자열은 계속 두지 않으며, 실제 런처 비교 후 표시되는 버전 동작은 유지한다.
 
 ## 3.70 변경
 
