@@ -2,7 +2,7 @@
 
 const $ = (s, r=document) => r.querySelector(s);
 const $$ = (s, r=document) => [...r.querySelectorAll(s)];
-const state = { index:null, current:null, currentPath:'', editing:false, savedRange:null, componentInsertionRange:null, footnoteInsertionRange:null, footnoteInsertionEditable:null, duelsInsertionRange:null, duelsInsertionEditable:null, lastEditable:null, selectedImage:null, selectedComponent:null, activeRibbon:'home', config:null };
+const state = { index:null, current:null, currentPath:'', editing:false, savedRange:null, componentInsertionRange:null, footnoteInsertionRange:null, footnoteInsertionEditable:null, duelsInsertionRange:null, duelsInsertionEditable:null, lastEditable:null, selectedImage:null, selectedComponent:null, descriptionClickArmed:null, activeRibbon:'home', config:null };
 const escapeHtml = s => String(s??'').replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
 const uid = p => `${p}_${crypto.randomUUID().replaceAll('-','')}`;
 const DUELS_CHARACTER_PROFILES=Object.freeze([
@@ -227,7 +227,7 @@ function bindFootnoteEditors(){
 function refreshFootnoteBlock(){
   const host=$('#footnoteBlockHost');if(!host)return;host.innerHTML=renderFootnotes(editingContent,true);bindFootnoteEditors();
 }
-function storageHtml(el){ clearComponentCaretAnchors(el); const clone=el.cloneNode(true); $$('img',clone).forEach(img=>{let src=img.getAttribute('src')||''; if(src.startsWith('/__media__/')){src='/'+decodeURIComponent(src.slice('/__media__/'.length));img.setAttribute('src',src);} img.classList.remove('selected-image');}); $$('.selected-duels-component',clone).forEach(x=>x.classList.remove('selected-duels-component')); $$('.table-cell-selected,.table-cell-editing',clone).forEach(x=>x.classList.remove('table-cell-selected','table-cell-editing')); $$('[data-table-cell]',clone).forEach(x=>{x.removeAttribute('contenteditable');x.removeAttribute('data-table-cell-editing');x.removeAttribute('data-footnote-target')}); $$('[data-editor-only]',clone).forEach(x=>x.remove()); return clone.innerHTML.replace(/\u200B/g,''); }
+function storageHtml(el){ clearComponentCaretAnchors(el); const clone=el.cloneNode(true); $$('img',clone).forEach(img=>{let src=img.getAttribute('src')||''; if(src.startsWith('/__media__/')){src='/'+decodeURIComponent(src.slice('/__media__/'.length));img.setAttribute('src',src);} img.classList.remove('selected-image');}); $$('.selected-duels-component',clone).forEach(x=>x.classList.remove('selected-duels-component')); $$('.duels-description-box.description-body-editing',clone).forEach(x=>x.classList.remove('description-body-editing')); $$('.duels-description-box-body',clone).forEach(x=>{x.removeAttribute('contenteditable');x.removeAttribute('data-description-body-editing')}); $$('.table-cell-selected,.table-cell-editing',clone).forEach(x=>x.classList.remove('table-cell-selected','table-cell-editing')); $$('[data-table-cell]',clone).forEach(x=>{x.removeAttribute('contenteditable');x.removeAttribute('data-table-cell-editing');x.removeAttribute('data-footnote-target')}); $$('[data-editor-only]',clone).forEach(x=>x.remove()); return clone.innerHTML.replace(/\u200B/g,''); }
 
 function sectionAnchor(id){return 'section-'+String(id).replace(/[^a-zA-Z0-9_-]/g,'-')}
 function renderToc(sections,prefix='',depth=0){return sections.map((s,i)=>{const n=prefix?`${prefix}.${i+1}`:`${i+1}`;return `<div class="toc-line" style="--toc-depth:${depth}"><a class="toc-number" href="#" data-section-anchor="${sectionAnchor(s.id)}">${n}.</a><span class="toc-text">${escapeHtml(s.title||'제목 없음')}</span></div>${renderToc(s.children||[],n,depth+1)}`}).join('')}
@@ -394,7 +394,7 @@ function caretAtParagraphBoundary(range,p,side){
 }
 function handleProtectedDeletion(el,e){
   if(!['Backspace','Delete'].includes(e.key))return false;
-  if(e.target?.closest?.('td[data-table-cell][data-table-cell-editing="1"]'))return false;
+  if(e.target?.closest?.('td[data-table-cell][data-table-cell-editing="1"],.duels-description-box-body[data-description-body-editing="1"]'))return false;
   if(inlineTable?.isConnected&&inlineTableSelected.size){e.preventDefault();clearSelectedInlineTableCellContents();return true}
   if(state.selectedImage?.isConnected||selectedCharacterCard()||$('.selected-duels-component',$('#editPage'))){e.preventDefault();return true}
   const sel=getSelection();if(!sel.rangeCount)return false;const range=sel.getRangeAt(0);
@@ -482,17 +482,27 @@ function bindEditable(el){
     const component=e.target.closest('[data-duels-component]');
     if(component&&el.contains(component)){
       const tableCell=e.target.closest('td[data-table-cell]');
+      const descriptionBody=e.target.closest('.duels-description-box-body[data-description-body-editing="1"]');
       if(component.dataset.duelsComponent==='table'&&tableCell?.dataset.tableCellEditing==='1'){state.lastEditable=tableCell;rememberSelection();return}
+      if(component.dataset.duelsComponent==='description-box'&&descriptionBody){state.lastEditable=descriptionBody;rememberSelection();return}
       e.preventDefault();
       clearImageSelection();
       if(component.dataset.duelsComponent==='table'){
+        state.descriptionClickArmed=null;
         if(inlineTableSuppressClick)return;
         clearComponentSelection();selectInlineTable(component,true);if(tableCell)selectSingleInlineTableCell(component,tableCell);
-      }else if(component.dataset.duelsComponent==='character-card'||component.dataset.duelsComponent==='description-box'){selectComponent(component,true)}
+      }else if(component.dataset.duelsComponent==='description-box'){
+        if(state.descriptionClickArmed===component){state.descriptionClickArmed=null;clearComponentCaretAnchors(el);beginDescriptionBoxBodyEdit(component,e)}
+        else{clearComponentSelection();clearInlineTableSelection();clearObjectSelection(true);state.descriptionClickArmed=component;placeComponentSideCaret(el,component)}
+      }else if(component.dataset.duelsComponent==='character-card'){
+        state.descriptionClickArmed=null;selectComponent(component,true)
+      }
       clearComponentCaretAnchors(el);
+      if(component.dataset.duelsComponent==='description-box'&&state.descriptionClickArmed===component)placeComponentSideCaret(el,component);
       return;
     }
     if(e.target.tagName==='IMG'){ selectImage(e.target); return; }
+    state.descriptionClickArmed=null;
     clearComponentSelection();
     if(!e.target.closest('img')) clearObjectSelection(true);
   });
@@ -503,7 +513,8 @@ function bindEditable(el){
       clearComponentCaretAnchors(el);
       clearImageSelection();
       if(component.dataset.duelsComponent==='table'){clearComponentSelection();const td=e.target.closest('td[data-table-cell]');selectInlineTable(component,true);if(td)beginInlineTableCellEdit(component,td,e);return}
-      if(component.dataset.duelsComponent==='character-card'||component.dataset.duelsComponent==='description-box'){selectComponent(component,true);return}
+      if(component.dataset.duelsComponent==='description-box'){state.descriptionClickArmed=null;beginDescriptionBoxBodyEdit(component,e);return}
+      if(component.dataset.duelsComponent==='character-card'){selectComponent(component,true);return}
     }
   });
 }
@@ -589,7 +600,7 @@ function exec(cmd,value=null){
     return;
   }
   restoreSelection();
-  const editable=(getSelection()?.anchorNode?.nodeType===1?getSelection()?.anchorNode:getSelection()?.anchorNode?.parentElement)?.closest?.('[data-table-cell-editing="1"],.editable');
+  const editable=(getSelection()?.anchorNode?.nodeType===1?getSelection()?.anchorNode:getSelection()?.anchorNode?.parentElement)?.closest?.('[data-table-cell-editing="1"],.duels-description-box-body[data-description-body-editing="1"],.editable');
   if(editable)editable.focus({preventScroll:true});
   document.execCommand(cmd,false,value);
   rememberSelection();
@@ -599,12 +610,32 @@ function selectedCharacterCard(){return $('.selected-duels-component[data-duels-
 function setCharacterCardAlign(value){const card=selectedCharacterCard();if(!card)return false;const data=componentPayload(card);data.align=cardAlign(value);renderCharacterCardElement(card,data);card.classList.add('selected-duels-component');card.closest('.editable')?.dispatchEvent(new Event('input',{bubbles:true}));return true}
 function selectedDescriptionBox(){return $('.selected-duels-component[data-duels-component="description-box"]',$('#editPage'))}
 function componentInputEvent(el){el?.closest('.editable')?.dispatchEvent(new Event('input',{bubbles:true}))}
+function endDescriptionBoxBodyEdit(box=null){
+  const roots=box?[box]:$$('[data-duels-component="description-box"]',$('#editPage'));
+  roots.forEach(root=>{const body=root?.querySelector?.('.duels-description-box-body[data-description-body-editing="1"]');if(!body)return;body.removeAttribute('data-description-body-editing');body.setAttribute('contenteditable','false');root.classList.remove('description-body-editing')});
+}
 function clearComponentSelection(){
+  endDescriptionBoxBodyEdit();
   $$('.selected-duels-component[data-duels-component="character-card"],.selected-duels-component[data-duels-component="description-box"]',$('#editPage')).forEach(x=>x.classList.remove('selected-duels-component'));
   state.selectedComponent=null;$('#cardTabBtn')?.classList.add('hidden');$('#descriptionTabBtn')?.classList.add('hidden');
 }
+function placeCaretFromPointer(node,e){
+  let r=null;
+  if(document.caretRangeFromPoint)r=document.caretRangeFromPoint(e.clientX,e.clientY);
+  else if(document.caretPositionFromPoint){const p=document.caretPositionFromPoint(e.clientX,e.clientY);if(p){r=document.createRange();r.setStart(p.offsetNode,p.offset);r.collapse(true)}}
+  if(!r||!node.contains(r.startContainer)){r=document.createRange();r.selectNodeContents(node);r.collapse(false)}
+  const sel=getSelection();sel.removeAllRanges();sel.addRange(r);state.savedRange=r.cloneRange();
+}
+function beginDescriptionBoxBodyEdit(box,e){
+  if(!box?.isConnected)return;
+  selectComponent(box,true);
+  let body=box.querySelector('.duels-description-box-body');
+  if(!body){body=document.createElement('div');body.className='duels-description-box-body';body.innerHTML='<br>';box.appendChild(body)}
+  box.classList.add('description-body-editing');body.dataset.descriptionBodyEditing='1';body.setAttribute('contenteditable','true');
+  body.focus({preventScroll:true});placeCaretFromPointer(body,e);state.lastEditable=body;rememberSelection();
+}
 function updateCardRibbonTools(){const card=selectedCharacterCard();if(!card)return;const d=componentPayload(card);$('#cardRibbonImage').value=d.image||'';$('#cardRibbonText').value=legacyCharacterCardText(d);$('#cardRibbonColor').value=componentColor(d.color);$('#cardRibbonWidth').value=cardDimension(d.width,138,80,1200);$('#cardRibbonHeight').value=cardDimension(d.height,222,100,1200);$('#cardRibbonFade').value=cardFade(d.fade);$('#cardRibbonAlign').value=cardAlign(d.align);$('#cardRibbonPreset').value='custom'}
-function updateDescriptionRibbonTools(){const box=selectedDescriptionBox();if(!box)return;const d=componentPayload(box);$('#descriptionRibbonTitle').value=d.title??'';$('#descriptionRibbonBody').value=d.body||'';$('#descriptionRibbonColor').value=componentColor(d.color)}
+function updateDescriptionRibbonTools(){const box=selectedDescriptionBox();if(!box)return;const d=componentPayload(box);$('#descriptionRibbonTitle').value=d.title??'';$('#descriptionRibbonColor').value=componentColor(d.color)}
 function selectComponent(component,switchTab=true){
   if(!component?.isConnected)return;clearImageSelection();clearInlineTableSelection();clearComponentSelection();
   component.classList.add('selected-duels-component');state.selectedComponent=component;const type=component.dataset.duelsComponent;
@@ -612,7 +643,7 @@ function selectComponent(component,switchTab=true){
   else if(type==='description-box'){$('#descriptionTabBtn').classList.remove('hidden');updateDescriptionRibbonTools();if(switchTab)switchRibbon('description')}
 }
 function applyCardRibbon(){const card=selectedCharacterCard();if(!card)return;const d={image:normalizeImageUrl($('#cardRibbonImage').value.trim()),text:$('#cardRibbonText').value,color:$('#cardRibbonColor').value,width:cardDimension($('#cardRibbonWidth').value,138,80,1200),height:cardDimension($('#cardRibbonHeight').value,222,100,1200),fade:cardFade($('#cardRibbonFade').value),align:cardAlign($('#cardRibbonAlign').value)};renderCharacterCardElement(card,d);card.classList.add('selected-duels-component');state.selectedComponent=card;componentInputEvent(card)}
-function applyDescriptionRibbon(){const box=selectedDescriptionBox();if(!box)return;const d={title:$('#descriptionRibbonTitle').value.trim(),color:$('#descriptionRibbonColor').value,body:$('#descriptionRibbonBody').value};renderDescriptionBoxElement(box,d);box.classList.add('selected-duels-component');state.selectedComponent=box;componentInputEvent(box)}
+function applyDescriptionRibbon(){const box=selectedDescriptionBox();if(!box)return;const current=componentPayload(box);const d={...current,title:$('#descriptionRibbonTitle').value.trim(),color:$('#descriptionRibbonColor').value};renderDescriptionBoxElement(box,d);box.classList.add('selected-duels-component');state.selectedComponent=box;componentInputEvent(box)}
 $$('[data-align]').forEach(b=>b.onclick=()=>{const a=b.dataset.align;if(a!=='justify'&&setCharacterCardAlign(a))return;exec(a==='left'?'justifyLeft':a==='center'?'justifyCenter':a==='right'?'justifyRight':'justifyFull')});
 $('#textColor').oninput=e=>exec('foreColor',e.target.value);
 $('#highlightColor').oninput=e=>exec('hiliteColor',e.target.value);
@@ -620,7 +651,7 @@ $('#fontSizeInput').onchange=e=>applyFontSize(Number(e.target.value)||16);
 $('#clearFormatBtn').onclick=()=>{exec('removeFormat');exec('unlink');};
 function applyFontSize(px){ restoreSelection(); document.execCommand('fontSize',false,'7'); $$('font[size="7"]',$('#editPage')).forEach(f=>{const span=document.createElement('span');span.style.fontSize=`${Math.max(8,Math.min(96,px))}px`;span.innerHTML=f.innerHTML;f.replaceWith(span)}); rememberSelection(); }
 function currentBlocks(){
-  const sel=getSelection(); if(!sel.rangeCount)return[]; const range=sel.getRangeAt(0); const root=range.commonAncestorContainer.nodeType===1?range.commonAncestorContainer:range.commonAncestorContainer.parentElement; const editable=root?.closest?.('[data-table-cell-editing="1"],.editable'); if(!editable)return[];
+  const sel=getSelection(); if(!sel.rangeCount)return[]; const range=sel.getRangeAt(0); const root=range.commonAncestorContainer.nodeType===1?range.commonAncestorContainer:range.commonAncestorContainer.parentElement; const editable=root?.closest?.('[data-table-cell-editing="1"],.duels-description-box-body[data-description-body-editing="1"],.editable'); if(!editable)return[];
   const candidates=$$('p,div,li,blockquote',editable).filter(x=>{try{return range.intersectsNode(x)}catch{return false}});
   if(candidates.length)return candidates.filter(x=>!candidates.some(y=>y!==x&&y.contains(x)));
   const n=(sel.anchorNode?.nodeType===1?sel.anchorNode:sel.anchorNode?.parentElement)?.closest('p,div,li,blockquote'); return n?[n]:[editable];
@@ -780,9 +811,10 @@ function renderCharacterCardElement(el,data){
 }
 function makeCharacterCard(data){const el=document.createElement('div');el.dataset.duelsComponent='character-card';renderCharacterCardElement(el,data);return el}
 function renderDescriptionBoxElement(el,data){
-  const color=componentColor(data.color),title=String(data.title??'').trim(),body=String(data.body||''),hasBody=body.trim().length>0;
-  el.className='duels-description-box';el.setAttribute('contenteditable','false');el.style.setProperty('--duels-box-color',color);setComponentPayload(el,{title,color,body});
-  el.innerHTML=`${title?`<div class="duels-description-box-title">${escapeHtml(title)}</div>`:''}${hasBody?`<div class="duels-description-box-body">${textLinesHtml(body)}</div>`:''}`;
+  const color=componentColor(data.color),title=String(data.title??'').trim(),body=String(data.body||''),bodyHtml=typeof data.bodyHtml==='string'?data.bodyHtml:'',hasBody=bodyHtml.trim().length>0||body.trim().length>0;
+  const selected=el.classList.contains('selected-duels-component'),editing=!!el.querySelector('.duels-description-box-body[data-description-body-editing="1"]');
+  el.className='duels-description-box'+(selected?' selected-duels-component':'')+(editing?' description-body-editing':'');el.setAttribute('contenteditable','false');el.style.setProperty('--duels-box-color',color);setComponentPayload(el,{title,color,body,...(bodyHtml?{bodyHtml}:{})});
+  el.innerHTML=`${title?`<div class="duels-description-box-title">${escapeHtml(title)}</div>`:''}${hasBody||editing?`<div class="duels-description-box-body"${editing?' data-description-body-editing="1" contenteditable="true"':''}>${bodyHtml||textLinesHtml(body)||'<br>'}</div>`:''}`;
 }
 function makeDescriptionBox(data){const el=document.createElement('div');el.dataset.duelsComponent='description-box';renderDescriptionBoxElement(el,data);return el}
 function upgradeDuelsComponents(root){
@@ -1176,8 +1208,9 @@ $('#cardRibbonImage')?.addEventListener('change',applyCardRibbon);
 ['cardRibbonWidth','cardRibbonHeight','cardRibbonFade','cardRibbonAlign'].forEach(id=>$('#'+id)?.addEventListener('change',applyCardRibbon));
 $('#cardRibbonPreset')?.addEventListener('change',e=>{const card=selectedCharacterCard();if(!card)return;const key=e.target.value;if(key==='profile'){$('#cardRibbonWidth').value=400;$('#cardRibbonHeight').value=400}else if(CARD_RATIO_PRESETS[key]){$('#cardRibbonWidth').value=cardDimension(Math.round((Number($('#cardRibbonHeight').value)||222)*CARD_RATIO_PRESETS[key].ratio),138,80,1200)}applyCardRibbon()});
 $('#cardRibbonDelete')?.addEventListener('click',()=>{const card=selectedCharacterCard();if(!card||!confirm('이 캐릭터 카드를 삭제할까요?'))return;const host=card.closest('.editable');card.remove();clearComponentSelection();host?.dispatchEvent(new Event('input',{bubbles:true}));switchRibbon('home')});
-['descriptionRibbonTitle','descriptionRibbonBody','descriptionRibbonColor'].forEach(id=>$('#'+id)?.addEventListener('input',applyDescriptionRibbon));
+['descriptionRibbonTitle','descriptionRibbonColor'].forEach(id=>$('#'+id)?.addEventListener('input',applyDescriptionRibbon));
 $('#descriptionRibbonDelete')?.addEventListener('click',()=>{const box=selectedDescriptionBox();if(!box||!confirm('이 설명 상자를 삭제할까요?'))return;const host=box.closest('.editable');box.remove();clearComponentSelection();host?.dispatchEvent(new Event('input',{bubbles:true}));switchRibbon('home')});
+document.addEventListener('input',e=>{const body=e.target.closest?.('.duels-description-box-body[data-description-body-editing="1"]');if(!body)return;const box=body.closest('[data-duels-component="description-box"]');if(!box)return;const d=componentPayload(box);d.bodyHtml=body.innerHTML;d.body=body.innerText.replace(/\u00a0/g,' ');setComponentPayload(box,d);componentInputEvent(box);rememberSelection()});
 enhanceImageUrlInputs($('#ribbon'));
 $('#characterCardBtn').onclick=()=>characterCardModal();
 $('#descriptionBoxBtn').onclick=()=>descriptionBoxModal();
