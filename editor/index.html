@@ -21,6 +21,8 @@
       <button class="ribbon-tab active" data-ribbon-tab="home">홈</button>
       <button class="ribbon-tab" data-ribbon-tab="insert">삽입</button>
       <button id="tableTabBtn" class="ribbon-tab contextual table-context hidden" data-ribbon-tab="table">표</button>
+      <button id="cardTabBtn" class="ribbon-tab contextual component-context hidden" data-ribbon-tab="card">캐릭터 카드</button>
+      <button id="descriptionTabBtn" class="ribbon-tab contextual component-context hidden" data-ribbon-tab="description">설명 상자</button>
       <button id="pictureTabBtn" class="ribbon-tab contextual picture-context hidden" data-ribbon-tab="picture">그림</button>
     </div>
 
@@ -114,6 +116,36 @@
           <button id="tableColBefore">왼쪽 열 +</button><button id="tableColAfter">오른쪽 열 +</button><button id="tableColRemove">열 삭제</button>
           <button id="tableMergeCells">셀 병합</button><button id="tableUnmergeCell">병합 해제</button><button id="tableDelete" class="danger">표 삭제</button>
         </div><span class="ribbon-group-title">구조</span></div>
+      </div>
+
+
+      <div class="ribbon-panel" data-ribbon-panel="card">
+        <div class="ribbon-group"><div class="ribbon-buttons wrap-buttons">
+          <label class="ribbon-field">이미지 <input id="cardRibbonImage" class="component-ribbon-input" data-character-image-presets="1" placeholder="/media/... 또는 URL"></label>
+          <label class="color-tool" title="테두리 강조색"><span>색</span><input id="cardRibbonColor" type="color" value="#44aaff"></label>
+          <label class="ribbon-field">페이드 <select id="cardRibbonFade"><option value="none">없음</option><option value="soft">약하게</option><option value="normal">기본</option><option value="strong">강하게</option></select></label>
+        </div><span class="ribbon-group-title">표현</span></div>
+        <div class="ribbon-group"><div class="ribbon-buttons wrap-buttons">
+          <label class="ribbon-field">너비 <input id="cardRibbonWidth" type="number" min="80" max="1200">px</label>
+          <label class="ribbon-field">높이 <input id="cardRibbonHeight" type="number" min="100" max="1200">px</label>
+          <label class="ribbon-field">배치 <select id="cardRibbonAlign"><option value="left">왼쪽</option><option value="center">가운데</option><option value="right">오른쪽</option></select></label>
+          <label class="ribbon-field">비율 <select id="cardRibbonPreset"><option value="custom">직접 입력</option><option value="profile">프로필 400×400</option><option value="duels">듀얼즈 138:222</option><option value="portrait-3-4">세로 3:4</option><option value="square">1:1</option><option value="landscape-3-2">가로 3:2</option><option value="landscape-16-9">가로 16:9</option></select></label>
+        </div><span class="ribbon-group-title">크기 / 배치</span></div>
+        <div class="ribbon-group"><div class="ribbon-buttons wrap-buttons">
+          <label class="ribbon-field">카드 글씨 <textarea id="cardRibbonText" class="component-ribbon-text" rows="2"></textarea></label>
+          <button id="cardRibbonDelete" class="danger">카드 삭제</button>
+        </div><span class="ribbon-group-title">내용</span></div>
+      </div>
+
+      <div class="ribbon-panel" data-ribbon-panel="description">
+        <div class="ribbon-group"><div class="ribbon-buttons wrap-buttons">
+          <label class="ribbon-field">제목 <input id="descriptionRibbonTitle" class="component-ribbon-input"></label>
+          <label class="color-tool" title="강조색"><span>색</span><input id="descriptionRibbonColor" type="color" value="#44aaff"></label>
+        </div><span class="ribbon-group-title">제목</span></div>
+        <div class="ribbon-group"><div class="ribbon-buttons wrap-buttons">
+          <label class="ribbon-field">내용 <textarea id="descriptionRibbonBody" class="component-ribbon-text" rows="2"></textarea></label>
+          <button id="descriptionRibbonDelete" class="danger">상자 삭제</button>
+        </div><span class="ribbon-group-title">내용</span></div>
       </div>
 
       <div class="ribbon-panel" data-ribbon-panel="picture">

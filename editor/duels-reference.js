@@ -5,9 +5,9 @@ const IMAGE_BASE='https://raw.githubusercontent.com/LyangNem/Duels/refs/heads/ma
 const SPEED_LABELS=['매우 느림','느림','보통','빠름','매우 빠름'];
 const STATUS_LABELS={bind:'속박',stun:'기절',slow:'둔화',freeze:'빙결',burn:'화상',zap:'감전',poison:'중독',bleed:'출혈',discharge:'방전',invulnerable:'무적'};
 const STAT_LABELS={damage:'피해',speed:'이동속도',attackRate:'공격속도',projectileSpeed:'투사체속도',staminaRegen:'스테미나회복',staminaCost:'스테미나소모',dodgeDistance:'회피거리',dodgeSpeed:'회피속도',healing:'회복',regeneration:'재생'};
-const PROFILE_METRICS=['칭호','이미지','체력','이동속도','이동속도_단계','난이도','난이도_별','스타일','사거리','역할군'];
-const CACHE_KEY='duelsWiki.characterReference.v3';
-const CACHE_SCHEMA=3;
+const PROFILE_METRICS=['칭호','체력','이동속도','이동속도_단계','난이도','난이도_별','스타일','사거리','역할군'];
+const CACHE_KEY='duelsWiki.characterReference.v4';
+const CACHE_SCHEMA=4;
 const CACHE_TTL=5*60*1000;
 const CACHE_MAX_AGE=24*60*60*1000;
 let cache=null,loading=null;
@@ -144,7 +144,6 @@ function profileValue(bundle,character,metricName){
   const {rules,data}=bundle;
   switch(metricName){
     case '칭호':return character.title||'';
-    case '이미지':return `${IMAGE_BASE}${character.id}.png`;
     case '체력':return fmtNumber(number(character,character.stats?.maxHealth));
     case '이동속도':return fmtNumber(number(character,character.stats?.speed));
     case '이동속도_단계':return speedTier(data,character);
@@ -164,12 +163,12 @@ function buildCatalog(bundle){
       {key:'프로필',label:'프로필',metrics:PROFILE_METRICS.map(x=>({
         label:x,
         value:profileValue(bundle,character,x),
-        tone:(x==='난이도_별'&&isSpecialDifficulty(bundle.rules,number(character,character.stats?.difficulty)))?'difficulty-special':''
+        tone:x==='칭호'?'title-gradient':((x==='난이도_별'&&isSpecialDifficulty(bundle.rules,number(character,character.stats?.difficulty)))?'difficulty-special':'')
       }))},
       ...tooltipEntries(character).map(e=>({key:e.field,label:e.display,metrics:attackMetrics(character,e.attackKey)}))
     ]
   }));
-  return chars.sort((a,b)=>String(a.name).localeCompare(String(b.name),'ko'));
+  return chars;
 }
 function storedBundle(maxAge=CACHE_MAX_AGE){
   try{
@@ -217,7 +216,7 @@ function applyBundle(root,bundle){
   const refs=[...root.querySelectorAll('.duels-reference-value')];
   for(const el of refs){
     const r=resolve(bundle,el.dataset.duelsCharacter,el.dataset.duelsField,el.dataset.duelsMetric);
-    el.classList.remove('loading','error','difficulty-special');
+    el.classList.remove('loading','error','difficulty-special','title-gradient');
     if(r.ok){el.textContent=r.value;el.title=el.dataset.duelsCommand||'';if(r.tone)el.classList.add(r.tone)}
     else{el.textContent='[참조 오류]';el.classList.add('error');el.title=`${r.error}\n${el.dataset.duelsCommand||''}`}
   }

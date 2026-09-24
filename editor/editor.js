@@ -2,7 +2,7 @@
 
 const $ = (s, r=document) => r.querySelector(s);
 const $$ = (s, r=document) => [...r.querySelectorAll(s)];
-const state = { index:null, current:null, currentPath:'', editing:false, savedRange:null, componentInsertionRange:null, footnoteInsertionRange:null, footnoteInsertionEditable:null, duelsInsertionRange:null, duelsInsertionEditable:null, lastEditable:null, selectedImage:null, activeRibbon:'home', config:null };
+const state = { index:null, current:null, currentPath:'', editing:false, savedRange:null, componentInsertionRange:null, footnoteInsertionRange:null, footnoteInsertionEditable:null, duelsInsertionRange:null, duelsInsertionEditable:null, lastEditable:null, selectedImage:null, selectedComponent:null, activeRibbon:'home', config:null };
 const escapeHtml = s => String(s??'').replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
 const uid = p => `${p}_${crypto.randomUUID().replaceAll('-','')}`;
 const DUELS_CHARACTER_PROFILES=Object.freeze([
@@ -487,13 +487,13 @@ function bindEditable(el){
       clearImageSelection();
       if(component.dataset.duelsComponent==='table'){
         if(inlineTableSuppressClick)return;
-        selectInlineTable(component,true);if(tableCell)selectSingleInlineTableCell(component,tableCell);
-      }else{$$('.selected-duels-component').forEach(x=>x.classList.remove('selected-duels-component'));clearInlineTableSelection()}
+        clearComponentSelection();selectInlineTable(component,true);if(tableCell)selectSingleInlineTableCell(component,tableCell);
+      }else if(component.dataset.duelsComponent==='character-card'||component.dataset.duelsComponent==='description-box'){selectComponent(component,true)}
       clearComponentCaretAnchors(el);
       return;
     }
     if(e.target.tagName==='IMG'){ selectImage(e.target); return; }
-    $$('.selected-duels-component').forEach(x=>x.classList.remove('selected-duels-component'));
+    clearComponentSelection();
     if(!e.target.closest('img')) clearObjectSelection(true);
   });
   el.addEventListener('dblclick',e=>{
@@ -502,10 +502,8 @@ function bindEditable(el){
       e.preventDefault();
       clearComponentCaretAnchors(el);
       clearImageSelection();
-      $$('.selected-duels-component').forEach(x=>x.classList.remove('selected-duels-component'));
-      component.classList.add('selected-duels-component');
-      if(component.dataset.duelsComponent==='table'){const td=e.target.closest('td[data-table-cell]');selectInlineTable(component,true);if(td)beginInlineTableCellEdit(component,td,e);return}
-      clearInlineTableSelection();openComponentEditor(component);
+      if(component.dataset.duelsComponent==='table'){clearComponentSelection();const td=e.target.closest('td[data-table-cell]');selectInlineTable(component,true);if(td)beginInlineTableCellEdit(component,td,e);return}
+      if(component.dataset.duelsComponent==='character-card'||component.dataset.duelsComponent==='description-box'){selectComponent(component,true);return}
     }
   });
 }
@@ -599,6 +597,22 @@ function exec(cmd,value=null){
 $$('[data-cmd]').forEach(b=>b.onclick=()=>exec(b.dataset.cmd));
 function selectedCharacterCard(){return $('.selected-duels-component[data-duels-component="character-card"]',$('#editPage'))}
 function setCharacterCardAlign(value){const card=selectedCharacterCard();if(!card)return false;const data=componentPayload(card);data.align=cardAlign(value);renderCharacterCardElement(card,data);card.classList.add('selected-duels-component');card.closest('.editable')?.dispatchEvent(new Event('input',{bubbles:true}));return true}
+function selectedDescriptionBox(){return $('.selected-duels-component[data-duels-component="description-box"]',$('#editPage'))}
+function componentInputEvent(el){el?.closest('.editable')?.dispatchEvent(new Event('input',{bubbles:true}))}
+function clearComponentSelection(){
+  $$('.selected-duels-component[data-duels-component="character-card"],.selected-duels-component[data-duels-component="description-box"]',$('#editPage')).forEach(x=>x.classList.remove('selected-duels-component'));
+  state.selectedComponent=null;$('#cardTabBtn')?.classList.add('hidden');$('#descriptionTabBtn')?.classList.add('hidden');
+}
+function updateCardRibbonTools(){const card=selectedCharacterCard();if(!card)return;const d=componentPayload(card);$('#cardRibbonImage').value=d.image||'';$('#cardRibbonText').value=legacyCharacterCardText(d);$('#cardRibbonColor').value=componentColor(d.color);$('#cardRibbonWidth').value=cardDimension(d.width,138,80,1200);$('#cardRibbonHeight').value=cardDimension(d.height,222,100,1200);$('#cardRibbonFade').value=cardFade(d.fade);$('#cardRibbonAlign').value=cardAlign(d.align);$('#cardRibbonPreset').value='custom'}
+function updateDescriptionRibbonTools(){const box=selectedDescriptionBox();if(!box)return;const d=componentPayload(box);$('#descriptionRibbonTitle').value=d.title??'';$('#descriptionRibbonBody').value=d.body||'';$('#descriptionRibbonColor').value=componentColor(d.color)}
+function selectComponent(component,switchTab=true){
+  if(!component?.isConnected)return;clearImageSelection();clearInlineTableSelection();clearComponentSelection();
+  component.classList.add('selected-duels-component');state.selectedComponent=component;const type=component.dataset.duelsComponent;
+  if(type==='character-card'){$('#cardTabBtn').classList.remove('hidden');updateCardRibbonTools();if(switchTab)switchRibbon('card')}
+  else if(type==='description-box'){$('#descriptionTabBtn').classList.remove('hidden');updateDescriptionRibbonTools();if(switchTab)switchRibbon('description')}
+}
+function applyCardRibbon(){const card=selectedCharacterCard();if(!card)return;const d={image:normalizeImageUrl($('#cardRibbonImage').value.trim()),text:$('#cardRibbonText').value,color:$('#cardRibbonColor').value,width:cardDimension($('#cardRibbonWidth').value,138,80,1200),height:cardDimension($('#cardRibbonHeight').value,222,100,1200),fade:cardFade($('#cardRibbonFade').value),align:cardAlign($('#cardRibbonAlign').value)};renderCharacterCardElement(card,d);card.classList.add('selected-duels-component');state.selectedComponent=card;componentInputEvent(card)}
+function applyDescriptionRibbon(){const box=selectedDescriptionBox();if(!box)return;const d={title:$('#descriptionRibbonTitle').value.trim(),color:$('#descriptionRibbonColor').value,body:$('#descriptionRibbonBody').value};renderDescriptionBoxElement(box,d);box.classList.add('selected-duels-component');state.selectedComponent=box;componentInputEvent(box)}
 $$('[data-align]').forEach(b=>b.onclick=()=>{const a=b.dataset.align;if(a!=='justify'&&setCharacterCardAlign(a))return;exec(a==='left'?'justifyLeft':a==='center'?'justifyCenter':a==='right'?'justifyRight':'justifyFull')});
 $('#textColor').oninput=e=>exec('foreColor',e.target.value);
 $('#highlightColor').oninput=e=>exec('hiliteColor',e.target.value);
@@ -658,7 +672,7 @@ function duelsReferenceModal(){
   let bundle=null,catalog=[];
   function selectedCharacter(){return catalog.find(x=>x.id===charSel.value)||catalog[0]}
   function selectedField(){const c=selectedCharacter();return c?.fields?.find(x=>x.key===fieldSel.value)||c?.fields?.[0]}
-  function updatePreview(){const c=selectedCharacter(),f=selectedField(),m=f?.metrics?.find(x=>x.label===metricSel.value)||f?.metrics?.[0];if(!c||!f||!m){$('#duelsRefCommand').textContent='-';$('#duelsRefValue').textContent='-';insert.disabled=true;return}const cmd=DuelsReference.command(c.name,f.key,m.label);$('#duelsRefCommand').textContent=cmd;const r=DuelsReference.resolve(bundle,c.name,f.key,m.label);const pv=$('#duelsRefValue');pv.textContent=r.ok?r.value:'참조 불가';pv.classList.toggle('difficulty-special',!!(r.ok&&r.tone==='difficulty-special'));insert.disabled=!r.ok;insert.dataset.command=cmd}
+  function updatePreview(){const c=selectedCharacter(),f=selectedField(),m=f?.metrics?.find(x=>x.label===metricSel.value)||f?.metrics?.[0];if(!c||!f||!m){$('#duelsRefCommand').textContent='-';$('#duelsRefValue').textContent='-';insert.disabled=true;return}const cmd=DuelsReference.command(c.name,f.key,m.label);$('#duelsRefCommand').textContent=cmd;const r=DuelsReference.resolve(bundle,c.name,f.key,m.label);const pv=$('#duelsRefValue');pv.textContent=r.ok?r.value:'참조 불가';pv.classList.toggle('difficulty-special',!!(r.ok&&r.tone==='difficulty-special'));pv.classList.toggle('title-gradient',!!(r.ok&&r.tone==='title-gradient'));insert.disabled=!r.ok;insert.dataset.command=cmd}
   function fillMetrics(){const f=selectedField(),list=f?.metrics||[];metricSel.innerHTML=list.length?list.map(x=>`<option value="${escapeHtml(x.label)}">${escapeHtml(x.label)}</option>`).join(''):'<option value="">참조 가능한 수치 없음</option>';metricSel.disabled=!list.length;updatePreview()}
   function fillFields(){const c=selectedCharacter(),list=c?.fields||[];fieldSel.innerHTML=list.map(x=>`<option value="${escapeHtml(x.key)}">${escapeHtml(x.label)}</option>`).join('');fieldSel.disabled=!list.length;fillMetrics()}
   function fillCharacters(){charSel.innerHTML=catalog.map(x=>`<option value="${escapeHtml(x.id)}">${escapeHtml(x.name)}</option>`).join('');charSel.disabled=!catalog.length;fillFields()}
@@ -1156,7 +1170,15 @@ function descriptionBoxModal(existing=null){
   if(existing)$('#deleteComponent').onclick=()=>{if(confirm('이 설명 상자를 삭제할까요?')){const host=existing.closest('.editable');existing.remove();host?.dispatchEvent(new Event('input',{bubbles:true}));closeModal()}};
   $('#saveComponent').onclick=()=>{const data={title:$('#dbTitle').value.trim(),color:$('#dbColor').value,body:$('#dbBody').value};if(existing){renderDescriptionBoxElement(existing,data);existing.closest('.editable')?.dispatchEvent(new Event('input',{bubbles:true}));closeModal()}else{const node=makeDescriptionBox(data);if(insertBlockComponent(node))closeModal()}};
 }
-function openComponentEditor(el){const type=el.dataset.duelsComponent;if(type==='character-card')characterCardModal(el);else if(type==='description-box')descriptionBoxModal(el);else if(type==='table')selectInlineTable(el,true)}
+function openComponentEditor(el){const type=el.dataset.duelsComponent;if(type==='character-card'||type==='description-box')selectComponent(el,true);else if(type==='table')selectInlineTable(el,true)}
+['cardRibbonText','cardRibbonColor'].forEach(id=>$('#'+id)?.addEventListener('input',applyCardRibbon));
+$('#cardRibbonImage')?.addEventListener('change',applyCardRibbon);
+['cardRibbonWidth','cardRibbonHeight','cardRibbonFade','cardRibbonAlign'].forEach(id=>$('#'+id)?.addEventListener('change',applyCardRibbon));
+$('#cardRibbonPreset')?.addEventListener('change',e=>{const card=selectedCharacterCard();if(!card)return;const key=e.target.value;if(key==='profile'){$('#cardRibbonWidth').value=400;$('#cardRibbonHeight').value=400}else if(CARD_RATIO_PRESETS[key]){$('#cardRibbonWidth').value=cardDimension(Math.round((Number($('#cardRibbonHeight').value)||222)*CARD_RATIO_PRESETS[key].ratio),138,80,1200)}applyCardRibbon()});
+$('#cardRibbonDelete')?.addEventListener('click',()=>{const card=selectedCharacterCard();if(!card||!confirm('이 캐릭터 카드를 삭제할까요?'))return;const host=card.closest('.editable');card.remove();clearComponentSelection();host?.dispatchEvent(new Event('input',{bubbles:true}));switchRibbon('home')});
+['descriptionRibbonTitle','descriptionRibbonBody','descriptionRibbonColor'].forEach(id=>$('#'+id)?.addEventListener('input',applyDescriptionRibbon));
+$('#descriptionRibbonDelete')?.addEventListener('click',()=>{const box=selectedDescriptionBox();if(!box||!confirm('이 설명 상자를 삭제할까요?'))return;const host=box.closest('.editable');box.remove();clearComponentSelection();host?.dispatchEvent(new Event('input',{bubbles:true}));switchRibbon('home')});
+enhanceImageUrlInputs($('#ribbon'));
 $('#characterCardBtn').onclick=()=>characterCardModal();
 $('#descriptionBoxBtn').onclick=()=>descriptionBoxModal();
 $('#tableBtn').onclick=()=>tableModal();
@@ -1207,7 +1229,7 @@ function startImageResize(e){
 }
 
 function clearImageSelection(){if(state.selectedImage)state.selectedImage.classList.remove('selected-image');state.selectedImage=null;$('#pictureTabBtn').classList.add('hidden');updateOverlay()}
-function clearObjectSelection(switchHome=true){clearImageSelection();clearInlineTableSelection();if(switchHome&&state.editing)switchRibbon('home')}
+function clearObjectSelection(switchHome=true){clearImageSelection();clearInlineTableSelection();clearComponentSelection();if(switchHome&&state.editing)switchRibbon('home')}
 
 function clearObjectSelectionOnOutside(e){if(e.target.closest('.editable')||e.target.closest('#ribbon')||e.target.closest('#imageOverlay')||e.target.closest('.modal')||e.target.closest('.character-color-floating-grid,.character-image-floating-grid,.character-color-presets,.character-image-presets'))return;clearComponentCaretAnchors();clearObjectSelection();}
 document.addEventListener('mousedown',clearObjectSelectionOnOutside);

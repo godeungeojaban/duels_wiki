@@ -1,6 +1,6 @@
-# Duels Wiki 3.68
+# Duels Wiki 3.70
 
-Duels Wiki 3.68은 Python 표준 라이브러리 기반 로컬 편집기 + GitHub 저장소 + GitHub Pages 정적 열람 사이트 구조다. Node.js/Next.js/npm은 사용하지 않는다.
+Duels Wiki 3.70은 Python 표준 라이브러리 기반 로컬 편집기 + GitHub 저장소 + GitHub Pages 정적 열람 사이트 구조다. Node.js/Next.js/npm은 사용하지 않는다.
 
 ## 실행
 
@@ -188,7 +188,7 @@ ZIP 최상위 폴더 자체가 GitHub 저장소 작업 폴더다. `run_editor.ba
 
 
 
-## 3.68 변경
+## 3.70 변경
 
 - `난이도_별`은 1~5단계를 `★☆☆☆☆`~`★★★★★`로 표시하고, 난이도 6은 원본 게임과 동일하게 문자열은 `★★★★★`로 유지하되 별도 특수 난이도 스타일로 파스텔 코랄색(`#ff8f8f`)을 적용한다.
 - 문서/정적 사이트의 Duels 참조는 본문 렌더링을 기다리지 않는다. 먼저 페이지와 `…` 자리표시자를 표시하고 첫 페인트 이후 유휴 시점에 raw `Duels.html`을 읽어 참조값을 채운다.
