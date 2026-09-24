@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Duels Wiki Editor Launcher v3.60
+# Duels Wiki Editor Launcher v3.63
 # Standard library only. No npm / Node.js required.
 
 from __future__ import annotations
@@ -20,7 +20,7 @@ from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
-APP_VERSION = "3.60"
+APP_VERSION = "3.63"
 DEFAULT_OWNER = "godeungeojaban"
 DEFAULT_REPO = "duels_wiki"
 DEFAULT_BRANCH = "main"
@@ -38,6 +38,7 @@ DUELS_SOURCE_URL = "https://raw.githubusercontent.com/LyangNem/Duels/main/Duels.
 DUELS_ASSET_API = "https://api.github.com/repos/LyangNem/Duels/contents/character?ref=main"
 DUELS_ASSET_RAW_BASE = "https://raw.githubusercontent.com/LyangNem/Duels/main/character/"
 DUELS_CACHE_TTL = 300
+DUELS_PARSER_VERSION = 2
 _DUELS_CATALOG_CACHE = {"at": 0.0, "catalog": None}
 
 _DUELS_NAME_KEYS = ("name", "displayname", "charactername", "charname", "이름")
@@ -63,11 +64,14 @@ _DUELS_FIELD_ALIASES = {
     "난이도": ("difficulty", "difficultyvalue", "난이도"), "difficulty": ("difficulty", "difficultyvalue", "난이도"),
     "공격력": ("attack", "atk", "power", "공격력"), "attack": ("attack", "atk", "power", "공격력"),
     "방어력": ("defense", "def", "armor", "방어력"), "defense": ("defense", "def", "armor", "방어력"),
-    "캐릭터타입": ("charactertype", "character_type", "type", "combatstyle", "style", "타입", "캐릭터타입"),
-    "교전사거리": ("engagementrange", "engagement_range", "combatrange", "combat_range", "rangeclass", "거리", "교전사거리"),
+    "스타일": ("charactertype", "character_type", "type", "combatstyle", "style", "타입", "캐릭터타입", "스타일"),
+    "캐릭터타입": ("charactertype", "character_type", "type", "combatstyle", "style", "타입", "캐릭터타입", "스타일"),
+    "사거리": ("engagementrange", "engagement_range", "combatrange", "combat_range", "rangeclass", "거리", "교전사거리", "사거리"),
+    "교전사거리": ("engagementrange", "engagement_range", "combatrange", "combat_range", "rangeclass", "거리", "교전사거리", "사거리"),
     "역할군": ("role", "class", "archetype", "roleclass", "역할", "역할군"),
     "칭호": ("epithet", "nickname", "subtitle", "charactertitle", "character_title", "title", "칭호", "별칭"),
-    "이동속도단계": ("speedtier", "speedgrade", "speedclass", "movementspeedtier", "movespeedtier", "이동속도단계", "속도등급"),
+    "이동속도_단계": ("speedtier", "speedgrade", "speedclass", "movementspeedtier", "movespeedtier", "이동속도단계", "이동속도_단계", "속도등급"),
+    "이동속도단계": ("speedtier", "speedgrade", "speedclass", "movementspeedtier", "movespeedtier", "이동속도단계", "이동속도_단계", "속도등급"),
 }
 _NARRATIVE_FIELD_KEYS = {"description","desc","summary","lore","background","story","flavor","설명","배경","배경설정","스토리","소개"}
 _ROLE_SOURCE_ALIASES = ("classification","classify","characterclass","character_class","roletext","type","class","role","style","position","분류","역할","타입")
@@ -208,9 +212,9 @@ def _duels_parse_value(raw: str, depth: int = 0):
     if low in ('null','undefined'):return None
     num=_duels_parse_number_expr(raw)
     if num is not None:return num
-    if depth<4 and raw.startswith('{') and raw.endswith('}'):
+    if depth<10 and raw.startswith('{') and raw.endswith('}'):
         return _duels_parse_object(raw,depth+1)
-    if depth<4 and raw.startswith('[') and raw.endswith(']'):
+    if depth<10 and raw.startswith('[') and raw.endswith(']'):
         return [_duels_parse_value(x,depth+1) for x in _duels_split_top_level(raw[1:-1]) if x.strip()]
     # Preserve simple identifiers/expressions as source text. This still lets the
     # reference UI expose fields even when a value is computed elsewhere.
@@ -303,34 +307,83 @@ def _duels_skill_score(fields: dict) -> int:
 
 
 def _duels_skill_list(fields: dict) -> list[dict]:
+    """Collect actual technique objects without exposing the source's container paths.
+
+    Duels.html has used several shapes over time (skills as arrays, maps such as
+    lmb/rmb/counter, and technique values nested under hit/effects/buff/debuff
+    objects).  Treat a mapping as a technique when it owns a technique-ish key/name
+    and contains at least one combat metric anywhere below it.  Generic containers
+    are traversed instead of becoming techniques themselves.
+    """
     norm={_duels_norm_key(k):k for k in fields}
-    candidates=[]
+    roots=[]
     for alias in _DUELS_SKILL_KEYS:
         k=norm.get(_duels_norm_key(alias))
-        if k is not None:candidates.append(fields.get(k))
-    # Also support skill1/rmb/lmb style object properties.
+        if k is not None: roots.append((str(k), fields.get(k)))
     for k,v in fields.items():
         nk=_duels_norm_key(k)
-        if isinstance(v,dict) and (nk.startswith(('skill','ability','lmb','rmb','attack','basic','counter','parry')) or any(x in nk for x in ('평타','기본공격','반격')) or _duels_skill_score(v)>=1):candidates.append(v)
+        if isinstance(v,(dict,list)) and (
+            nk.startswith(('skill','ability','lmb','rmb','attack','basic','counter','parry','normal'))
+            or any(x in nk for x in ('평타','기본공격','반격','카운터'))
+        ):
+            roots.append((str(k),v))
+
+    metric_aliases={_duels_norm_key(a) for aliases in _DUELS_TECHNIQUE_METRICS.values() for a in aliases}
+    metric_aliases.update({_duels_norm_key(x) for x in ('value','amount','strength','power','rate','percent','multiplier','magnitude','duration','time')})
+    generic={_duels_norm_key(x) for x in ('skills','skillset','skillsets','abilities','moves','스킬셋','effects','effect','values','data')}
+    blocked={_duels_norm_key(x) for x in _NARRATIVE_FIELD_KEYS}
+
+    def has_metric(node,depth=0):
+        if depth>6:return False
+        if isinstance(node,dict):
+            for k,v in node.items():
+                nk=_duels_norm_key(k)
+                if nk in metric_aliases and isinstance(v,(str,int,float,bool)) and v not in ('',None):return True
+                if isinstance(v,(dict,list)) and has_metric(v,depth+1):return True
+        elif isinstance(node,list):
+            return any(has_metric(x,depth+1) for x in node)
+        return False
+
     out=[]
-    def add(v,label=None):
-        if isinstance(v,list):
-            for x in v:add(x)
-        elif isinstance(v,dict):
-            # A map of named skills can either be one skill or many child skills.
-            if _duels_skill_score(v)>=1 or _duels_lookup_key(v,_DUELS_NAME_KEYS)[0]:
-                blocked={_duels_norm_key(x) for x in _NARRATIVE_FIELD_KEYS}
-                item={k:val for k,val in v.items() if _duels_norm_key(k) not in blocked and not (isinstance(val,str) and len(val)>180)}
-                if label:
-                    item['_duelsKey']=label
-                    if _duels_lookup_key(item,_DUELS_NAME_KEYS)[0] is None:item['name']=label
-                out.append(item)
-            else:
-                for kk,vv in v.items():
-                    if isinstance(vv,dict):add(vv,kk)
-        elif isinstance(v,str) and v.strip():out.append({'name':v.strip()})
-    for c in candidates:add(c)
-    # Stable de-duplication by a compact JSON representation.
+    def cleaned(node,depth=0):
+        if depth>7:return None
+        if isinstance(node,dict):
+            r={}
+            for k,v in node.items():
+                if _duels_norm_key(k) in blocked:continue
+                if isinstance(v,str) and len(v)>180:continue
+                cv=cleaned(v,depth+1) if isinstance(v,(dict,list)) else v
+                if cv not in (None,{},[]):r[k]=cv
+            return r
+        if isinstance(node,list):
+            return [x for x in (cleaned(v,depth+1) if isinstance(v,(dict,list)) else v for v in node) if x not in (None,{},[])]
+        return node
+
+    def walk(node,path=(),depth=0):
+        if depth>7:return
+        if isinstance(node,list):
+            for i,x in enumerate(node):walk(x,path+(str(i+1),),depth+1)
+            return
+        if not isinstance(node,dict):return
+        leaf=str(path[-1]) if path else ''
+        leaf_n=_duels_norm_key(leaf)
+        _,name=_duels_lookup_key(node,_DUELS_NAME_KEYS)
+        hint=' '.join([leaf,str(name or ''),str(node.get('type') or ''),str(node.get('input') or ''),str(node.get('key') or '')])
+        hint_n=_duels_norm_key(hint)
+        technique_hint=(leaf_n not in generic and (
+            any(x in hint_n for x in ('lmb','rmb','counter','parry','attack','basic','normal','skill','ability','평타','기본공격','반격','카운터'))
+            or bool(name)
+        ))
+        if technique_hint and has_metric(node):
+            item=cleaned(node) or {}
+            if leaf:item['_duelsKey']=leaf
+            if name in (None,'') and leaf:item.setdefault('name',leaf)
+            out.append(item)
+            return
+        for k,v in node.items():
+            if isinstance(v,(dict,list)):walk(v,path+(str(k),),depth+1)
+
+    for label,node in roots:walk(node,(label,))
     seen=set();result=[]
     for x in out:
         sig=json.dumps(x,ensure_ascii=False,sort_keys=True,default=str)
@@ -468,17 +521,33 @@ def fetch_duels_catalog(force: bool = False, timeout: int = 30) -> dict:
     if not force and _DUELS_CATALOG_CACHE.get('catalog') and now-float(_DUELS_CATALOG_CACHE.get('at') or 0)<DUELS_CACHE_TTL:
         return _DUELS_CATALOG_CACHE['catalog']
     cache_file=APP_HOME/'duels-source-cache.json'
+    # Reuse a recently parsed on-disk catalog across launcher restarts. Parsing
+    # the multi-megabyte Duels.html is unnecessary when the cache is still
+    # inside the same TTL used by the in-memory cache.
+    if not force and cache_file.exists():
+        try:
+            cached=json.loads(cache_file.read_text('utf-8'))
+            fetched=float(cached.get('fetchedAt') or 0)
+            if cached.get('characters') and int(cached.get('parserVersion') or 0)==DUELS_PARSER_VERSION and fetched and now-fetched<DUELS_CACHE_TTL:
+                cached['stale']=False
+                _DUELS_CATALOG_CACHE.update({'at':now,'catalog':cached})
+                return cached
+        except Exception:
+            pass
     try:
         req=urllib.request.Request(DUELS_SOURCE_URL,headers={'User-Agent':f'DuelsWikiEditor/{APP_VERSION}','Accept':'text/html,*/*'})
         with urllib.request.urlopen(req,timeout=timeout) as r:source=r.read().decode('utf-8','replace')
         catalog=parse_duels_catalog(source,_duels_fetch_assets(timeout=min(timeout,20)))
         catalog['fetchedAt']=int(now)
+        catalog['parserVersion']=DUELS_PARSER_VERSION
         catalog['stale']=False
         ensure_dirs();cache_file.write_text(json.dumps(catalog,ensure_ascii=False,separators=(',',':')),'utf-8')
     except Exception as e:
         if cache_file.exists():
             try:
-                catalog=json.loads(cache_file.read_text('utf-8'));catalog['stale']=True;catalog['warning']=f'최신 Duels 원본 조회 실패: {e}'
+                catalog=json.loads(cache_file.read_text('utf-8'));
+                if int(catalog.get('parserVersion') or 0)!=DUELS_PARSER_VERSION: raise RuntimeError('기존 Duels 분석 캐시가 현재 파서와 호환되지 않습니다.')
+                catalog['stale']=True;catalog['warning']=f'최신 Duels 원본 조회 실패: {e}'
             except Exception:raise RuntimeError(f'Duels 원본 조회 실패: {e}') from e
         else:raise RuntimeError(f'Duels 원본 조회 실패: {e}') from e
     _DUELS_CATALOG_CACHE.update({'at':now,'catalog':catalog})
@@ -499,7 +568,7 @@ def _duels_casefold_lookup(mapping: dict, key: str, aliases: dict | None = None)
 def _duels_role_parts(fields: dict) -> dict:
     out={}; source=None
     aliases={_duels_norm_key(k):v for k,v in _DUELS_FIELD_ALIASES.items()}
-    for label in ("캐릭터타입","교전사거리","역할군"):
+    for label in ("스타일","사거리","역할군"):
         val=_duels_casefold_lookup(fields,label,aliases)
         if val in (None,""):continue
         if isinstance(val,str):
@@ -507,7 +576,7 @@ def _duels_role_parts(fields: dict) -> dict:
             looks_combined=any(r in text for r in _ROLE_RANGES) and (" " in text or "/" in text or "·" in text)
             if looks_combined:
                 source=source or text;continue
-            if label=="캐릭터타입" and len(text.split())>1:
+            if label=="스타일" and len(text.split())>1:
                 source=source or text;continue
         out[label]=val
     if len(out)==3:return out
@@ -518,14 +587,14 @@ def _duels_role_parts(fields: dict) -> dict:
                 source=v.strip();break
     if not source:return out
     tokens=re.sub(r"[\s/·,|>]+"," ",source).strip().split()
-    if "교전사거리" not in out:
+    if "사거리" not in out:
         for r in _ROLE_RANGES:
-            if r in source:out["교전사거리"]=r;break
-    if "캐릭터타입" not in out:
+            if r in source:out["사거리"]=r;break
+    if "스타일" not in out:
         for t in tokens:
-            if t.endswith("형") and t not in _ROLE_RANGES:out["캐릭터타입"]=t;break
+            if t.endswith("형") and t not in _ROLE_RANGES:out["스타일"]=t;break
     if "역할군" not in out:
-        left=[t for t in tokens if t!=out.get("캐릭터타입") and t!=out.get("교전사거리") and t not in _ROLE_RANGES]
+        left=[t for t in tokens if t!=out.get("스타일") and t!=out.get("사거리") and t not in _ROLE_RANGES]
         if left:out["역할군"]=left[-1]
     return out
 
@@ -558,28 +627,62 @@ def _duels_technique_label(skill: dict, index: int) -> str:
     return category if display==category else f'{category} · {display}'
 
 def _duels_technique_metrics(skill: dict) -> dict:
-    out={}; norm={_duels_norm_key(k):k for k in skill}
+    """Recursively extract combat values from one technique.
+
+    The source often nests values under hit/effects/buff/debuff/status objects, so
+    restricting lookup to the technique's first level loses most useful numbers.
+    Canonical values keep stable Korean names; repeated/named nested effects receive
+    a readable suffix instead of exposing raw object paths such as skill.1.name.
+    """
+    out={}
+    alias_to_label={}
     for label,aliases in _DUELS_TECHNIQUE_METRICS.items():
-        for alias in aliases:
-            k=norm.get(_duels_norm_key(alias))
-            if k is not None and skill.get(k) not in (None,''):
-                out[label]=skill.get(k);break
-    # Some game objects group effects one level deeper.
-    for k,v in skill.items():
-        if not isinstance(v,dict):continue
-        prefix=_duels_norm_key(k)
-        child={_duels_norm_key(kk):vv for kk,vv in v.items()}
-        if 'buff' in prefix or '버프' in prefix:
-            for label,aliases in (("버프세기",_DUELS_TECHNIQUE_METRICS['버프세기']),("버프지속시간",_DUELS_TECHNIQUE_METRICS['버프지속시간'])):
-                if label in out:continue
-                for a in aliases:
-                    if _duels_norm_key(a) in child:out[label]=child[_duels_norm_key(a)];break
-        if 'debuff' in prefix or '디버프' in prefix:
-            for label,aliases in (("디버프세기",_DUELS_TECHNIQUE_METRICS['디버프세기']),("디버프지속시간",_DUELS_TECHNIQUE_METRICS['디버프지속시간'])):
-                if label in out:continue
-                for a in aliases:
-                    if _duels_norm_key(a) in child:out[label]=child[_duels_norm_key(a)];break
+        for a in aliases:alias_to_label[_duels_norm_key(a)]=label
+    generic_parts={_duels_norm_key(x) for x in ('effect','effects','buff','buffs','debuff','debuffs','status','statuses','values','value','data','stats','hit','hits')}
+    value_keys={_duels_norm_key(x) for x in ('value','amount','strength','power','rate','percent','multiplier','magnitude')}
+    duration_keys={_duels_norm_key(x) for x in ('duration','time','seconds','second','sec','지속시간')}
+
+    def effect_name(path):
+        for p in reversed(path):
+            n=_duels_norm_key(p)
+            if n and n not in generic_parts and n not in value_keys and n not in duration_keys:
+                return str(p)
+        return ''
+    def context(path):
+        joined=' '.join(_duels_norm_key(x) for x in path)
+        if 'debuff' in joined or '디버프' in joined:return '디버프'
+        if 'buff' in joined or '버프' in joined:return '버프'
+        return '효과'
+    def put(label,value,path):
+        if value in (None,'') or isinstance(value,(dict,list)):return
+        if label not in out:out[label]=value;return
+        if out[label]==value:return
+        suffix=effect_name(path)
+        key=f'{label} · {suffix}' if suffix else f'{label} · {len([k for k in out if k.startswith(label)])+1}'
+        if key not in out:out[key]=value
+    def walk(node,path=(),depth=0):
+        if depth>7:return
+        if isinstance(node,list):
+            for i,v in enumerate(node):walk(v,path+(str(i+1),),depth+1)
+            return
+        if not isinstance(node,dict):return
+        for k,v in node.items():
+            nk=_duels_norm_key(k);next_path=path+(str(k),)
+            if isinstance(v,(dict,list)):
+                walk(v,next_path,depth+1);continue
+            label=alias_to_label.get(nk)
+            if label:
+                # Generic duration/value fields are classified by their surrounding effect.
+                if nk in duration_keys and label in ('효과지속시간','버프지속시간','디버프지속시간'):
+                    label=f'{context(path)}지속시간'
+                put(label,v,path);continue
+            if nk in value_keys and path:
+                put(f'{context(path)}세기',v,path)
+            elif nk in duration_keys and path:
+                put(f'{context(path)}지속시간',v,path)
+    walk(skill)
     return out
+
 
 def _duels_speed_value(row: dict):
     alias_map={_duels_norm_key(k):v for k,v in _DUELS_FIELD_ALIASES.items()}
@@ -587,7 +690,7 @@ def _duels_speed_value(row: dict):
 
 def _duels_speed_grade(catalog: dict, row: dict):
     fields=row.get('fields') or {}; alias_map={_duels_norm_key(k):v for k,v in _DUELS_FIELD_ALIASES.items()}
-    explicit=_duels_casefold_lookup(fields,'이동속도단계',alias_map)
+    explicit=_duels_casefold_lookup(fields,'이동속도_단계',alias_map)
     if isinstance(explicit,str) and explicit.strip():return explicit.strip()
     cur=_duels_speed_value(row)
     try:cur=float(cur)
@@ -642,11 +745,11 @@ def resolve_duels_reference(catalog: dict, character: str, field: str):
     if nk in ('이름','name'):return {'ok':True,'kind':'text','value':found.get('name','')}
     if nk in ('이미지','image','img','portrait'):
         return {'ok':True,'kind':'image','value':found['image']} if found.get('image') else {'ok':False,'error':f'이미지를 찾을 수 없음: {character}'}
-    if nk in (_duels_norm_key('이동속도단계'),_duels_norm_key('속도단계')):
+    if nk in (_duels_norm_key('이동속도_단계'),_duels_norm_key('이동속도단계'),_duels_norm_key('속도단계')):
         v=_duels_speed_grade(catalog,found);return {'ok':True,'kind':'text','value':v} if v else {'ok':False,'error':'이동속도 단계를 계산할 수 없음'}
-    if nk in (_duels_norm_key('난이도별'),_duels_norm_key('난이도별표')):
+    if nk in (_duels_norm_key('난이도_별'),_duels_norm_key('난이도별'),_duels_norm_key('난이도별표')):
         v=_duels_difficulty_stars(found);return {'ok':True,'kind':'text','value':v} if v else {'ok':False,'error':'난이도 별표를 계산할 수 없음'}
-    for wanted in ('캐릭터타입','교전사거리','역할군'):
+    for wanted in ('스타일','사거리','역할군'):
         if nk==_duels_norm_key(wanted):
             v=_duels_role_parts(found.get('fields') or {}).get(wanted)
             return {'ok':True,'kind':'text','value':v} if v not in (None,'') else {'ok':False,'error':f'{wanted} 정보를 찾을 수 없음: {character}'}
