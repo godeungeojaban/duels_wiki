@@ -2,7 +2,7 @@
 
 const $ = (s, r=document) => r.querySelector(s);
 const $$ = (s, r=document) => [...r.querySelectorAll(s)];
-const state = { index:null, current:null, currentPath:'', editing:false, savedRange:null, componentInsertionRange:null, footnoteInsertionRange:null, footnoteInsertionEditable:null, lastEditable:null, selectedImage:null, activeRibbon:'home', config:null };
+const state = { index:null, current:null, currentPath:'', editing:false, savedRange:null, componentInsertionRange:null, footnoteInsertionRange:null, footnoteInsertionEditable:null, duelsInsertionRange:null, duelsInsertionEditable:null, lastEditable:null, selectedImage:null, activeRibbon:'home', config:null };
 const escapeHtml = s => String(s??'').replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
 const uid = p => `${p}_${crypto.randomUUID().replaceAll('-','')}`;
 const DUELS_CHARACTER_PROFILES=Object.freeze([
@@ -196,7 +196,7 @@ function expandInlineImageSyntax(root){
   });
 }
 
-function viewHtml(html,{expandInlineImages=true}={}){ const t=document.createElement('template'); t.innerHTML=html||''; $$('img',t.content).forEach(img=>{const src=img.getAttribute('src')||'';img.setAttribute('src',mediaSrc(src));}); $$('a',t.content).forEach(a=>{const h=a.getAttribute('href')||''; if(h.startsWith('wiki:/'))a.dataset.wikiLink=h;}); upgradeDuelsComponents(t.content); if(expandInlineImages)expandInlineImageSyntax(t.content); return t.innerHTML; }
+function viewHtml(html,{expandInlineImages=true}={}){ const t=document.createElement('template'); t.innerHTML=html||''; $$('img',t.content).forEach(img=>{const src=img.getAttribute('src')||'';img.setAttribute('src',mediaSrc(src));}); $$('a',t.content).forEach(a=>{const h=a.getAttribute('href')||''; if(h.startsWith('wiki:/'))a.dataset.wikiLink=h;}); upgradeDuelsComponents(t.content); if(expandInlineImages)expandInlineImageSyntax(t.content); if(!state.editing&&window.DuelsReference)window.DuelsReference.expand(t.content); return t.innerHTML; }
 function footnoteAnchor(id){return 'footnote-'+String(id).replace(/[^a-zA-Z0-9_-]/g,'-')}
 function footnoteNumber(content,id){const i=(content?.footnotes||[]).findIndex(f=>f.id===id);return i>=0?i+1:null}
 function syncFootnoteRefs(root,content){
@@ -271,8 +271,8 @@ function bindWikiLinks(root){ bindFootnotePreview(root); $$('a[data-wiki-link]',
 
 async function renderRoute(){ state.editing=false; hideToolbar(); state.selectedImage=null; updateOverlay(); const route=parseRoute(); if(!route){await renderHome();return} try{const r=await api(`/api/document?category=${encodeURIComponent(route.category)}${route.doc?`&doc=${encodeURIComponent(route.doc)}`:''}`); state.current=r.document; state.currentPath=r.path; renderDocument(r.document,route);}catch(e){$('#viewPage').innerHTML=`<div class="wiki-card"><h2>문서를 불러올 수 없습니다.</h2><p>${escapeHtml(e.message)}</p></div>`;} }
 async function renderHome(){ try{const r=await api('/api/root'); state.current=r.document; state.currentPath=r.path; renderRootDocument(r.document);}catch(e){state.current=null;state.currentPath='';$('#viewPage').innerHTML=`<div class="wiki-card"><h2>Duels Wiki</h2><p>${escapeHtml(e.message)}</p></div>`;$('#editPage').classList.add('hidden');$('#viewPage').classList.remove('hidden');} }
-function renderRootDocument(doc){ const c=normalizeContent(doc.content); const self='#/'; $('#viewPage').innerHTML=`<div class="wiki-card"><div class="doc-head"><div><h1>${displayTitleHtml(c.titleHtml,doc.title||'Duels Wiki')}</h1></div><div class="doc-actions"><button id="editBtn">문서 편집</button><button id="historyBtn">문서 역사</button></div></div><div class="intro wiki-body">${viewHtml(c.introHtml)}</div>${c.sections.length?`<nav class="toc"><div class="toc-title">목차</div>${renderToc(c.sections)}</nav>`:''}${renderSections(c.sections,self)}${renderFootnotes(c)}</div>`; $('#editPage').classList.add('hidden');$('#viewPage').classList.remove('hidden');syncFootnoteRefs($('#viewPage'),c);bindWikiLinks($('#viewPage'));$('#editBtn').onclick=()=>startRootEdit(doc);$('#historyBtn').onclick=()=>showHistory(); }
-function renderDocument(doc,route){ const c=normalizeContent(doc.content); const self=routeFor(route.category,route.doc); const canDuplicate=doc.kind==='document'; $('#viewPage').innerHTML=`<div class="wiki-card"><div class="doc-head"><div><h1>${displayTitleHtml(c.titleHtml,doc.title)}</h1></div><div class="doc-actions">${canDuplicate?'<button id="duplicateBtn">문서 복제</button>':''}<button id="editBtn">문서 편집</button><button id="historyBtn">문서 역사</button></div></div><div class="intro wiki-body">${viewHtml(c.introHtml)}</div>${c.sections.length?`<nav class="toc"><div class="toc-title">목차</div>${renderToc(c.sections)}</nav>`:''}${renderSections(c.sections,self)}${renderFootnotes(c)}</div>`; $('#editPage').classList.add('hidden');$('#viewPage').classList.remove('hidden');syncFootnoteRefs($('#viewPage'),c);bindWikiLinks($('#viewPage'));if(canDuplicate)$('#duplicateBtn').onclick=()=>duplicateDocumentModal(doc,route);$('#editBtn').onclick=()=>startEdit(doc,route);$('#historyBtn').onclick=()=>showHistory(); }
+function renderRootDocument(doc){ const c=normalizeContent(doc.content); const self='#/'; $('#viewPage').innerHTML=`<div class="wiki-card"><div class="doc-head"><div><h1>${displayTitleHtml(c.titleHtml,doc.title||'Duels Wiki')}</h1></div><div class="doc-actions"><button id="editBtn">문서 편집</button><button id="historyBtn">문서 역사</button></div></div><div class="intro wiki-body">${viewHtml(c.introHtml)}</div>${c.sections.length?`<nav class="toc"><div class="toc-title">목차</div>${renderToc(c.sections)}</nav>`:''}${renderSections(c.sections,self)}${renderFootnotes(c)}</div>`; $('#editPage').classList.add('hidden');$('#viewPage').classList.remove('hidden');syncFootnoteRefs($('#viewPage'),c);bindWikiLinks($('#viewPage'));window.DuelsReference?.scheduleResolveRoot($('#viewPage'));$('#editBtn').onclick=()=>startRootEdit(doc);$('#historyBtn').onclick=()=>showHistory(); }
+function renderDocument(doc,route){ const c=normalizeContent(doc.content); const self=routeFor(route.category,route.doc); const canDuplicate=doc.kind==='document'; $('#viewPage').innerHTML=`<div class="wiki-card"><div class="doc-head"><div><h1>${displayTitleHtml(c.titleHtml,doc.title)}</h1></div><div class="doc-actions">${canDuplicate?'<button id="duplicateBtn">문서 복제</button>':''}<button id="editBtn">문서 편집</button><button id="historyBtn">문서 역사</button></div></div><div class="intro wiki-body">${viewHtml(c.introHtml)}</div>${c.sections.length?`<nav class="toc"><div class="toc-title">목차</div>${renderToc(c.sections)}</nav>`:''}${renderSections(c.sections,self)}${renderFootnotes(c)}</div>`; $('#editPage').classList.add('hidden');$('#viewPage').classList.remove('hidden');syncFootnoteRefs($('#viewPage'),c);bindWikiLinks($('#viewPage'));window.DuelsReference?.scheduleResolveRoot($('#viewPage'));if(canDuplicate)$('#duplicateBtn').onclick=()=>duplicateDocumentModal(doc,route);$('#editBtn').onclick=()=>startEdit(doc,route);$('#historyBtn').onclick=()=>showHistory(); }
 function duplicateDocumentModal(doc,route){
   const cats=sortedCategories(state.index?.categories||[]);
   const suggested=`${doc.title} 복사본`;
@@ -633,6 +633,38 @@ function captureFootnoteInsertionPoint(){
   state.footnoteInsertionRange=state.savedRange.cloneRange();state.footnoteInsertionEditable=editable;return true;
 }
 function clearFootnoteInsertionPoint(){state.footnoteInsertionRange=null;state.footnoteInsertionEditable=null}
+
+function captureDuelsInsertionRange(){
+  const sel=getSelection();let range=null;
+  if(sel?.rangeCount){const r=sel.getRangeAt(0);if($('#editPage')?.contains(r.commonAncestorContainer))range=r.cloneRange()}
+  if(!range&&state.savedRange&&$('#editPage')?.contains(state.savedRange.commonAncestorContainer))range=state.savedRange.cloneRange();
+  if(!range){state.duelsInsertionRange=null;state.duelsInsertionEditable=null;return false}
+  const node=range.commonAncestorContainer.nodeType===1?range.commonAncestorContainer:range.commonAncestorContainer.parentElement;
+  const editable=node?.closest?.('[data-table-cell-editing="1"],.editable,.inline-title-editable');
+  if(!editable||!$('#editPage')?.contains(editable)){state.duelsInsertionRange=null;state.duelsInsertionEditable=null;return false}
+  state.duelsInsertionRange=range;state.duelsInsertionEditable=editable;return true;
+}
+function clearDuelsInsertionRange(){state.duelsInsertionRange=null;state.duelsInsertionEditable=null}
+function insertDuelsReferenceCommand(text){
+  const r=state.duelsInsertionRange,editable=state.duelsInsertionEditable;
+  if(!r||!editable||!editable.isConnected)return false;
+  try{const sel=getSelection();sel.removeAllRanges();sel.addRange(r);r.deleteContents();const node=document.createTextNode(text);r.insertNode(node);const after=document.createRange();after.setStartAfter(node);after.collapse(true);sel.removeAllRanges();sel.addRange(after);state.savedRange=after.cloneRange();editable.dispatchEvent(new Event('input',{bubbles:true}));editable.focus({preventScroll:true});clearDuelsInsertionRange();return true}catch{return false}
+}
+function duelsReferenceModal(){
+  if(!captureDuelsInsertionRange()){showStatus('먼저 참조를 삽입할 텍스트 위치에 커서를 두세요.',true);return}
+  openModal(`<div class="duels-reference-modal"><div class="duels-reference-head"><div><span class="duels-reference-kicker">LIVE DATA</span><h2>듀얼즈 참조</h2></div><button type="button" id="duelsRefReload">원본 새로고침</button></div><p class="muted">Duels.html의 CHARACTER_DATA에서 실제 값을 읽습니다. 문법: <code>{{=duels("캐릭터","필드","수치")}}</code></p><div id="duelsRefStatus" class="duels-reference-status">CHARACTER_DATA를 불러오는 중…</div><div class="duels-reference-grid"><div class="form-row"><label>캐릭터</label><select id="duelsRefCharacter" disabled></select></div><div class="form-row"><label>필드</label><select id="duelsRefField" disabled></select></div><div class="form-row"><label>수치</label><select id="duelsRefMetric" disabled></select></div></div><div class="duels-reference-preview"><span>명령어</span><code id="duelsRefCommand">-</code><span>현재 값</span><strong id="duelsRefValue">-</strong></div><div class="modal-actions"><button id="cancelDuelsRef">취소</button><button id="insertDuelsRef" class="primary" disabled>삽입</button></div></div>`);
+  $('#cancelDuelsRef').onclick=()=>{clearDuelsInsertionRange();closeModal()};
+  const charSel=$('#duelsRefCharacter'),fieldSel=$('#duelsRefField'),metricSel=$('#duelsRefMetric'),status=$('#duelsRefStatus'),insert=$('#insertDuelsRef');
+  let bundle=null,catalog=[];
+  function selectedCharacter(){return catalog.find(x=>x.id===charSel.value)||catalog[0]}
+  function selectedField(){const c=selectedCharacter();return c?.fields?.find(x=>x.key===fieldSel.value)||c?.fields?.[0]}
+  function updatePreview(){const c=selectedCharacter(),f=selectedField(),m=f?.metrics?.find(x=>x.label===metricSel.value)||f?.metrics?.[0];if(!c||!f||!m){$('#duelsRefCommand').textContent='-';$('#duelsRefValue').textContent='-';insert.disabled=true;return}const cmd=DuelsReference.command(c.name,f.key,m.label);$('#duelsRefCommand').textContent=cmd;const r=DuelsReference.resolve(bundle,c.name,f.key,m.label);const pv=$('#duelsRefValue');pv.textContent=r.ok?r.value:'참조 불가';pv.classList.toggle('difficulty-special',!!(r.ok&&r.tone==='difficulty-special'));insert.disabled=!r.ok;insert.dataset.command=cmd}
+  function fillMetrics(){const f=selectedField(),list=f?.metrics||[];metricSel.innerHTML=list.length?list.map(x=>`<option value="${escapeHtml(x.label)}">${escapeHtml(x.label)}</option>`).join(''):'<option value="">참조 가능한 수치 없음</option>';metricSel.disabled=!list.length;updatePreview()}
+  function fillFields(){const c=selectedCharacter(),list=c?.fields||[];fieldSel.innerHTML=list.map(x=>`<option value="${escapeHtml(x.key)}">${escapeHtml(x.label)}</option>`).join('');fieldSel.disabled=!list.length;fillMetrics()}
+  function fillCharacters(){charSel.innerHTML=catalog.map(x=>`<option value="${escapeHtml(x.id)}">${escapeHtml(x.name)}</option>`).join('');charSel.disabled=!catalog.length;fillFields()}
+  async function load(force=false){status.classList.remove('error');status.textContent='CHARACTER_DATA를 불러오는 중…';charSel.disabled=fieldSel.disabled=metricSel.disabled=insert.disabled=true;try{bundle=await DuelsReference.load(force);catalog=bundle.catalog||[];status.textContent=`${catalog.length}명의 CHARACTER_DATA를 불러왔습니다.`;fillCharacters()}catch(e){status.textContent=e.message||String(e);status.classList.add('error')}}
+  charSel.onchange=fillFields;fieldSel.onchange=fillMetrics;metricSel.onchange=updatePreview;$('#duelsRefReload').onclick=()=>load(true);insert.onclick=()=>{const cmd=insert.dataset.command;if(!cmd||!insertDuelsReferenceCommand(cmd)){showStatus('원래 커서 위치를 찾지 못했습니다.',true);return}closeModal()};load(false);
+}
 function makeFootnoteReferenceNode(id){const a=document.createElement('a');a.className='footnote-ref';a.dataset.footnoteRef=id;a.contentEditable='false';const n=footnoteNumber(editingContent,id);a.href=`#${footnoteAnchor(id)}`;a.textContent=`[${n??'?'}]`;a.removeAttribute('title');const sup=document.createElement('sup');sup.append(a);return sup}
 function insertFootnoteReference(id){
   const editable=state.footnoteInsertionEditable;const stored=state.footnoteInsertionRange;if(!editable||!stored||!editable.isConnected||!$('#editPage')?.contains(editable)){clearFootnoteInsertionPoint();alert('각주를 넣을 위치에 커서를 놓아주세요.');return false}
@@ -649,6 +681,7 @@ function openFootnoteDialog(){
   $('#createFootnote').onclick=()=>{const text=$('#newFootnoteText').value.trim();if(!text){$('#newFootnoteText').focus();return}const id=uid('fn');editingContent.footnotes.push({id,contentHtml:`<p>${escapeHtml(text).replace(/\n/g,'<br>')}</p>`});closeModal();refreshFootnoteBlock();insertFootnoteReference(id);};
   $('#newFootnoteText').focus();
 }
+$('#duelsReferenceBtn').onclick=duelsReferenceModal;
 $('#footnoteBtn').onclick=openFootnoteDialog;
 
 function normalizeImageUrl(url){try{const u=new URL(url);if(u.hostname==='github.com'){const p=u.pathname.split('/').filter(Boolean),bi=p.indexOf('blob');if(bi>=2&&p[bi+1])return `https://raw.githubusercontent.com/${p[0]}/${p[1]}/${p[bi+1]}/${p.slice(bi+2).join('/')}`;}return url}catch{return url}}

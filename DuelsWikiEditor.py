@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Duels Wiki Editor Launcher v3.66
+# Duels Wiki Editor Launcher v3.68
 # Standard library only. No npm / Node.js required.
 
 from __future__ import annotations
@@ -20,13 +20,13 @@ from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
-APP_VERSION = "3.66"
+APP_VERSION = "3.68"
 DEFAULT_OWNER = "godeungeojaban"
 DEFAULT_REPO = "duels_wiki"
 DEFAULT_BRANCH = "main"
 DEFAULT_DATA_ROOT = "wiki"
 DEFAULT_MEDIA_ROOT = "media"
-EDITOR_FILES = ("index.html", "editor.css", "editor.js", "version.json")
+EDITOR_FILES = ("index.html", "editor.css", "editor.js", "duels-reference.js", "version.json")
 UNCAT_ID = "uncategorized"
 UNCAT_SLUG = "미분류"
 
@@ -613,7 +613,7 @@ def fetch_editor_assets(cfg: dict) -> tuple[bool, str]:
         except Exception:
             pass
         cached = _read_cached_editor_version()
-        if all((CACHE_DIR / name).exists() for name in ("index.html", "editor.css", "editor.js")):
+        if all((CACHE_DIR / name).exists() for name in ("index.html", "editor.css", "editor.js", "duels-reference.js")):
             return False, f"최신 UI 확인 실패. 캐시 Editor {cached}를 사용합니다: {e}"
         return False, f"편집기 UI를 GitHub에서 가져오지 못했습니다: {e}"
 
@@ -731,7 +731,7 @@ class Handler(BaseHTTPRequestHandler):
         if path in {"", "/"}:
             path = "/index.html"
         name = path.lstrip("/")
-        if name not in {"index.html", "editor.css", "editor.js"}:
+        if name not in {"index.html", "editor.css", "editor.js", "duels-reference.js"}:
             self.send_error(404); return
         file = CACHE_DIR / name
         if not file.exists():

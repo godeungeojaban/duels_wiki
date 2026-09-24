@@ -1,4 +1,19 @@
-# Duels Wiki 3.66
+# Duels Wiki 3.68
+
+## 3.68
+
+- `난이도_별` 6단계를 원본의 `difficulty-red-stars` 표현과 동일한 방식으로 처리. 1~5는 `★☆☆☆☆`~`★★★★★`, 6은 `★★★★★` 문자열에 별도 붉은 특수 난이도 스타일을 적용한다.
+- 편집기와 정적 사이트에서 문서 본문을 먼저 표시하고 Duels 참조는 첫 페인트 이후 비동기로 채우도록 변경해 raw 파일 다운로드/분석이 초기 페이지 표시를 막지 않게 했다.
+- Duels 참조 카탈로그를 로컬에 5분 캐시하고, 전체 CHARACTER_DATA 대신 참조에 필요한 경량 카탈로그만 보존하도록 최적화했다.
+- raw 요청의 `no-store` 강제를 제거해 브라우저 HTTP 캐시를 활용하고, 참조 원본 새로고침에서만 강제 reload를 사용한다.
+
+## 3.67
+
+- 업로드된 Duels.html에서 실제 `const CHARACTER_DATA=freezeCharacterData({ ... })` 구조를 확인하고 이를 단일 참조 원본으로 사용하도록 재구현.
+- `CHARACTER_RULES`의 스타일/역할군/사거리/난이도 규칙과 `CHARACTER_DATA`의 stats/tooltipSkills/attacks를 함께 해석.
+- `{{=duels("캐릭터","필드","수치")}}` 문법과 삽입 UI 추가.
+- 수치값은 하드코딩하지 않고 raw GitHub 파일에서 실시간으로 해석.
+- 정적 GitHub Pages에서도 참조 명령이 클라이언트 측에서 최신 raw 데이터를 읽어 표시되도록 처리.
 
 ## 3.66
 

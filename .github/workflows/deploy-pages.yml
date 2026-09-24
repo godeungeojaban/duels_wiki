@@ -6,6 +6,7 @@ on:
       - 'wiki/**'
       - 'media/**'
       - 'site/**'
+      - 'editor/duels-reference.js'
       - '.github/workflows/deploy-pages.yml'
   workflow_dispatch:
 permissions:

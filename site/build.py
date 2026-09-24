@@ -23,6 +23,12 @@ CSS='''
 *{scrollbar-width:thin;scrollbar-color:#29435c #080d13}*::-webkit-scrollbar{width:8px;height:8px}*::-webkit-scrollbar-track{background:#080d13}*::-webkit-scrollbar-thumb{background:#162b3b;border:1px solid #29435c;border-radius:2px}*::-webkit-scrollbar-thumb:hover{background:#21415a;border-color:#4af}*::-webkit-scrollbar-corner{background:#080d13}
 '''
 
+
+DUELS_REFERENCE_CSS=r'''
+.duels-reference-value{display:inline;color:#9fd7ff;font-weight:650;text-shadow:0 0 7px #4af2}.duels-reference-value.loading{color:#66869d;font-weight:500;text-shadow:none}.duels-reference-value.error{color:#ff7b86;text-shadow:none}.duels-reference-value.difficulty-special{color:#ff8f8f;-webkit-text-fill-color:#ff8f8f;text-shadow:0 0 4px rgba(255,143,143,.28)}
+'''
+DUELS_REFERENCE_JS=(ROOT/'editor'/'duels-reference.js').read_text('utf-8') if (ROOT/'editor'/'duels-reference.js').exists() else ''
+
 def esc(s): return html.escape(str(s or ''))
 def load_json(p,default=None):
     try:return json.loads(p.read_text('utf-8'))
@@ -190,7 +196,7 @@ document.addEventListener('click',function(e){if(!touchMode()||!active)return;if
 })();'''
 
 def shell(title,body,root_href,sidebar):
-    return f'''<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>{esc(title)} - Duels Wiki</title><style>{CSS}</style></head><body><header class="top"><button class="nav-toggle" id="navToggle" aria-label="문서 목록">☰</button><a href="{root_href}">Duels Wiki</a></header><div class="layout"><aside class="sidebar" id="wikiSidebar">{sidebar}</aside><div class="content">{body}</div></div><script>(function(){{var b=document.getElementById('navToggle'),s=document.getElementById('wikiSidebar');if(b&&s)b.addEventListener('click',function(){{s.classList.toggle('open')}});document.addEventListener('click',function(e){{if(window.innerWidth>720||!s.classList.contains('open'))return;if(e.target.closest('#wikiSidebar')||e.target.closest('#navToggle'))return;s.classList.remove('open')}})}})();</script><script>{FOOTNOTE_JS}</script></body></html>'''
+    return f'''<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>{esc(title)} - Duels Wiki</title><style>{CSS}{DUELS_REFERENCE_CSS}</style></head><body><header class="top"><button class="nav-toggle" id="navToggle" aria-label="문서 목록">☰</button><a href="{root_href}">Duels Wiki</a></header><div class="layout"><aside class="sidebar" id="wikiSidebar">{sidebar}</aside><div class="content">{body}</div></div><script>(function(){{var b=document.getElementById('navToggle'),s=document.getElementById('wikiSidebar');if(b&&s)b.addEventListener('click',function(){{s.classList.toggle('open')}});document.addEventListener('click',function(e){{if(window.innerWidth>720||!s.classList.contains('open'))return;if(e.target.closest('#wikiSidebar')||e.target.closest('#navToggle'))return;s.classList.remove('open')}})}})();</script><script>{FOOTNOTE_JS}</script><script>{DUELS_REFERENCE_JS}</script><script>window.DuelsReference&&window.DuelsReference.enhance(document);</script></body></html>'''
 
 def build():
     if OUT.exists():shutil.rmtree(OUT)
