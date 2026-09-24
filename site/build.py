@@ -81,7 +81,7 @@ def internal_href(cur_parts,target):
     return Path(os.path.relpath(target_file,cur_dir)).as_posix()
 
 
-DUELS_REF_RE=re.compile(r'''\{\{=\s*duels\s*\(\s*(["'])(.*?)\1\s*,\s*(["'])(.*?)\3\s*\)\s*\}\}''',re.I)
+DUELS_REF_RE=re.compile(r'''\{\{=\s*duels\s*\(\s*(["'])(.*?)\1\s*,\s*(["'])(.*?)\3\s*,\s*(["'])(.*?)\5\s*\)\s*\}\}''',re.I)
 _DUELS_BUILD_CATALOG=None
 
 def _duels_catalog():
@@ -105,8 +105,8 @@ def expand_duels_refs(src):
             out.append(part);continue
         if blocked:out.append(part);continue
         def repl(m):
-            character,field=m.group(2),m.group(4)
-            result=resolve_duels_reference(_duels_catalog(),character,field)
+            character,scope,field=m.group(2),m.group(4),m.group(6)
+            result=resolve_duels_reference(_duels_catalog(),character,scope,field)
             if not result.get('ok'):
                 return f'<span class="duels-ref-error" data-duels-ref-error="{html.escape(str(result.get("error") or "참조 실패"),quote=True)}">[참조 오류]</span>'
             value=result.get('value','')

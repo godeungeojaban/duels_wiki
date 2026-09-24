@@ -196,35 +196,23 @@ function expandInlineImageSyntax(root){
   });
 }
 
-const DUELS_REF_COMMAND_RE=/\{\{=\s*duels\s*\(\s*(["'])(.*?)\1\s*,\s*(["'])(.*?)\3\s*\)\s*\}\}/gi;
+const DUELS_REF_COMMAND_RE=/\{\{=\s*duels\s*\(\s*(["'])(.*?)\1\s*,\s*(["'])(.*?)\3\s*,\s*(["'])(.*?)\5\s*\)\s*\}\}/gi;
 const DUELS_FIELD_ALIASES={
-  '이름':['name','displayname','charactername','charname','이름'],'name':['name','displayname','charactername','charname','이름'],
   '이미지':['image','img','imageurl','portrait','portraiturl','icon','iconurl','sprite','profile','thumbnail'],'image':['image','img','imageurl','portrait','portraiturl','icon','iconurl','sprite','profile','thumbnail'],
   '체력':['hp','maxhp','health','maxhealth','체력'],'hp':['hp','maxhp','health','maxhealth','체력'],
-  '스태미나':['stamina','maxstamina','energy','maxenergy','스태미나'],'stamina':['stamina','maxstamina','energy','maxenergy','스태미나'],
   '이동속도':['speed','movespeed','movementspeed','walkspeed','이동속도'],'속도':['speed','movespeed','movementspeed','walkspeed','이동속도'],'speed':['speed','movespeed','movementspeed','walkspeed','이동속도'],
   '난이도':['difficulty','difficultyvalue','난이도'],'difficulty':['difficulty','difficultyvalue','난이도'],
-  '공격력':['attack','atk','power','공격력'],'attack':['attack','atk','power','공격력'],
-  '방어력':['defense','def','armor','방어력'],'defense':['defense','def','armor','방어력'],
   '스타일':['charactertype','character_type','type','combatstyle','style','타입','캐릭터타입','스타일'],
-  '캐릭터타입':['charactertype','character_type','type','combatstyle','style','타입','캐릭터타입','스타일'],
   '사거리':['engagementrange','engagement_range','combatrange','combat_range','rangeclass','거리','교전사거리','사거리'],
-  '교전사거리':['engagementrange','engagement_range','combatrange','combat_range','rangeclass','거리','교전사거리','사거리'],
   '역할군':['role','class','archetype','roleclass','역할','역할군'],
   '칭호':['epithet','nickname','subtitle','charactertitle','character_title','title','칭호','별칭'],
-  '이동속도_단계':['speedtier','speedgrade','speedclass','movementspeedtier','movespeedtier','이동속도단계','이동속도_단계','속도등급'],
-  '이동속도단계':['speedtier','speedgrade','speedclass','movementspeedtier','movespeedtier','이동속도단계','이동속도_단계','속도등급']
+  '이동속도_단계':['speedtier','speedgrade','speedclass','movementspeedtier','movespeedtier','이동속도단계','이동속도_단계','속도등급']
 };
 const DUELS_NARRATIVE_FIELDS=new Set(['description','desc','summary','lore','background','story','flavor','설명','배경','배경설정','스토리','소개'].map(duelsNormKey));
 const DUELS_ROLE_RANGES=['초근거리','근거리','중근거리','중거리','중원거리','원거리','초원거리'];
 const DUELS_ROLE_SOURCE=['classification','classify','characterclass','character_class','roletext','type','class','role','style','position','분류','역할','타입'];
 const DUELS_SKILL_FIELD_ALIASES={
-  '이름':['name','displayname','skillname','title','이름'],'name':['name','displayname','skillname','title','이름'],
-  '피해':['damage','dmg','basedamage','damagevalue','피해','데미지'],'데미지':['damage','dmg','basedamage','damagevalue','피해','데미지'],'damage':['damage','dmg','basedamage','damagevalue','피해','데미지'],
-  '쿨다운':['cooldown','cd','cooldowntime','쿨다운'],'cooldown':['cooldown','cd','cooldowntime','쿨다운'],
-  '사거리':['range','attackrange','skillrange','사거리'],'range':['range','attackrange','skillrange','사거리'],
-  '지속시간':['duration','time','지속시간'],'duration':['duration','time','지속시간'],
-  '비용':['cost','staminacost','energycost','비용'],'cost':['cost','staminacost','energycost','비용']
+  '이름':['name','displayname','skillname','title','이름'],'name':['name','displayname','skillname','title','이름']
 };
 function duelsNormKey(v){return String(v??'').toLowerCase().replace(/[^0-9a-z가-힣]+/g,'')}
 function duelsMapValue(map,key,aliases={}){const keys=new Map(Object.keys(map||{}).map(k=>[duelsNormKey(k),k]));const wanted=[key,...(aliases[key]||aliases[duelsNormKey(key)]||[])];for(const w of wanted){const k=keys.get(duelsNormKey(w));if(k!==undefined)return map[k]}return undefined}
@@ -242,6 +230,7 @@ function duelsRoleParts(fields){
 const DUELS_TECHNIQUE_METRICS={
   '피해량':['damage','dmg','basedamage','damagevalue','damageamount','피해','피해량','데미지'],
   '스태미나소모량':['staminacost','staminause','staminaconsume','staminaconsumption','energycost','cost','스태미나소모','스태미나소모량'],
+  '스태미나회복량':['staminarestore','staminarecovery','staminagain','energyrestore','energygain','스태미나회복','스태미나회복량'],
   '쿨다운':['cooldown','cd','cooldowntime','쿨다운'],
   '사거리':['range','attackrange','skillrange','사거리'],
   '버프세기':['buffvalue','buffamount','buffstrength','buffpower','buffrate','buffpercent','버프수치','버프세기'],
@@ -262,39 +251,41 @@ function duelsTechniqueMetrics(sk){
   const effectName=path=>{for(let i=path.length-1;i>=0;i--){const n=duelsNormKey(path[i]);if(n&&!generic.has(n)&&!valueKeys.has(n)&&!durationKeys.has(n))return String(path[i])}return''};
   const context=path=>{const j=path.map(duelsNormKey).join(' ');return j.includes('debuff')||j.includes('디버프')?'디버프':j.includes('buff')||j.includes('버프')?'버프':'효과'};
   const put=(label,value,path)=>{if(value===undefined||value===null||value===''||typeof value==='object')return;if(out[label]===undefined){out[label]=value;return}if(out[label]===value)return;const suffix=effectName(path),base=suffix?`${label} · ${suffix}`:`${label} · ${Object.keys(out).filter(k=>k.startsWith(label)).length+1}`;if(out[base]===undefined)out[base]=value};
-  const walk=(node,path=[],depth=0)=>{if(depth>7||node===null||node===undefined)return;if(Array.isArray(node)){node.forEach((v,i)=>walk(v,[...path,String(i+1)],depth+1));return}if(typeof node!=='object')return;for(const [k,v] of Object.entries(node)){const nk=duelsNormKey(k),next=[...path,k];if(v&&typeof v==='object'){walk(v,next,depth+1);continue}let label=aliasToLabel.get(nk);if(label){if(durationKeys.has(nk)&&['효과지속시간','버프지속시간','디버프지속시간'].includes(label))label=`${context(path)}지속시간`;put(label,v,path);continue}if(valueKeys.has(nk)&&path.length)put(`${context(path)}세기`,v,path);else if(durationKeys.has(nk)&&path.length)put(`${context(path)}지속시간`,v,path)}};
+  const walk=(node,path=[],depth=0)=>{if(depth>9||node===null||node===undefined)return;if(Array.isArray(node)){node.forEach((v,i)=>walk(v,[...path,String(i+1)],depth+1));return}if(typeof node!=='object')return;for(const [k,v] of Object.entries(node)){const nk=duelsNormKey(k),next=[...path,k];if(v&&typeof v==='object'){walk(v,next,depth+1);continue}let label=aliasToLabel.get(nk);if(label){if(durationKeys.has(nk)&&['효과지속시간','버프지속시간','디버프지속시간'].includes(label))label=`${context(path)}지속시간`;put(label,v,path);continue}if(valueKeys.has(nk)&&path.length)put(`${context(path)}세기`,v,path);else if(durationKeys.has(nk)&&path.length)put(`${context(path)}지속시간`,v,path)}};
   walk(sk);return out
 }
-function duelsFindTechnique(row,key){const want=duelsNormKey(key);for(let i=0;i<(row?.skills||[]).length;i++){const sk=row.skills[i],label=duelsTechniqueLabel(sk,i+1),parts=label.split(' · '),cat=parts[0],name=parts[1]||label;if([label,cat,name].some(x=>duelsNormKey(x)===want))return{sk,label,cat,name}}return null}
+function duelsFindTechnique(row,key){const want=duelsNormKey(key);for(let i=0;i<(row?.skills||[]).length;i++){const sk=row.skills[i],label=duelsTechniqueLabel(sk,i+1),parts=label.split(' · '),cat=parts[0],name=parts.slice(1).join(' · ')||label;if([label,cat,name].some(x=>duelsNormKey(x)===want))return{sk,label,cat,name}}return null}
 function duelsSpeedGrade(row){const explicit=duelsMapValue(row?.fields||{},'이동속도_단계',DUELS_FIELD_ALIASES);if(typeof explicit==='string'&&explicit.trim())return explicit.trim();const cur=Number(duelsMapValue(row?.fields||{},'이동속도',DUELS_FIELD_ALIASES));if(!Number.isFinite(cur))return null;const vals=[...new Set((state.duelsData?.characters||[]).map(r=>Number(duelsMapValue(r?.fields||{},'이동속도',DUELS_FIELD_ALIASES))).filter(Number.isFinite))].sort((a,b)=>a-b);if(!vals.length)return null;if(vals.length===1)return'보통';const rank=vals.filter(v=>v<cur).length/(vals.length-1);return rank<.2?'매우 느림':rank<.4?'느림':rank<.6?'보통':rank<.8?'빠름':'매우 빠름'}
 function duelsDifficultyStars(row){let v=duelsMapValue(row?.fields||{},'난이도',DUELS_FIELD_ALIASES);if(typeof v==='string'){const c=(v.match(/★/g)||[]).length;if(c)return'★'.repeat(Math.min(5,Math.max(1,c)));const m=v.match(/[-+]?\d+(?:\.\d+)?/);v=m?Number(m[0]):NaN}const n=Math.round(Number(v));return Number.isFinite(n)?'★'.repeat(Math.min(5,Math.max(1,n))):null}
-function resolveDuelsReferenceClient(character,field){
-  const row=findDuelsCharacter(character);if(!row)return{ok:false,error:`캐릭터를 찾을 수 없음: ${character}`};const path=String(field||'').trim(),nk=duelsNormKey(path);
-  if(DUELS_NARRATIVE_FIELDS.has(nk))return{ok:false,error:'문장형 설명 필드는 참조 대상이 아닙니다.'};
-  if(['이름','name'].includes(nk))return{ok:true,kind:'text',value:row.name||''};
-  if(['이미지','image','img','portrait'].includes(nk))return row.image?{ok:true,kind:'image',value:row.image}:{ok:false,error:`이미지를 찾을 수 없음: ${character}`};
-  if(['이동속도_단계','이동속도단계','속도단계'].some(x=>duelsNormKey(x)===nk)){const v=duelsSpeedGrade(row);return v?{ok:true,kind:'text',value:v}:{ok:false,error:'이동속도 단계를 계산할 수 없음'}}
-  if(['난이도_별','난이도별','난이도별표'].some(x=>duelsNormKey(x)===nk)){const v=duelsDifficultyStars(row);return v?{ok:true,kind:'text',value:v}:{ok:false,error:'난이도 별표를 계산할 수 없음'}}
-  if(['스타일','사거리','역할군','캐릭터타입','교전사거리'].some(x=>duelsNormKey(x)===nk)){const parts=duelsRoleParts(row.fields||{}),legacyMap={캐릭터타입:'스타일',교전사거리:'사거리'},rawKey=['스타일','사거리','역할군','캐릭터타입','교전사거리'].find(x=>duelsNormKey(x)===nk),key=legacyMap[rawKey]||rawKey;return parts[key]?{ok:true,kind:'text',value:parts[key]}:{ok:false,error:`${key} 정보를 찾을 수 없음: ${character}`}}
-  const tm=path.match(/^기술\.(.+?)\.(.+)$/i);if(tm){const t=duelsFindTechnique(row,tm[1].trim());if(!t)return{ok:false,error:`기술을 찾을 수 없음: ${tm[1]}`};const metrics=duelsTechniqueMetrics(t.sk),v=metrics[tm[2].trim()];return v===undefined||v===null?{ok:false,error:`${tm[1]}의 ${tm[2]} 정보를 찾을 수 없음`}:{ok:true,kind:'text',value:v}}
-  const v=duelsMapValue(row.fields||{},path,DUELS_FIELD_ALIASES);return v===undefined||v===null?{ok:false,error:`필드를 찾을 수 없음: ${field}`}:{ok:true,kind:'text',value:v};
+function resolveDuelsReference(character,scope,field){
+  const row=findDuelsCharacter(character);if(!row)return{ok:false,error:`캐릭터를 찾을 수 없음: ${character}`};
+  scope=String(scope||'').trim();field=String(field||'').trim();if(!scope||!field)return{ok:false,error:'참조 범주 또는 값이 비어 있음'};
+  if(duelsNormKey(scope)===duelsNormKey('프로필')){
+    const nk=duelsNormKey(field);if(DUELS_NARRATIVE_FIELDS.has(nk))return{ok:false,error:'문장형 설명 필드는 참조 대상이 아님'};
+    if(['이미지','image','img','portrait'].some(x=>duelsNormKey(x)===nk))return row.image?{ok:true,kind:'image',value:row.image}:{ok:false,error:`이미지를 찾을 수 없음: ${character}`};
+    if(duelsNormKey('이동속도_단계')===nk){const v=duelsSpeedGrade(row);return v?{ok:true,kind:'text',value:v}:{ok:false,error:'이동속도 단계를 계산할 수 없음'}}
+    if(duelsNormKey('난이도_별')===nk){const v=duelsDifficultyStars(row);return v?{ok:true,kind:'text',value:v}:{ok:false,error:'난이도 별표를 계산할 수 없음'}}
+    if(['스타일','사거리','역할군'].some(x=>duelsNormKey(x)===nk)){const parts=duelsRoleParts(row.fields||{}),key=['스타일','사거리','역할군'].find(x=>duelsNormKey(x)===nk);return parts[key]?{ok:true,kind:'text',value:parts[key]}:{ok:false,error:`${key} 정보를 찾을 수 없음: ${character}`}}
+    const v=duelsMapValue(row.fields||{},field,DUELS_FIELD_ALIASES);return v===undefined||v===null?{ok:false,error:`프로필 값을 찾을 수 없음: ${field}`}:{ok:true,kind:'text',value:v};
+  }
+  const t=duelsFindTechnique(row,scope);if(!t)return{ok:false,error:`기술을 찾을 수 없음: ${scope}`};const metrics=duelsTechniqueMetrics(t.sk),v=metrics[field];return v===undefined||v===null?{ok:false,error:`${scope}의 ${field} 정보를 찾을 수 없음`}:{ok:true,kind:'text',value:v}
 }
-function duelsRefMatchParts(m){return [m[2],m[4]]}
-function duelsReferenceNode(character,field){
-  if(!state.duelsData){const span=document.createElement('span');span.className='duels-ref-pending';span.dataset.duelsCharacter=character;span.dataset.duelsField=field;span.textContent='…';return span}
-  const result=resolveDuelsReferenceClient(character,field);
+function duelsRefMatchParts(m){return [m[2],m[4],m[6]]}
+function duelsReferenceNode(character,scope,field){
+  if(!state.duelsData){const span=document.createElement('span');span.className='duels-ref-pending';span.dataset.duelsCharacter=character;span.dataset.duelsScope=scope;span.dataset.duelsField=field;span.textContent='…';return span}
+  const result=resolveDuelsReference(character,scope,field);
   if(result.ok&&result.kind==='image'){const img=document.createElement('img');img.className='inline-linked-image duels-ref-image';img.src=String(result.value||'');img.alt=character;img.loading='lazy';img.decoding='async';return img}
-  if(result.ok){const span=document.createElement('span');span.className='duels-ref-value';span.dataset.duelsRef=`${character}:${field}`;span.textContent=typeof result.value==='object'?JSON.stringify(result.value):String(result.value??'');return span}
+  if(result.ok){const span=document.createElement('span');span.className='duels-ref-value';span.dataset.duelsRef=`${character}:${scope}:${field}`;span.textContent=typeof result.value==='object'?JSON.stringify(result.value):String(result.value??'');return span}
   const span=document.createElement('span');span.className='duels-ref-error';span.textContent='[참조 오류]';span.dataset.duelsRefError=result.error||'참조 실패';return span
 }
 function expandDuelsReferenceSyntax(root){
-  const walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT,{acceptNode(node){const p=node.parentElement;if(!p||p.closest('code,pre,script,style,textarea'))return NodeFilter.FILTER_REJECT;DUELS_REF_COMMAND_RE.lastIndex=0;return DUELS_REF_COMMAND_RE.test(node.nodeValue||'')?NodeFilter.FILTER_ACCEPT:NodeFilter.FILTER_REJECT;}});
+  const walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT,{acceptNode(n){if(!n.nodeValue?.includes('{{='))return NodeFilter.FILTER_REJECT;const p=n.parentElement;if(!p||p.closest('code,pre,script,style,textarea,.duels-ref-value,.duels-ref-error,.duels-ref-pending'))return NodeFilter.FILTER_REJECT;return NodeFilter.FILTER_ACCEPT}});
   const nodes=[];while(walker.nextNode())nodes.push(walker.currentNode);
-  nodes.forEach(node=>{const text=node.nodeValue||'';let last=0,m;DUELS_REF_COMMAND_RE.lastIndex=0;const frag=document.createDocumentFragment();while((m=DUELS_REF_COMMAND_RE.exec(text))){if(m.index>last)frag.append(document.createTextNode(text.slice(last,m.index)));const [character,field]=duelsRefMatchParts(m);frag.append(duelsReferenceNode(character,field));last=m.index+m[0].length}if(last<text.length)frag.append(document.createTextNode(text.slice(last)));node.replaceWith(frag)});
+  nodes.forEach(node=>{const text=node.nodeValue||'';let last=0,m;DUELS_REF_COMMAND_RE.lastIndex=0;const frag=document.createDocumentFragment();while((m=DUELS_REF_COMMAND_RE.exec(text))){if(m.index>last)frag.append(document.createTextNode(text.slice(last,m.index)));const [character,scope,field]=duelsRefMatchParts(m);frag.append(duelsReferenceNode(character,scope,field));last=m.index+m[0].length}if(last<text.length)frag.append(document.createTextNode(text.slice(last)));node.replaceWith(frag)});
 }
-function hydrateDuelsReferences(root=document){
+function hydrateDuelsReferences(root){
   if(!state.duelsData)return;
-  $$('.duels-ref-pending',root).forEach(old=>old.replaceWith(duelsReferenceNode(old.dataset.duelsCharacter||'',old.dataset.duelsField||'')));
+  $$('.duels-ref-pending',root).forEach(old=>old.replaceWith(duelsReferenceNode(old.dataset.duelsCharacter||'',old.dataset.duelsScope||'',old.dataset.duelsField||'')));
 }
 async function ensureDuelsData(force=false){
   if(state.duelsData&&!force)return state.duelsData;
@@ -303,7 +294,7 @@ async function ensureDuelsData(force=false){
   state.duelsDataPromise=task;return task;
 }
 function hydrateVisibleDuelsReferences(){const root=$('#viewPage');if(!root?.querySelector('.duels-ref-pending'))return Promise.resolve();return ensureDuelsData().then(()=>hydrateDuelsReferences(root));}
-function duelsRefCommand(character,field){return `{{=duels(${JSON.stringify(String(character||''))},${JSON.stringify(String(field||''))})}}`}
+function duelsRefCommand(character,scope,field){return `{{=duels(${JSON.stringify(String(character||''))},${JSON.stringify(String(scope||''))},${JSON.stringify(String(field||''))})}}`}
 function insertPlainTextAtSavedRange(text){
   const r=state.savedRange?.cloneRange();if(!r)return false;const el=r.commonAncestorContainer.nodeType===1?r.commonAncestorContainer:r.commonAncestorContainer.parentElement;const editable=el?.closest?.('.editable,[data-footnote-target="1"],.inline-title-editable');if(!editable||!$('#editPage')?.contains(editable))return false;
   r.deleteContents();const n=document.createTextNode(text);r.insertNode(n);r.setStartAfter(n);r.collapse(true);const sel=getSelection();sel.removeAllRanges();sel.addRange(r);state.savedRange=r.cloneRange();editable.dispatchEvent(new Event('input',{bubbles:true}));return true;
@@ -315,21 +306,29 @@ function duelsReferenceCharacters(){
   const source=matched.length?matched:rows.filter(row=>row&&String(row.name||row.id||'').trim()&&!['체력','스태미나','이동속도','난이도','공격력','방어력','스킬','가져올값'].includes(duelsNormKey(row.name||row.id)));
   return [...source].sort((a,b)=>String(a.name||a.id||'').localeCompare(String(b.name||b.id||''),'ko'));
 }
-function duelsReferenceFields(row){
-  const out=[],seen=new Set();const add=(value,label=value,group='기본')=>{value=String(value||'').trim();if(!value||seen.has(value))return;seen.add(value);out.push({value,label:String(label||value),group})};
-  ['칭호','이미지','체력','이동속도','이동속도_단계','난이도','난이도_별','스타일','사거리','역할군'].forEach(x=>add(x,x,'캐릭터'));
-  (row?.skills||[]).forEach((sk,i)=>{const label=duelsTechniqueLabel(sk,i+1),metrics=duelsTechniqueMetrics(sk);for(const metric of Object.keys(metrics))add(`기술.${label}.${metric}`,`${label} · ${metric}`,'기술 수치')});
+const DUELS_PROFILE_FIELDS=['칭호','이미지','체력','이동속도','이동속도_단계','난이도','난이도_별','스타일','사거리','역할군'];
+function duelsReferenceScopes(row){
+  const out=[{value:'프로필',label:'프로필',kind:'profile'}],seen=new Set(['프로필']);
+  (row?.skills||[]).forEach((sk,i)=>{const label=duelsTechniqueLabel(sk,i+1);if(!seen.has(label)){seen.add(label);out.push({value:label,label,kind:'technique',sk})}});
+  if(out.length===1){for(const label of ['평타','스킬','반격기']){seen.add(label);out.push({value:label,label,kind:'technique',sk:null})}}
   return out;
+}
+function duelsReferenceValues(row,scope){
+  if(scope==='프로필')return DUELS_PROFILE_FIELDS.map(x=>({value:x,label:x}));
+  const t=duelsFindTechnique(row,scope),metrics=t?duelsTechniqueMetrics(t.sk):null;
+  if(metrics&&Object.keys(metrics).length)return Object.keys(metrics).map(x=>({value:x,label:x}));
+  return Object.keys(DUELS_TECHNIQUE_METRICS).map(x=>({value:x,label:x}));
 }
 async function openDuelsReferenceDialog(){
   rememberSelection();await ensureDuelsData();const chars=duelsReferenceCharacters();
-  openModal(`<div class="duels-ref-modal"><h2>듀얼즈 참조</h2><p class="muted">Wiki에 값 자체를 저장하지 않고 Duels.html의 최신 캐릭터 데이터를 참조합니다.</p>${state.duelsDataError?`<div class="duels-ref-warning">${escapeHtml(state.duelsDataError)}</div>`:''}${chars.length?'':`<div class="duels-ref-warning">원본에서 캐릭터 데이터를 찾지 못했습니다. 원본 새로고침을 시도하세요.</div>`}<div class="form-row"><label>캐릭터</label><select id="duelsRefCharacter">${chars.map(x=>`<option value="${escapeHtml(x.name||x.id)}">${escapeHtml(x.name||x.id)}${x.id&&x.id!==x.name?` · ${escapeHtml(x.id)}`:''}</option>`).join('')}</select></div><div class="form-row"><label>가져올 값</label><select id="duelsRefField"></select></div><div class="duels-ref-preview"><span>명령어</span><code id="duelsRefPreview"></code></div><div class="modal-actions"><button id="duelsRefRefresh">원본 새로고침</button><button id="duelsRefCancel">취소</button><button id="duelsRefInsert" class="primary">삽입</button></div></div>`);
-  const sel=$('#duelsRefCharacter'),field=$('#duelsRefField'),preview=$('#duelsRefPreview');
-  const redraw=()=>{const row=findDuelsCharacter(sel.value),items=duelsReferenceFields(row),groups=new Map();for(const item of items){if(!groups.has(item.group))groups.set(item.group,[]);groups.get(item.group).push(item)}field.innerHTML=[...groups].map(([g,xs])=>`<optgroup label="${escapeHtml(g)}">${xs.map(x=>`<option value="${escapeHtml(x.value)}">${escapeHtml(x.label)}</option>`).join('')}</optgroup>`).join('');if([...field.options].some(o=>o.value==='체력'))field.value='체력';preview.textContent=duelsRefCommand(sel.value,field.value)};
-  sel.onchange=redraw;field.onchange=()=>preview.textContent=duelsRefCommand(sel.value,field.value);redraw();
+  openModal(`<div class="duels-ref-modal"><h2>듀얼즈 참조</h2><p class="muted">캐릭터 → 프로필/기술 → 값 순서로 선택합니다. 값 자체는 Wiki에 저장하지 않고 Duels.html의 최신 데이터를 참조합니다.</p>${state.duelsDataError?`<div class="duels-ref-warning">${escapeHtml(state.duelsDataError)}</div>`:''}${chars.length?'':`<div class="duels-ref-warning">원본에서 캐릭터 데이터를 찾지 못했습니다. 원본 새로고침을 시도하세요.</div>`}<div class="form-row"><label>캐릭터</label><select id="duelsRefCharacter">${chars.map(x=>`<option value="${escapeHtml(x.name||x.id)}">${escapeHtml(x.name||x.id)}${x.id&&x.id!==x.name?` · ${escapeHtml(x.id)}`:''}</option>`).join('')}</select></div><div class="form-row"><label>프로필 / 기술</label><select id="duelsRefScope"></select></div><div class="form-row"><label>가져올 값</label><select id="duelsRefField"></select></div><div class="duels-ref-preview"><span>명령어</span><code id="duelsRefPreview"></code></div><div class="modal-actions"><button id="duelsRefRefresh">원본 새로고침</button><button id="duelsRefCancel">취소</button><button id="duelsRefInsert" class="primary">삽입</button></div></div>`);
+  const charSel=$('#duelsRefCharacter'),scopeSel=$('#duelsRefScope'),fieldSel=$('#duelsRefField'),preview=$('#duelsRefPreview');
+  const redrawField=()=>{const row=findDuelsCharacter(charSel.value),items=duelsReferenceValues(row,scopeSel.value);fieldSel.innerHTML=items.map(x=>`<option value="${escapeHtml(x.value)}">${escapeHtml(x.label)}</option>`).join('');if(scopeSel.value==='프로필'&&[...fieldSel.options].some(o=>o.value==='체력'))fieldSel.value='체력';preview.textContent=duelsRefCommand(charSel.value,scopeSel.value,fieldSel.value)};
+  const redrawScope=()=>{const row=findDuelsCharacter(charSel.value),items=duelsReferenceScopes(row);scopeSel.innerHTML=items.map(x=>`<option value="${escapeHtml(x.value)}">${escapeHtml(x.label)}</option>`).join('');scopeSel.value='프로필';redrawField()};
+  charSel.onchange=redrawScope;scopeSel.onchange=redrawField;fieldSel.onchange=()=>preview.textContent=duelsRefCommand(charSel.value,scopeSel.value,fieldSel.value);redrawScope();
   $('#duelsRefCancel').onclick=closeModal;
-  $('#duelsRefRefresh').onclick=async()=>{const old=sel.value;await ensureDuelsData(true);closeModal();await openDuelsReferenceDialog();const next=$('#duelsRefCharacter');if(next&&[...next.options].some(o=>o.value===old)){next.value=old;next.dispatchEvent(new Event('change'))}};
-  $('#duelsRefInsert').onclick=()=>{const cmd=duelsRefCommand(sel.value,field.value);closeModal();if(!insertPlainTextAtSavedRange(cmd)){showStatus('참조 명령을 삽입할 텍스트 위치를 먼저 선택하세요.',true)}};
+  $('#duelsRefRefresh').onclick=async()=>{const old=charSel.value;await ensureDuelsData(true);closeModal();await openDuelsReferenceDialog();const next=$('#duelsRefCharacter');if(next&&[...next.options].some(o=>o.value===old)){next.value=old;next.dispatchEvent(new Event('change'))}};
+  $('#duelsRefInsert').onclick=()=>{const cmd=duelsRefCommand(charSel.value,scopeSel.value,fieldSel.value);closeModal();if(!insertPlainTextAtSavedRange(cmd)){showStatus('참조 명령을 삽입할 텍스트 위치를 먼저 선택하세요.',true)}};
 }
 
 function viewHtml(html,{expandInlineImages=true}={}){ const t=document.createElement('template'); t.innerHTML=html||''; $$('img',t.content).forEach(img=>{const src=img.getAttribute('src')||'';img.setAttribute('src',mediaSrc(src));}); $$('a',t.content).forEach(a=>{const h=a.getAttribute('href')||''; if(h.startsWith('wiki:/'))a.dataset.wikiLink=h;}); upgradeDuelsComponents(t.content); if(!state.editing)expandDuelsReferenceSyntax(t.content); if(expandInlineImages)expandInlineImageSyntax(t.content); return t.innerHTML; }

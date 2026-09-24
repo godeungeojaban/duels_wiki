@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Duels Wiki Editor Launcher v3.63
+# Duels Wiki Editor Launcher v3.64
 # Standard library only. No npm / Node.js required.
 
 from __future__ import annotations
@@ -20,7 +20,7 @@ from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
-APP_VERSION = "3.63"
+APP_VERSION = "3.64"
 DEFAULT_OWNER = "godeungeojaban"
 DEFAULT_REPO = "duels_wiki"
 DEFAULT_BRANCH = "main"
@@ -38,7 +38,7 @@ DUELS_SOURCE_URL = "https://raw.githubusercontent.com/LyangNem/Duels/main/Duels.
 DUELS_ASSET_API = "https://api.github.com/repos/LyangNem/Duels/contents/character?ref=main"
 DUELS_ASSET_RAW_BASE = "https://raw.githubusercontent.com/LyangNem/Duels/main/character/"
 DUELS_CACHE_TTL = 300
-DUELS_PARSER_VERSION = 2
+DUELS_PARSER_VERSION = 4
 _DUELS_CATALOG_CACHE = {"at": 0.0, "catalog": None}
 
 _DUELS_NAME_KEYS = ("name", "displayname", "charactername", "charname", "이름")
@@ -92,6 +92,7 @@ _DUELS_SKILL_FIELD_ALIASES = {
     "비용": ("cost", "staminacost", "energycost", "비용"),
     "cost": ("cost", "staminacost", "energycost", "비용"),
     "스태미나소모량": ("staminacost", "staminause", "staminaconsume", "staminaconsumption", "energycost", "cost", "스태미나소모", "스태미나소모량"),
+    "스태미나회복량": ("staminarestore", "staminarecovery", "staminagain", "energyrestore", "energygain", "스태미나회복", "스태미나회복량"),
     "버프세기": ("buffvalue", "buffamount", "buffstrength", "buffpower", "buffrate", "buffpercent", "버프수치", "버프세기"),
     "버프지속시간": ("buffduration", "bufftime", "버프지속시간"),
     "디버프세기": ("debuffvalue", "debuffamount", "debuffstrength", "debuffpower", "debuffrate", "debuffpercent", "디버프수치", "디버프세기"),
@@ -383,7 +384,11 @@ def _duels_skill_list(fields: dict) -> list[dict]:
         for k,v in node.items():
             if isinstance(v,(dict,list)):walk(v,path+(str(k),),depth+1)
 
+    # Scan both the known skill containers and the whole character object.
+    # Real character definitions are not required to keep lmb/skill/counter at
+    # the first level; nested combat/actions/controller blocks are common.
     for label,node in roots:walk(node,(label,))
+    walk(fields,())
     seen=set();result=[]
     for x in out:
         sig=json.dumps(x,ensure_ascii=False,sort_keys=True,default=str)
@@ -602,6 +607,7 @@ def _duels_role_parts(fields: dict) -> dict:
 _DUELS_TECHNIQUE_METRICS = {
     "피해량": ("damage", "dmg", "basedamage", "damagevalue", "damageamount", "피해", "피해량", "데미지"),
     "스태미나소모량": ("staminacost", "staminause", "staminaconsume", "staminaconsumption", "energycost", "cost", "스태미나소모", "스태미나소모량"),
+    "스태미나회복량": ("staminarestore", "staminarecovery", "staminagain", "energyrestore", "energygain", "스태미나회복", "스태미나회복량"),
     "쿨다운": ("cooldown", "cd", "cooldowntime", "쿨다운"),
     "사거리": ("range", "attackrange", "skillrange", "사거리"),
     "버프세기": ("buffvalue", "buffamount", "buffstrength", "buffpower", "buffrate", "buffpercent", "버프수치", "버프세기"),
@@ -733,36 +739,36 @@ def _duels_find_technique(row: dict, key: str):
     if exact:return exact[0]
     return None
 
-def resolve_duels_reference(catalog: dict, character: str, field: str):
+def resolve_duels_reference(catalog: dict, character: str, scope: str, field: str):
     target=_duels_norm_key(character);found=None
     for row in catalog.get('characters') or []:
         if target in {_duels_norm_key(row.get('name')),_duels_norm_key(row.get('id'))}:found=row;break
     if not found:return {'ok':False,'error':f'캐릭터를 찾을 수 없음: {character}'}
-    path=str(field or '').strip()
-    if not path:return {'ok':False,'error':'조회 필드가 비어 있음'}
-    nk=_duels_norm_key(path)
-    if nk in {_duels_norm_key(x) for x in _NARRATIVE_FIELD_KEYS}:return {'ok':False,'error':'문장형 설명 필드는 참조 대상이 아닙니다.'}
-    if nk in ('이름','name'):return {'ok':True,'kind':'text','value':found.get('name','')}
-    if nk in ('이미지','image','img','portrait'):
-        return {'ok':True,'kind':'image','value':found['image']} if found.get('image') else {'ok':False,'error':f'이미지를 찾을 수 없음: {character}'}
-    if nk in (_duels_norm_key('이동속도_단계'),_duels_norm_key('이동속도단계'),_duels_norm_key('속도단계')):
-        v=_duels_speed_grade(catalog,found);return {'ok':True,'kind':'text','value':v} if v else {'ok':False,'error':'이동속도 단계를 계산할 수 없음'}
-    if nk in (_duels_norm_key('난이도_별'),_duels_norm_key('난이도별'),_duels_norm_key('난이도별표')):
-        v=_duels_difficulty_stars(found);return {'ok':True,'kind':'text','value':v} if v else {'ok':False,'error':'난이도 별표를 계산할 수 없음'}
-    for wanted in ('스타일','사거리','역할군'):
-        if nk==_duels_norm_key(wanted):
-            v=_duels_role_parts(found.get('fields') or {}).get(wanted)
-            return {'ok':True,'kind':'text','value':v} if v not in (None,'') else {'ok':False,'error':f'{wanted} 정보를 찾을 수 없음: {character}'}
-    tech=re.match(r'^기술\.(.+?)\.(.+)$',path,re.I)
-    if tech:
-        technique,metric=tech.group(1).strip(),tech.group(2).strip();match=_duels_find_technique(found,technique)
-        if not match:return {'ok':False,'error':f'기술을 찾을 수 없음: {technique}'}
-        metrics=_duels_technique_metrics(match[0]);value=metrics.get(metric)
-        if value is None:return {'ok':False,'error':f'{technique}의 {metric} 정보를 찾을 수 없음'}
+    scope=str(scope or '').strip();field=str(field or '').strip()
+    if not scope or not field:return {'ok':False,'error':'참조 범주 또는 값이 비어 있음'}
+
+    if _duels_norm_key(scope)==_duels_norm_key('프로필'):
+        nk=_duels_norm_key(field)
+        if nk in {_duels_norm_key(x) for x in _NARRATIVE_FIELD_KEYS}:return {'ok':False,'error':'문장형 설명 필드는 참조 대상이 아닙니다.'}
+        if nk in {_duels_norm_key(x) for x in ('이미지','image','img','portrait')}:
+            return {'ok':True,'kind':'image','value':found['image']} if found.get('image') else {'ok':False,'error':f'이미지를 찾을 수 없음: {character}'}
+        if nk==_duels_norm_key('이동속도_단계'):
+            v=_duels_speed_grade(catalog,found);return {'ok':True,'kind':'text','value':v} if v else {'ok':False,'error':'이동속도 단계를 계산할 수 없음'}
+        if nk==_duels_norm_key('난이도_별'):
+            v=_duels_difficulty_stars(found);return {'ok':True,'kind':'text','value':v} if v else {'ok':False,'error':'난이도 별표를 계산할 수 없음'}
+        for wanted in ('스타일','사거리','역할군'):
+            if nk==_duels_norm_key(wanted):
+                v=_duels_role_parts(found.get('fields') or {}).get(wanted)
+                return {'ok':True,'kind':'text','value':v} if v not in (None,'') else {'ok':False,'error':f'{wanted} 정보를 찾을 수 없음: {character}'}
+        alias_map={_duels_norm_key(k):v for k,v in _DUELS_FIELD_ALIASES.items()}
+        value=_duels_casefold_lookup(found.get('fields') or {},field,alias_map)
+        if value is None:return {'ok':False,'error':f'프로필 값을 찾을 수 없음: {field}'}
         return {'ok':True,'kind':'text','value':value}
-    alias_map={_duels_norm_key(k):v for k,v in _DUELS_FIELD_ALIASES.items()}
-    value=_duels_casefold_lookup(found.get('fields') or {},path,alias_map)
-    if value is None:return {'ok':False,'error':f'필드를 찾을 수 없음: {field}'}
+
+    match=_duels_find_technique(found,scope)
+    if not match:return {'ok':False,'error':f'기술을 찾을 수 없음: {scope}'}
+    metrics=_duels_technique_metrics(match[0]);value=metrics.get(field)
+    if value is None:return {'ok':False,'error':f'{scope}의 {field} 정보를 찾을 수 없음'}
     return {'ok':True,'kind':'text','value':value}
 
 if os.name == "nt":
