@@ -13,7 +13,6 @@
     <a class="brand" href="#/">Duels Wiki</a>
     <span id="editorVersion" class="version">Editor …</span>
     <div class="spacer"></div>
-    <button id="localDocsBtn" class="ghost-btn">로컬 문서</button>
     <button id="settingsBtn" class="ghost-btn">GitHub 설정</button>
   </header>
 
@@ -194,6 +193,9 @@
       <div class="side-actions">
         <button id="newCategoryBtn">카테고리 생성</button>
         <button id="newDocumentBtn">문서 생성</button>
+        <button id="newLocalDocumentBtn">로컬 문서 생성</button>
+        <button id="openLocalJsonBtn">로컬 JSON 불러오기</button>
+        <input id="openLocalJsonFile" type="file" accept=".json,application/json" hidden>
       </div>
       <div id="tree" class="tree"><div class="loading">불러오는 중…</div></div>
     </aside>

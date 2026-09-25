@@ -182,3 +182,20 @@
 .local-doc-badge,.local-edit-label{display:inline-flex;align-items:center;width:fit-content;padding:3px 7px;margin-bottom:7px;border:1px solid #2d6489;background:#0a1b29;color:#67c8ff;font:700 9px var(--mono);letter-spacing:.14em;text-transform:uppercase}
 .local-doc-list{display:grid;gap:7px;max-height:52vh;overflow:auto;margin-top:14px;padding-right:2px}.local-doc-row{display:flex;align-items:center;gap:12px;padding:10px 11px;border:1px solid #223b50;background:#09131c}.local-doc-info{min-width:0;flex:1;display:grid;gap:3px}.local-doc-info strong{color:#d7e9f5;overflow-wrap:anywhere}.local-doc-info span{font:500 10px var(--mono);color:#657c90;overflow-wrap:anywhere}.local-doc-actions{display:flex;gap:6px;flex:0 0 auto}.local-doc-empty{padding:22px 10px;border:1px dashed #29435c;color:#657c90;text-align:center}.local-editor-card .edit-meta{display:flex;align-items:center;margin-bottom:12px}
 @media(max-width:720px){.local-doc-row{align-items:flex-start;flex-direction:column}.local-doc-actions{width:100%}.local-doc-actions button{flex:1}}
+
+/* 4.1 local sidebar + persistent editor action bar + future internal links */
+.tree-local-category{margin-top:14px;padding-top:10px;border-top:1px solid #1d3042}
+.tree-local-title{cursor:default;color:#71a8c9;border-left-color:#315b7c}
+.tree-local-title:hover{background:transparent;color:#71a8c9;border-left-color:#315b7c}
+.tree-local-empty{padding:7px 10px 8px 22px;color:#4f6578;font-size:11px}
+.side-actions{grid-template-columns:1fr 1fr}
+#newLocalDocumentBtn,#openLocalJsonBtn{border-color:#28516d;color:#8fc9e9}
+.editor-bottom-bar{position:fixed;left:292px;right:0;bottom:0;z-index:54;padding:10px 28px calc(10px + env(safe-area-inset-bottom));background:linear-gradient(180deg,#0b1118f2,#080c11fa);border-top:1px solid #29435c;box-shadow:0 -8px 24px #0009;backdrop-filter:blur(8px)}
+.editor-bottom-bar-inner{max-width:var(--page);margin:0 auto;display:flex;align-items:center;justify-content:flex-end;gap:10px;min-height:40px}
+.editor-bottom-bar-inner>.muted{margin-right:auto}
+.editing-mode .main{padding-bottom:120px}
+a.missing-wiki-link{color:#d88bff!important;text-decoration-style:dashed!important;text-decoration-line:underline;text-decoration-color:#8f55ad!important;text-underline-offset:2px}
+a.missing-wiki-link:hover{color:#efb8ff!important;text-shadow:0 0 8px #b45cff66!important}
+.internal-link-manual{margin-top:14px;padding:12px;border:1px solid #20384d;background:#081019}.internal-link-manual .form-row{margin:0 0 8px}.internal-link-manual input+input{margin-top:7px}
+@media(max-width:900px){.editor-bottom-bar{left:240px;padding-left:16px;padding-right:16px}}
+@media(max-width:720px){.editor-bottom-bar{left:0;padding:8px 10px calc(8px + env(safe-area-inset-bottom))}.editor-bottom-bar-inner{min-height:38px}.editing-mode .main{padding-bottom:110px}}

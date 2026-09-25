@@ -8,9 +8,12 @@ ROOT=Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:sys.path.insert(0,str(ROOT))
 WIKI=ROOT/'wiki'; MEDIA=ROOT/'media'; OUT=ROOT/'site'/'dist'
 UNCAT='미분류'
+INTERNAL_LINK_TARGETS=set()
+INTERNAL_CATEGORY_NAMES={}
+INTERNAL_DOCUMENT_NAMES={}
 
 CSS='''
-*{box-sizing:border-box}html,body{margin:0;min-height:100%;font-family:"SUIT Variable","SUIT","Pretendard Variable","Pretendard","Wanted Sans","Noto Sans KR","Apple SD Gothic Neo","Segoe UI",Arial,sans-serif;color:#e0e0e0;background:#0a0a0c;letter-spacing:-.018em}body{line-height:1.6}.top{height:58px;background:#090b0f;border-bottom:1px solid #1f3345;display:flex;align-items:center;padding:0 20px;position:sticky;top:0;z-index:50;box-shadow:0 6px 22px #0008}.top a{color:#44aaff;text-decoration:none;font-weight:650;font-size:20px;letter-spacing:.12em;text-transform:uppercase;text-shadow:0 0 12px #4af5}.nav-toggle{display:none;margin-right:10px;border:1px solid #2a4a6a;background:transparent;color:#adf;border-radius:2px;padding:6px 9px;font-size:18px;cursor:pointer}.layout{display:grid;grid-template-columns:292px minmax(0,1fr);min-height:calc(100vh - 58px)}.sidebar{background:linear-gradient(180deg,#0c1118,#080c11);border-right:1px solid #203548;padding:18px 14px 40px;position:sticky;top:58px;height:calc(100vh - 58px);overflow:auto}.side-root{display:block;padding:9px 10px;color:#9fc8e6;text-decoration:none;font-weight:650;margin-bottom:9px;letter-spacing:.08em;border-left:2px solid transparent}.side-root:hover,.side-link:hover{background:#0f1b27;color:#dff;border-left-color:#315b7c}.side-category{margin:9px 0 3px}.side-category>a,.side-category>span{display:block;padding:7px 10px;color:#a9bed0;text-decoration:none;font-weight:650;border-left:2px solid transparent}.side-category>a:hover{background:#0f1b27;color:#dff;border-left-color:#315b7c}.side-docs{margin:1px 0 8px;padding-left:10px;border-left:1px solid #1d3042}.side-link{display:block;padding:6px 10px;color:#718395;text-decoration:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;border-left:2px solid transparent;font-size:13px}.side-link.active,.side-root.active,.side-category>a.active{background:#102130;color:#dff;border-left-color:#49b8ff;text-shadow:0 0 8px #4af4}.content{min-width:0;background:radial-gradient(circle at 72% 0,#10223755,transparent 33%),#0a0a0c}.page{max-width:980px;margin:30px auto 80px;background:linear-gradient(180deg,#0d1219,#0a0f15);border:1px solid #29435c;padding:30px 38px;box-shadow:0 0 0 1px #09111b,0 0 24px #249cff14}h1{font-size:33px;margin:0 0 16px;color:#dceeff;letter-spacing:.035em;border-bottom:1px solid #1e3447;padding-bottom:14px}.intro{margin-bottom:20px;color:#b9c5d0}.toc{border:1px solid #223b51;background:linear-gradient(180deg,#0b141d,#09111a);padding:14px 18px;margin:22px 0}.toc-title{font-weight:650;margin-bottom:8px;color:#58bfff;font-size:11px;letter-spacing:.18em;text-transform:uppercase}.toc-line{display:flex;align-items:baseline;gap:9px;padding-left:calc(var(--toc-depth,0) * 18px);margin:5px 0}.toc a,.body a,.section-title a{color:#65c6ff;text-decoration:none}.toc a:hover,.body a:hover{text-decoration:underline;text-shadow:0 0 8px #4af8}.toc-number{display:inline-block;flex:0 0 auto;min-width:0;white-space:nowrap}.toc-text{min-width:0;color:#b7c2cc}.section{margin:28px 0}.section-title{border-bottom:1px solid #1e3447;padding-bottom:8px;margin:0 0 12px;line-height:1.35;color:#d9e7f3}.depth-1>.section-title{font-size:25px}.depth-2>.section-title{font-size:21px}.depth-3>.section-title{font-size:18px}.num{margin-right:7px;color:#58bfff}.body{color:#b7c2cc}.body p{margin:.42em 0}.body img{max-width:100%;height:auto}.body ul{list-style:none;padding-left:1.55em;margin:.45em 0}.body ul>li{position:relative}.body ul>li::before{content:'·';position:absolute;left:-1.05em;top:0;color:#c9dbe9;font-weight:800}.body ol{list-style-type:decimal;padding-left:2.05em;margin:.45em 0}.body ol>li::marker{color:#c9dbe9;font-variant-numeric:tabular-nums}.body li{padding-left:.12em;margin:.12em 0}.body li>ul,.body li>ol{margin:.14em 0}.body blockquote{border-left:2px solid #315b7c;margin:.7em 0;padding:.35em .9em;color:#91a1b2;background:#09131d}.muted{color:#667788}
+*{box-sizing:border-box}html,body{margin:0;min-height:100%;font-family:"SUIT Variable","SUIT","Pretendard Variable","Pretendard","Wanted Sans","Noto Sans KR","Apple SD Gothic Neo","Segoe UI",Arial,sans-serif;color:#e0e0e0;background:#0a0a0c;letter-spacing:-.018em}body{line-height:1.6}.top{height:58px;background:#090b0f;border-bottom:1px solid #1f3345;display:flex;align-items:center;padding:0 20px;position:sticky;top:0;z-index:50;box-shadow:0 6px 22px #0008}.top a{color:#44aaff;text-decoration:none;font-weight:650;font-size:20px;letter-spacing:.12em;text-transform:uppercase;text-shadow:0 0 12px #4af5}.nav-toggle{display:none;margin-right:10px;border:1px solid #2a4a6a;background:transparent;color:#adf;border-radius:2px;padding:6px 9px;font-size:18px;cursor:pointer}.layout{display:grid;grid-template-columns:292px minmax(0,1fr);min-height:calc(100vh - 58px)}.sidebar{background:linear-gradient(180deg,#0c1118,#080c11);border-right:1px solid #203548;padding:18px 14px 40px;position:sticky;top:58px;height:calc(100vh - 58px);overflow:auto}.side-root{display:block;padding:9px 10px;color:#9fc8e6;text-decoration:none;font-weight:650;margin-bottom:9px;letter-spacing:.08em;border-left:2px solid transparent}.side-root:hover,.side-link:hover{background:#0f1b27;color:#dff;border-left-color:#315b7c}.side-category{margin:9px 0 3px}.side-category>a,.side-category>span{display:block;padding:7px 10px;color:#a9bed0;text-decoration:none;font-weight:650;border-left:2px solid transparent}.side-category>a:hover{background:#0f1b27;color:#dff;border-left-color:#315b7c}.side-docs{margin:1px 0 8px;padding-left:10px;border-left:1px solid #1d3042}.side-link{display:block;padding:6px 10px;color:#718395;text-decoration:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;border-left:2px solid transparent;font-size:13px}.side-link.active,.side-root.active,.side-category>a.active{background:#102130;color:#dff;border-left-color:#49b8ff;text-shadow:0 0 8px #4af4}.content{min-width:0;background:radial-gradient(circle at 72% 0,#10223755,transparent 33%),#0a0a0c}.page{max-width:980px;margin:30px auto 80px;background:linear-gradient(180deg,#0d1219,#0a0f15);border:1px solid #29435c;padding:30px 38px;box-shadow:0 0 0 1px #09111b,0 0 24px #249cff14}h1{font-size:33px;margin:0 0 16px;color:#dceeff;letter-spacing:.035em;border-bottom:1px solid #1e3447;padding-bottom:14px}.intro{margin-bottom:20px;color:#b9c5d0}.toc{border:1px solid #223b51;background:linear-gradient(180deg,#0b141d,#09111a);padding:14px 18px;margin:22px 0}.toc-title{font-weight:650;margin-bottom:8px;color:#58bfff;font-size:11px;letter-spacing:.18em;text-transform:uppercase}.toc-line{display:flex;align-items:baseline;gap:9px;padding-left:calc(var(--toc-depth,0) * 18px);margin:5px 0}.toc a,.body a,.section-title a{color:#65c6ff;text-decoration:none}.toc a:hover,.body a:hover{text-decoration:underline;text-shadow:0 0 8px #4af8}a.missing-wiki-link{color:#d88bff;text-decoration:underline dashed #8f55ad;text-underline-offset:2px}a.missing-wiki-link:hover{color:#efb8ff;text-shadow:0 0 8px #b45cff66}.toc-number{display:inline-block;flex:0 0 auto;min-width:0;white-space:nowrap}.toc-text{min-width:0;color:#b7c2cc}.section{margin:28px 0}.section-title{border-bottom:1px solid #1e3447;padding-bottom:8px;margin:0 0 12px;line-height:1.35;color:#d9e7f3}.depth-1>.section-title{font-size:25px}.depth-2>.section-title{font-size:21px}.depth-3>.section-title{font-size:18px}.num{margin-right:7px;color:#58bfff}.body{color:#b7c2cc}.body p{margin:.42em 0}.body img{max-width:100%;height:auto}.body ul{list-style:none;padding-left:1.55em;margin:.45em 0}.body ul>li{position:relative}.body ul>li::before{content:'·';position:absolute;left:-1.05em;top:0;color:#c9dbe9;font-weight:800}.body ol{list-style-type:decimal;padding-left:2.05em;margin:.45em 0}.body ol>li::marker{color:#c9dbe9;font-variant-numeric:tabular-nums}.body li{padding-left:.12em;margin:.12em 0}.body li>ul,.body li>ol{margin:.14em 0}.body blockquote{border-left:2px solid #315b7c;margin:.7em 0;padding:.35em .9em;color:#91a1b2;background:#09131d}.muted{color:#667788}
 @media(max-width:900px){.layout{grid-template-columns:240px minmax(0,1fr)}.page{margin:18px 14px 60px}}
 .footnote-ref{color:#65c6ff;text-decoration:none;font-weight:700;font-size:.82em;white-space:nowrap}.footnote-ref:hover{text-decoration:underline;text-shadow:0 0 8px #4af8}.footnotes{margin:42px 0 8px;padding-top:16px;border-top:1px solid #29435c}.footnotes-head{display:flex;align-items:center;gap:10px;margin-bottom:12px}.footnotes-head h2{margin:0;color:#d9e7f3;font-size:20px;line-height:1.3}.footnotes-kicker{font-size:9px;letter-spacing:.18em;color:#4f7895;border:1px solid #28465f;padding:2px 5px}.footnote-row{display:grid;grid-template-columns:30px minmax(0,1fr);gap:4px;align-items:start;padding:8px 0;border-bottom:1px solid #162a3b}.footnote-number{color:#68c7ff;font-size:12px;font-weight:700;padding-top:4px;font-variant-numeric:tabular-nums}.footnote-content>p:first-child{margin-top:0}.footnote-content>p:last-child{margin-bottom:0}@media(max-width:720px){.nav-toggle{display:inline-block;color:#adf}.layout{display:block}.sidebar{position:fixed;left:0;top:58px;bottom:0;width:min(86vw,300px);height:auto;z-index:45;transform:translateX(-102%);transition:transform .18s ease;box-shadow:8px 0 24px #000b}.sidebar.open{transform:translateX(0)}.page{margin:12px 8px 50px;padding:20px 16px}h1{font-size:27px}.top{padding:0 10px}.top a{font-size:17px}}
 @media(max-width:720px){html,body{max-width:100%;overflow-x:hidden}.content{min-width:0}.page{max-width:calc(100vw - 16px);overflow-wrap:anywhere}.body img{max-width:100%!important;height:auto!important}.toc{overflow-wrap:anywhere}}
@@ -127,9 +130,35 @@ def rewrite_html(src,cur_parts,notes=None):
     src=re.sub(r'\s+title=(["\'])각주\s+\d+\1','',src)
     # local media
     src=re.sub(r'(?i)(src=["\'])/media/',lambda m:m.group(1)+('../'*len(cur_parts))+'media/',src)
-    # semantic links
-    def repl(m):return f'{m.group(1)}{internal_href(cur_parts,m.group(2))}{m.group(3)}'
-    src=re.sub(r'(href=["\'])(wiki:/[^"\']*)(["\'])',repl,src)
+    # semantic links: resolve to static paths, preserve category/document hover labels,
+    # and visibly mark links whose target document does not exist yet.
+    def repl_anchor(m):
+        tag=m.group(0);hm=re.search(r'href=(["\'])(wiki:/[^"\']*)\1',tag,re.I)
+        if not hm:return tag
+        target=hm.group(2);x=target[6:];parts=[unquote(p) for p in x.lstrip('/').split('/') if p]
+        exists=target in INTERNAL_LINK_TARGETS
+        cat_name='Duels Wiki';doc_name='전체'
+        if parts:
+            cat_name=INTERNAL_CATEGORY_NAMES.get(parts[0],parts[0]);doc_name='정보'
+        if len(parts)>1:
+            doc_name=INTERNAL_DOCUMENT_NAMES.get((parts[0],parts[1]),parts[1])
+        cm=re.search(r'data-wiki-category-name=(["\'])(.*?)\1',tag,re.I|re.S)
+        dm=re.search(r'data-wiki-document-name=(["\'])(.*?)\1',tag,re.I|re.S)
+        if cm:cat_name=html.unescape(cm.group(2))
+        if dm:doc_name=html.unescape(dm.group(2))
+        tag=re.sub(r'href=(["\'])wiki:/[^"\']*\1',f'href="{internal_href(cur_parts,target)}"',tag,count=1,flags=re.I)
+        tag=re.sub(r'\s+title=(["\']).*?\1','',tag,flags=re.I|re.S)
+        title=html.escape(f'{cat_name} / {doc_name}',quote=True)
+        tag=tag[:-1]+f' title="{title}">'
+        if not exists:
+            cmatch=re.search(r'class=(["\'])(.*?)\1',tag,re.I|re.S)
+            if cmatch:
+                classes=cmatch.group(2).split()
+                if 'missing-wiki-link' not in classes:classes.append('missing-wiki-link')
+                tag=tag[:cmatch.start()]+f'class="{" ".join(classes)}"'+tag[cmatch.end():]
+            else:tag=tag[:-1]+' class="missing-wiki-link">'
+        return tag
+    src=re.sub(r'<a\b[^>]*href=(["\'])wiki:/[^"\']*\1[^>]*>',repl_anchor,src,flags=re.I|re.S)
     return src
 
 def toc(sections,prefix='',depth=0):
@@ -215,6 +244,13 @@ def build():
                 if p.name=='_info.json':continue
                 d=load_json(p,{}) or {};docs.append({'title':d.get('title',p.stem),'slug':d.get('slug',p.stem),'doc':d})
         allcats.append((c,docs))
+    INTERNAL_LINK_TARGETS.clear();INTERNAL_CATEGORY_NAMES.clear();INTERNAL_DOCUMENT_NAMES.clear();INTERNAL_LINK_TARGETS.add('wiki:/')
+    for c,docs in allcats:
+        slug=c.get('slug','');INTERNAL_CATEGORY_NAMES[slug]=c.get('name',slug)
+        if c.get('hasInfo'):INTERNAL_LINK_TARGETS.add('wiki:/'+quote(slug,safe=''))
+        for d in docs:
+            dslug=d.get('slug','');INTERNAL_DOCUMENT_NAMES[(slug,dslug)]=d.get('title',dslug)
+            INTERNAL_LINK_TARGETS.add('wiki:/'+quote(slug,safe='')+'/'+quote(dslug,safe=''))
     root_doc=load_json(WIKI/'_root.json') or {
         'id':'root','kind':'root','title':'Duels Wiki','slug':'_root',
         'content':{'type':'wiki-sections-v3','introHtml':'<p></p>','sections':[{'id':'root-overview','title':'개요','contentHtml':'<p></p>','children':[]}]}

@@ -1,4 +1,4 @@
-# Duels Wiki 4.0
+# Duels Wiki 4.1
 
 Duels Wiki 3.78는 Python 표준 라이브러리 기반 로컬 편집기 + GitHub 저장소 + GitHub Pages 정적 열람 사이트 구조다. Node.js/Next.js/npm은 사용하지 않는다.
 
