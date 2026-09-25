@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Duels Wiki Editor Launcher v3.72
+# Duels Wiki Editor Launcher v3.77
 # Standard library only. No npm / Node.js required.
 
 from __future__ import annotations
@@ -9,6 +9,7 @@ import json
 import mimetypes
 import os
 import re
+import shutil
 import threading
 import time
 import urllib.error
@@ -20,7 +21,7 @@ from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
-APP_VERSION = "3.73"
+APP_VERSION = "3.78"
 DEFAULT_OWNER = "godeungeojaban"
 DEFAULT_REPO = "duels_wiki"
 DEFAULT_BRANCH = "main"
@@ -31,18 +32,23 @@ UNCAT_ID = "uncategorized"
 UNCAT_SLUG = "미분류"
 
 
+LAUNCHER_DIR = Path(__file__).resolve().parent
 if os.name == "nt":
     APP_HOME = Path(os.environ.get("APPDATA", Path.home())) / "DuelsWikiEditor"
 else:
     APP_HOME = Path.home() / ".duels-wiki-editor"
 CACHE_DIR = APP_HOME / "editor-cache"
 CONFIG_FILE = APP_HOME / "config.json"
-TOKEN_FILE = Path(__file__).resolve().with_name("token.txt")
+# Local JSON documents are intentionally portable with the editor package.
+# They live next to DuelsWikiEditor.py rather than in the per-user config/cache directory.
+LOCAL_DOCUMENTS_DIR = LAUNCHER_DIR / "local-documents"
+TOKEN_FILE = LAUNCHER_DIR / "token.txt"
 
 
 def ensure_dirs() -> None:
     APP_HOME.mkdir(parents=True, exist_ok=True)
     CACHE_DIR.mkdir(parents=True, exist_ok=True)
+    LOCAL_DOCUMENTS_DIR.mkdir(parents=True, exist_ok=True)
 
 
 def default_config() -> dict:
@@ -319,6 +325,126 @@ def blank_content():
             {"id": f"sec_{uuid.uuid4().hex}", "title": "개요", "contentHtml": "<p></p>", "children": []}
         ],
     }
+
+
+def _local_document_path(local_id: str) -> Path:
+    local_id = str(local_id or "").strip()
+    if not re.fullmatch(r"[A-Za-z0-9_-]{1,80}", local_id):
+        raise RuntimeError("올바르지 않은 로컬 문서 ID입니다.")
+    return LOCAL_DOCUMENTS_DIR / f"{local_id}.json"
+
+
+def _normalize_local_document_payload(document: dict, local_id: str | None = None, source: dict | None = None) -> dict:
+    if not isinstance(document, dict):
+        raise RuntimeError("로컬 문서 데이터가 올바르지 않습니다.")
+    title = str(document.get("title") or "로컬 문서").strip() or "로컬 문서"
+    content = document.get("content") if isinstance(document.get("content"), dict) else blank_content()
+    now = now_iso()
+    lid = local_id or uuid.uuid4().hex
+    old_local = document.get("_local") if isinstance(document.get("_local"), dict) else {}
+    merged_source = source if isinstance(source, dict) else old_local.get("source") if isinstance(old_local.get("source"), dict) else {}
+    return {
+        "id": str(document.get("id") or f"local_{uuid.uuid4().hex}"),
+        "kind": "local-document",
+        "title": title,
+        "slug": safe_slug(title) or "local-document",
+        "content": content,
+        "createdAt": str(document.get("createdAt") or now),
+        "updatedAt": now,
+        "_local": {
+            "version": 1,
+            "id": lid,
+            "source": merged_source,
+        },
+    }
+
+
+def list_local_documents() -> list:
+    ensure_dirs()
+    rows = []
+    for path in LOCAL_DOCUMENTS_DIR.glob("*.json"):
+        try:
+            data = json.loads(path.read_text("utf-8"))
+            if not isinstance(data, dict):
+                continue
+            meta = data.get("_local") if isinstance(data.get("_local"), dict) else {}
+            lid = str(meta.get("id") or path.stem)
+            # Accept hand-copied wiki JSON files too; normalize on first save.
+            rows.append({
+                "id": lid,
+                "title": str(data.get("title") or path.stem),
+                "updatedAt": str(data.get("updatedAt") or ""),
+                "source": meta.get("source") if isinstance(meta.get("source"), dict) else {},
+                "filename": path.name,
+            })
+        except Exception:
+            continue
+    rows.sort(key=lambda x: (x.get("updatedAt") or "", x.get("title") or ""), reverse=True)
+    return rows
+
+
+def load_local_document(local_id: str) -> dict:
+    ensure_dirs()
+    # Normal files use <id>.json. For manually copied files, fall back to scanning _local.id / stem.
+    try:
+        direct = _local_document_path(local_id)
+        if direct.exists():
+            data = json.loads(direct.read_text("utf-8"))
+            return data
+    except RuntimeError:
+        pass
+    for path in LOCAL_DOCUMENTS_DIR.glob("*.json"):
+        try:
+            data = json.loads(path.read_text("utf-8"))
+            meta = data.get("_local") if isinstance(data, dict) and isinstance(data.get("_local"), dict) else {}
+            if str(meta.get("id") or path.stem) == str(local_id):
+                return data
+        except Exception:
+            continue
+    raise RuntimeError("로컬 문서를 찾을 수 없습니다.")
+
+
+def save_local_document(document: dict, local_id: str | None = None, source: dict | None = None) -> dict:
+    ensure_dirs()
+    # Saving the same GitHub document again updates its existing local copy instead of
+    # silently creating duplicate snapshots. Users can still create a separate copy by
+    # editing/saving another local JSON file.
+    if not local_id and isinstance(source, dict) and source.get("path"):
+        source_path = str(source.get("path"))
+        for row in list_local_documents():
+            row_source = row.get("source") if isinstance(row.get("source"), dict) else {}
+            if str(row_source.get("path") or "") == source_path:
+                local_id = str(row.get("id") or "") or None
+                break
+    if local_id:
+        existing = None
+        try:
+            existing = load_local_document(local_id)
+        except Exception:
+            existing = None
+        if existing and isinstance(existing, dict):
+            # Preserve creation metadata and source unless explicitly supplied.
+            document = {**existing, **document, "content": document.get("content", existing.get("content"))}
+    normalized = _normalize_local_document_payload(document, local_id=local_id, source=source)
+    lid = normalized["_local"]["id"]
+    target = _local_document_path(lid)
+    target.write_text(json.dumps(normalized, ensure_ascii=False, indent=2), "utf-8")
+    return normalized
+
+
+def delete_local_document(local_id: str) -> None:
+    ensure_dirs()
+    # Resolve manual-file case before deleting.
+    for path in LOCAL_DOCUMENTS_DIR.glob("*.json"):
+        try:
+            data = json.loads(path.read_text("utf-8"))
+            meta = data.get("_local") if isinstance(data, dict) and isinstance(data.get("_local"), dict) else {}
+            if str(meta.get("id") or path.stem) == str(local_id):
+                path.unlink(missing_ok=True)
+                return
+        except Exception:
+            continue
+    raise RuntimeError("로컬 문서를 찾을 수 없습니다.")
 
 
 
@@ -652,6 +778,11 @@ class Handler(BaseHTTPRequestHandler):
                     "data_root": self.cfg["data_root"], "media_root": self.cfg["media_root"],
                     "tokenConfigured": bool(self.cfg.get("token")), "launcherVersion": APP_VERSION,
                 }); return
+            if u.path == "/api/local-documents":
+                self.send_json({"documents": list_local_documents()}); return
+            if u.path == "/api/local-document":
+                local_id = q.get("id", [""])[0]
+                self.send_json({"document": load_local_document(local_id)}); return
             if u.path == "/api/index":
                 self.send_json(build_index(self.cfg)); return
             if u.path == "/api/root":
@@ -694,6 +825,11 @@ class Handler(BaseHTTPRequestHandler):
                     if body.get(k): self.cfg[k] = body[k].strip()
                 save_config(self.cfg)
                 self.send_json({"ok": True}); return
+            if u.path == "/api/local-document":
+                document = body.get("document") if isinstance(body.get("document"), dict) else {}
+                local_id = str(body.get("id") or "").strip() or None
+                source = body.get("source") if isinstance(body.get("source"), dict) else None
+                self.send_json({"document": save_local_document(document, local_id=local_id, source=source)}); return
             if not self.cfg.get("token"):
                 self.send_json({"error": "GitHub Token을 먼저 설정해주세요."}, 401); return
             if u.path == "/api/root/update":
@@ -714,10 +850,13 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_DELETE(self):
         try:
-            if not self.cfg.get("token"):
-                self.send_json({"error": "GitHub Token을 먼저 설정해주세요."}, 401); return
             u = urllib.parse.urlparse(self.path)
             q = urllib.parse.parse_qs(u.query)
+            if u.path == "/api/local-document":
+                delete_local_document(q.get("id", [""])[0])
+                self.send_json({"ok": True}); return
+            if not self.cfg.get("token"):
+                self.send_json({"error": "GitHub Token을 먼저 설정해주세요."}, 401); return
             if u.path == "/api/document":
                 category = q.get("category", [""])[0]
                 doc = q.get("doc", [None])[0]

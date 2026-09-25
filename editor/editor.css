@@ -177,3 +177,8 @@
 .duels-description-box.description-body-editing .duels-description-box-body{display:block;min-height:1.55em;cursor:text;user-select:text;outline:none}
 .duels-description-box .duels-description-box-body[data-description-body-editing="1"]{caret-color:#dcefff}
 .duels-description-box.description-body-editing .duels-description-box-title{user-select:none}
+
+/* 3.75 local JSON documents */
+.local-doc-badge,.local-edit-label{display:inline-flex;align-items:center;width:fit-content;padding:3px 7px;margin-bottom:7px;border:1px solid #2d6489;background:#0a1b29;color:#67c8ff;font:700 9px var(--mono);letter-spacing:.14em;text-transform:uppercase}
+.local-doc-list{display:grid;gap:7px;max-height:52vh;overflow:auto;margin-top:14px;padding-right:2px}.local-doc-row{display:flex;align-items:center;gap:12px;padding:10px 11px;border:1px solid #223b50;background:#09131c}.local-doc-info{min-width:0;flex:1;display:grid;gap:3px}.local-doc-info strong{color:#d7e9f5;overflow-wrap:anywhere}.local-doc-info span{font:500 10px var(--mono);color:#657c90;overflow-wrap:anywhere}.local-doc-actions{display:flex;gap:6px;flex:0 0 auto}.local-doc-empty{padding:22px 10px;border:1px dashed #29435c;color:#657c90;text-align:center}.local-editor-card .edit-meta{display:flex;align-items:center;margin-bottom:12px}
+@media(max-width:720px){.local-doc-row{align-items:flex-start;flex-direction:column}.local-doc-actions{width:100%}.local-doc-actions button{flex:1}}

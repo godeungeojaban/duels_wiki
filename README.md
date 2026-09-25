@@ -1,6 +1,6 @@
-# Duels Wiki 3.73
+# Duels Wiki 3.78
 
-Duels Wiki 3.72은 Python 표준 라이브러리 기반 로컬 편집기 + GitHub 저장소 + GitHub Pages 정적 열람 사이트 구조다. Node.js/Next.js/npm은 사용하지 않는다.
+Duels Wiki 3.78는 Python 표준 라이브러리 기반 로컬 편집기 + GitHub 저장소 + GitHub Pages 정적 열람 사이트 구조다. Node.js/Next.js/npm은 사용하지 않는다.
 
 ## 실행
 
@@ -16,6 +16,14 @@ Duels Wiki 3.72은 Python 표준 라이브러리 기반 로컬 편집기 + GitHu
 에디터 실행 시 `DuelsWikiEditor.py`와 같은 폴더에 `token.txt`가 있으면 `config.json`의 기존 토큰보다 항상 우선한다. `token.txt`의 첫 번째 유효한 토큰을 `config.json`에 덮어써 저장한 뒤 저장에 성공한 경우에만 `token.txt`를 삭제한다. 읽기 또는 로컬 저장에 실패한 경우에는 파일을 남겨 다음 실행에서 다시 시도할 수 있게 한다. GitHub 설정 화면에서 저장한 토큰은 `config.json`에만 저장되며 `token.txt`를 다시 만들지 않는다.
 
 
+
+
+## 로컬 문서
+
+- 문서 보기 화면의 `로컬 저장`은 현재 문서를 GitHub와 별개인 PC 로컬 JSON으로 저장한다. GitHub Token은 필요하지 않다.
+- 로컬 JSON은 `DuelsWikiEditor.py`와 같은 폴더의 `local-documents/`에 보관되며 에디터 상단 `로컬 문서`에서 열고 수정한 뒤 `로컬 저장`으로 다시 저장할 수 있다.
+- 같은 GitHub 원본 문서를 다시 저장하면 기존 로컬 복사본을 갱신한다.
+- GitHub Token 인증이 완료된 경우 `문서 생성` → `로컬 JSON에서 생성`에서 Windows 파일 탐색기로 임의의 `.json` 파일을 직접 선택한 뒤, 지정 카테고리에 새 GitHub 문서로 업로드할 수 있다. 로컬 원본 JSON은 삭제하거나 변경하지 않는다.
 
 ## Duels.html 데이터 참조
 
