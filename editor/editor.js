@@ -306,8 +306,18 @@ async function openLocalDocument(localId){
 async function showLocalDocumentsModal(){
   try{
     const r=await api('/api/local-documents');const docs=r.documents||[];
-    openModal(`<div class="local-doc-modal"><h2>로컬 문서</h2><p class="muted">GitHub Token 없이도 JSON 문서를 열어 편집하고 에디터 옆 local-documents/ 폴더에 저장할 수 있습니다.</p><div class="local-doc-import"><button type="button" id="openExternalLocalJson">Windows 파일 탐색기에서 JSON 열기</button><input id="externalLocalJsonFile" type="file" accept=".json,application/json" class="hidden"></div><div class="local-doc-list">${docs.length?docs.map(d=>`<div class="local-doc-row" data-local-id="${escapeHtml(d.id)}"><div class="local-doc-info"><strong>${escapeHtml(d.title)}</strong><span>${escapeHtml(d.filename||`${d.title||d.id}.json`)}</span></div><div class="local-doc-actions"><button data-local-open>열기</button><button data-local-delete class="danger-soft">삭제</button></div></div>`).join(''):'<div class="local-doc-empty">저장된 로컬 문서가 없습니다.</div>'}</div><div class="modal-actions"><button id="closeLocalDocs">닫기</button></div></div>`);
+    openModal(`<div class="local-doc-modal"><h2>로컬 문서</h2><p class="muted">GitHub Token 없이도 새 문서를 만들거나 JSON 문서를 열어 편집하고, 에디터 옆 local-documents/ 폴더에 저장할 수 있습니다.</p><div class="local-doc-import"><button type="button" id="createLocalDocument" class="primary">새 로컬 문서</button><button type="button" id="openExternalLocalJson">Windows 파일 탐색기에서 JSON 열기</button><input id="externalLocalJsonFile" type="file" accept=".json,application/json" class="hidden"></div><div class="local-doc-list">${docs.length?docs.map(d=>`<div class="local-doc-row" data-local-id="${escapeHtml(d.id)}"><div class="local-doc-info"><strong>${escapeHtml(d.title)}</strong><span>${escapeHtml(d.filename||`${d.title||d.id}.json`)}</span></div><div class="local-doc-actions"><button data-local-open>열기</button><button data-local-delete class="danger-soft">삭제</button></div></div>`).join(''):'<div class="local-doc-empty">저장된 로컬 문서가 없습니다.</div>'}</div><div class="modal-actions"><button id="closeLocalDocs">닫기</button></div></div>`);
     $('#closeLocalDocs').onclick=closeModal;
+    $('#createLocalDocument').onclick=async()=>{
+      const title=String(prompt('새 로컬 문서의 문서명을 입력하세요.')||'').trim();
+      if(!title)return;
+      const content={type:'wiki-sections-v3',titleHtml:escapeHtml(title),introHtml:'<p></p>',sections:[{id:uid('sec'),title:'개요',titleHtml:'개요',contentHtml:'<p></p>',children:[]}],footnotes:[]};
+      try{
+        const r=await api('/api/local-document',{method:'POST',body:JSON.stringify({document:{title,kind:'local-document',content},source:{type:'local-new'}})});
+        const localId=String(r.document?._local?.id||'');
+        closeModal();state.current=r.document;state.currentLocalId=localId;state.localMode=true;startLocalEdit(r.document,localId);showStatus(`“${title}” 로컬 문서를 생성했습니다.`);
+      }catch(err){alert(err.message)}
+    };
     $('#openExternalLocalJson').onclick=()=>$('#externalLocalJsonFile').click();
     $('#externalLocalJsonFile').onchange=async e=>{const f=e.target.files?.[0];if(!f)return;try{const text=await f.text();let data=JSON.parse(text);if(data&&typeof data==='object'&&data.document&&typeof data.document==='object')data=data.document;if(!data||typeof data!=='object'||!data.content||typeof data.content!=='object')throw new Error('Duels Wiki 문서 JSON 구조가 올바르지 않습니다.');const title=String(data.title||f.name.replace(/\.json$/i,'')||'로컬 문서').trim()||'로컬 문서';data={...data,title,kind:'local-document'};closeModal();state.current=data;state.currentLocalId=null;state.localMode=true;startLocalEdit(data,null)}catch(err){alert(err.message)}e.target.value=''};
     $$('[data-local-open]',$('#modal')).forEach(b=>b.onclick=()=>openLocalDocument(b.closest('[data-local-id]').dataset.localId));

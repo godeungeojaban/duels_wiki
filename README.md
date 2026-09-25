@@ -1,6 +1,10 @@
-# Duels Wiki 3.79
+# Duels Wiki 4.0
 
 Duels Wiki 3.78는 Python 표준 라이브러리 기반 로컬 편집기 + GitHub 저장소 + GitHub Pages 정적 열람 사이트 구조다. Node.js/Next.js/npm은 사용하지 않는다.
+
+## 4.0 로컬 편집 모드
+
+GitHub Token 없이도 로컬에서 새 Wiki 문서를 생성하고, 외부 JSON을 열어 편집하고, `local-documents/문서명.json`으로 저장할 수 있다. `로컬 문서` 창의 `새 로컬 문서`에서 문서명을 지정하면 실제 JSON 파일을 즉시 생성하고 기존 Wiki 편집기로 연다. 동일 문서명은 기존 로컬 중복 검사로 차단한다. GitHub 업로드 기능은 Token 인증된 사용자의 `문서 생성 → 로컬 JSON에서 생성`에 그대로 분리되어 있다.
 
 ## 3.79 로컬 JSON / 문서명 동기화
 

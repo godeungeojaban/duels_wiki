@@ -21,7 +21,7 @@ from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
-APP_VERSION = "3.79"
+APP_VERSION = "4.0"
 DEFAULT_OWNER = "godeungeojaban"
 DEFAULT_REPO = "duels_wiki"
 DEFAULT_BRANCH = "main"
