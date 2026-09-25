@@ -7,7 +7,7 @@
   "categorySlug": "캐릭터",
   "content": {
     "type": "wiki-sections-v3",
-    "introHtml": "<p></p><div data-duels-component=\"character-card\" class=\"duels-character-card\" contenteditable=\"false\" data-fade=\"none\" data-align=\"left\" data-duels-data=\"%7B%22color%22%3A%22%23ff4500%22%2C%22image%22%3A%22https%3A%2F%2Fraw.githubusercontent.com%2FLyangNem%2FDuels%2Fmain%2Fcharacter%2Fshubi.png%22%2C%22text%22%3A%22%22%2C%22width%22%3A400%2C%22height%22%3A400%2C%22fade%22%3A%22none%22%2C%22align%22%3A%22left%22%7D\" style=\"--duels-card-color: #ff4500; --duels-card-width: 400px; --duels-card-height: 400px;\"><div class=\"duels-character-card-image\" style=\"background-image:url(&quot;https://raw.githubusercontent.com/LyangNem/Duels/main/character/shubi.png&quot;)\"></div><div class=\"duels-character-card-shade\"></div><div class=\"duels-character-card-copy\"><div><br></div></div></div><div data-duels-component=\"description-box\" class=\"duels-description-box\" contenteditable=\"false\" data-duels-data=\"%7B%22title%22%3A%22%EC%8A%88%EB%B9%84%22%2C%22color%22%3A%22%23ff4500%22%2C%22body%22%3A%22%7B%7B%3Dduels(%5C%22%EC%8A%88%EB%B9%84%5C%22%2C%5C%22%ED%94%84%EB%A1%9C%ED%95%84%5C%22%2C%5C%22%EC%B9%AD%ED%98%B8%5C%22)%7D%7D%5Cn%22%2C%22bodyHtml%22%3A%22%7B%7B%3Dduels(%5C%22%EC%8A%88%EB%B9%84%5C%22%2C%5C%22%ED%94%84%EB%A1%9C%ED%95%84%5C%22%2C%5C%22%EC%B9%AD%ED%98%B8%5C%22)%7D%7D%3Cbr%3E%22%7D\" style=\"--duels-box-color: #ff4500;\"><div class=\"duels-description-box-title\">슈비</div><div class=\"duels-description-box-body\">{{=duels(\"슈비\",\"프로필\",\"칭호\")}}<br></div></div>",
+    "introHtml": "<p></p><div data-duels-component=\"character-card\" class=\"duels-character-card\" contenteditable=\"false\" data-fade=\"none\" data-align=\"left\" data-duels-data=\"%7B%22color%22%3A%22%23ff4500%22%2C%22image%22%3A%22https%3A%2F%2Fraw.githubusercontent.com%2FLyangNem%2FDuels%2Fmain%2Fcharacter%2Fshubi.png%22%2C%22text%22%3A%22%22%2C%22width%22%3A400%2C%22height%22%3A400%2C%22fade%22%3A%22none%22%2C%22align%22%3A%22left%22%7D\" style=\"--duels-card-color: #ff4500; --duels-card-width: 400px; --duels-card-height: 400px;\"><div class=\"duels-character-card-image\" style=\"background-image:url(&quot;https://raw.githubusercontent.com/LyangNem/Duels/main/character/shubi.png&quot;)\"></div><div class=\"duels-character-card-shade\"></div><div class=\"duels-character-card-copy\"><div><br></div></div></div><div data-duels-component=\"description-box\" class=\"duels-description-box\" contenteditable=\"false\" data-duels-data=\"%7B%22title%22%3A%22%EC%8A%88%EB%B9%84%22%2C%22color%22%3A%22%23ff4500%22%2C%22body%22%3A%22%7B%7B%3Dduels(%5C%22%EC%8A%88%EB%B9%84%5C%22%2C%5C%22%ED%94%84%EB%A1%9C%ED%95%84%5C%22%2C%5C%22%EC%B9%AD%ED%98%B8%5C%22)%7D%7D%22%2C%22bodyHtml%22%3A%22%7B%7B%3Dduels(%5C%22%EC%8A%88%EB%B9%84%5C%22%2C%5C%22%ED%94%84%EB%A1%9C%ED%95%84%5C%22%2C%5C%22%EC%B9%AD%ED%98%B8%5C%22)%7D%7D%3Cbr%3E%22%7D\" style=\"--duels-box-color: #ff4500;\"><div class=\"duels-description-box-title\">슈비</div><div class=\"duels-description-box-body\">{{=duels(\"슈비\",\"프로필\",\"칭호\")}}<br></div></div>",
     "sections": [
       {
         "id": "sec_a3dc20e67a10480e842fab2c2461955f",
@@ -45,16 +45,16 @@
           {
             "id": "sec_bd847cfbc39d41498a10d64d32c050c5",
             "title": "[RMB] - 반동샷",
-            "contentHtml": "샷건을 6발 발사한다.<div><br></div><div>사실상 슈비의 진짜 평타로, 긴 사거리와 원거리에서도 무난하게 들어가는 딜량 덕에 슈비의 중거리 체급을 기하급수적으로 올려주는 스킬이다.<br><br>슈비의 주요 교전 무대가 근거리가 아닌 중거리가 되는 이유.</div>",
+            "contentHtml": "샷건을 6발 발사하며 자체 넉백 된다.<div><br></div><div>사실상 슈비의 진짜 평타로, 긴 사거리와 원거리에서도 무난하게 들어가는 딜량 덕에 슈비의 중거리 체급을 기하급수적으로 올려주는 스킬이다.<br><br>슈비의 주요 교전 무대가 근거리가 아닌 중거리가 되는 이유.</div>",
             "children": [],
             "titleHtml": "[RMB] - 반동샷"
           },
           {
             "id": "sec_6ddd4db1a1cb4153b393b6d99505c25d",
-            "title": "[L-Shift] - 스파크 웨이브",
-            "contentHtml": "낫을 한 바퀴 돌려 원형 범위에 광역 피해를 주고 스파크를 최대치로 충전한다.<div><br></div><div>타우의 진정한 이니시에이팅 기술. 선딜레이 후 평타 사거리와 같은 크기의 원형 범위에 광역 피해를 주고 무력화 넉백을 적용한다.</div><div>적에게 날아가는 도중에 끔살이 가능하고 CC도 0.5초밖에 되지 않는 스파크 체인과 달리 비교적 먼 거리에서 안정적으로 하드CC를 넣을 수 있으며, 넉백이 있기에 카이팅에도 도움을 준다.</div><div><br></div><div>그리고 무엇보다 이 반격기가 높은 평가를 받는 이유는 바로 스파크 최대치 충전 효과다.</div><div>반격기 한 번으로 평타 3회 적중 조건을 아예 스킵해버리는 것은 물론, 기존에 스파크 충전이 되어 있다면 평-반격-평으로 순식간에 600+최대 체력의 40%에 해당하는 피해를 입힐 수 있다. 뿐만 아니라 이 효과는 아무런 조건 없이 발동되므로, 타우는 반격기를 허공에 날려도 다음 전투를 유리하게 시작할 수 있다.</div>",
+            "title": "[L-Shift] - 충전 사격",
+            "contentHtml": "사거리, 집탄률, 탄속이 증가한 샷건 6발을 발사하며 자체 넉백 된다.<div><br></div><div>슈비에게 있어 생각보다도 더 높은 가치를 가지고 있는 반격기. 일회성이지만 순간적으로 초장거리 캐릭터들과 비비는 사거리를 가지며, 그 공격에 무력화 넉백이 달려있고, 탄속도 반응하기 어려운 수준으로 빠르다.<br><br>이론상의 자체 피해량도 600이나 되는데, 타 캐릭터들이 반격기 + @로 콤보 박아서 넣는 피해량을 이론상 근중거리에서 한 방에 꽂아넣을 수 있다.<br></div>",
             "children": [],
-            "titleHtml": "[L-Shift] - 스파크 웨이브"
+            "titleHtml": "[L-Shift] - 충전 사격"
           }
         ],
         "titleHtml": "스킬셋"
@@ -62,7 +62,7 @@
       {
         "id": "sec_1c8c3c8620bf4bad956df0728149f753",
         "title": "평가",
-        "contentHtml": "<br>",
+        "contentHtml": "첫번째로 출시한 캐릭터다운 단순 명료한 스킬셋과 쉬운 입문 난이도를 가졌지만, 근거리 캐릭터들 상대로 딸깍 몇번이면 근거리 대전을 죄다 씹어먹을 수 있는 흉폭한 화력을 가지고 있기에 평균적으로 무시할 수 없는 성능을 보여준다.<div><br></div><div>근거리 캐릭터라는 설명과 다르게 사실상 사거리가 중거리여서, 원거리 캐릭터 상대로 비벼볼만한 상황도 자주 연출된다.</div>",
         "children": [],
         "titleHtml": "평가"
       },
@@ -74,7 +74,7 @@
           {
             "id": "sec_b62e58b6af4a4ccfa34ed5929b1fc6f0",
             "title": "극단적인 상성",
-            "contentHtml": "샤이라즈<font color=\"#78909c\"> </font>: 모든 심리전을 성공해 모든 덫을 저회한다면 이길 수 있다.",
+            "contentHtml": "사이엔 : 사이엔이 기초적인 실력을 가지고 있다는 전제 하에 패리로 한번만 막아내도 게이지의 75%가 차오르는 기적의 절격 순환률을 보여준다.<div><br></div>",
             "children": [],
             "titleHtml": "극단적인 상성"
           }
@@ -86,5 +86,5 @@
     "titleHtml": "슈비"
   },
   "createdAt": "2026-09-26T05:53:57+0900",
-  "updatedAt": "2026-09-26T06:00:36+0900"
+  "updatedAt": "2026-09-26T06:11:18+0900"
 }
