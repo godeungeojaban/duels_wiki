@@ -6,8 +6,8 @@ const SPEED_LABELS=['매우 느림','느림','보통','빠름','매우 빠름'];
 const STATUS_LABELS={bind:'속박',stun:'기절',slow:'둔화',freeze:'빙결',burn:'화상',zap:'감전',poison:'중독',bleed:'출혈',discharge:'방전',invulnerable:'무적'};
 const STAT_LABELS={damage:'피해',speed:'이동속도',attackRate:'공격속도',projectileSpeed:'투사체속도',staminaRegen:'스테미나회복',staminaCost:'스테미나소모',dodgeDistance:'회피거리',dodgeSpeed:'회피속도',healing:'회복',regeneration:'재생'};
 const PROFILE_METRICS=['칭호','체력','이동속도','이동속도_단계','난이도','난이도_별','스타일','사거리','역할군'];
-const CACHE_KEY='duelsWiki.characterReference.v4';
-const CACHE_SCHEMA=4;
+const CACHE_KEY='duelsWiki.characterReference.v5';
+const CACHE_SCHEMA=5;
 const CACHE_TTL=5*60*1000;
 const CACHE_MAX_AGE=24*60*60*1000;
 let cache=null,loading=null;
@@ -57,29 +57,42 @@ function fmtNumber(n){if(!Number.isFinite(n))return'';if(Math.abs(n-Math.round(n
 function fmtMs(n){if(!Number.isFinite(n))return'';return n%1000===0?`${n/1000}초`:`${fmtNumber(n/1000)}초`}
 function fmtPercent(n){if(!Number.isFinite(n))return'';return `${fmtNumber(n*100)}%`}
 function metric(map,label,value,rawPath=''){if(value==null||value==='')return;if(!map.has(label))map.set(label,{label,value:String(value),path:rawPath})}
-function abilityKind(entry,counts){
+function skillFieldLabel(entry){
   const key=String(entry?.key||'').trim(),name=String(entry?.name||'').trim();
-  let base='기술';
-  if(/^LMB\b/i.test(key))base='평타'; else if(/^RMB\b/i.test(key))base='스킬'; else if(/L-?Shift|Counter/i.test(key))base='반격기'; else if(/^ALWAYS$/i.test(key))base='패시브'; else base=name||key||'기술';
-  const group=base==='평타'?'LMB':base==='스킬'?'RMB':base==='반격기'?'COUNTER':'OTHER';
-  const multi=(counts[group]||0)>1;
-  const field=(base==='패시브')?(name?`패시브 · ${name}`:'패시브'):(['평타','스킬','반격기'].includes(base)?(multi&&name?`${base} · ${name}`:base):base);
-  const display=(base==='패시브')?(name?`패시브 · ${name}`:'패시브'):(['평타','스킬','반격기'].includes(base)?(name?`${base} · ${name}`:base):base);
-  return {base,field,display};
+  if(key&&name)return `${key} · ${name}`;
+  return key||name||'';
 }
-function tooltipEntries(character){
-  const list=Array.isArray(character.tooltipSkills)?character.tooltipSkills:[];
-  const counts={LMB:0,RMB:0,COUNTER:0,OTHER:0};
-  for(const x of list){const k=String(x?.key||'');if(/^LMB\b/i.test(k))counts.LMB++;else if(/^RMB\b/i.test(k))counts.RMB++;else if(/L-?Shift|Counter/i.test(k))counts.COUNTER++;else counts.OTHER++}
-  const used=new Map(),out=[];
-  for(const entry of list){
-    const attackKey=entry?.attack;if(!attackKey||!character.attacks?.[attackKey])continue;
-    const kind=abilityKind(entry,counts);let field=kind.field;const c=(used.get(field)||0)+1;used.set(field,c);if(c>1)field=`${field} ${c}`;
-    out.push({field,display:kind.display,attackKey,entry});
+function expandedTooltipEntries(character){
+  const source=Array.isArray(character.tooltipSkills)?character.tooltipSkills:[];
+  const out=[];
+  for(const entry of source){
+    if(!entry||typeof entry!=='object')continue;
+    if(entry.key||entry.name||entry.attack)out.push(entry);
+    if(Array.isArray(entry.inlineStages)){
+      for(const stage of entry.inlineStages){
+        if(stage&&typeof stage==='object')out.push({...entry,...stage,inlineStages:undefined});
+      }
+    }
   }
   return out;
 }
-function attackMetrics(character,attackKey){
+function tooltipEntries(character){
+  const list=expandedTooltipEntries(character),used=new Map(),out=[];
+  for(const entry of list){
+    const label=skillFieldLabel(entry);
+    if(!label)continue;
+    let field=label;const c=(used.get(label)||0)+1;used.set(label,c);if(c>1)field=`${label} ${c}`;
+    out.push({field,display:label,attackKey:entry?.attack||'',entry});
+  }
+  return out;
+}
+function attackDamage(character,attack){
+  if(!attack||typeof attack!=='object'||attack.effectsOnly)return null;
+  const base=number(character,character.stats?.baseDamage)??100,ratio=number(character,attack.damageRatio);
+  return ratio==null?null:base*ratio;
+}
+function firstModule(attack,type){return (Array.isArray(attack?.modules)?attack.modules:[]).find(m=>m?.type===type)||null}
+function attackMetrics(character,attackKey,entry={}){
   const attack=character.attacks?.[attackKey];if(!attack||typeof attack!=='object')return[];
   const out=new Map(),base=number(character,character.stats?.baseDamage)??100;
   const ratio=number(character,attack.damageRatio);
@@ -90,18 +103,23 @@ function attackMetrics(character,attackKey){
   if(pTo!=null)metric(out,'최대피해량',fmtNumber(base*pTo),'progressScale.damageRatio.to');
   const fullRatio=number(character,attack.charge?.fullSpec?.damageRatio);
   if(fullRatio!=null)metric(out,'최대피해량',fmtNumber(base*fullRatio),'charge.fullSpec.damageRatio');
-  const cost=number(character,attack.cost);if(cost!=null)metric(out,'스테미나소모량',fmtNumber(cost),'cost');
+  const costAttack=entry?.costAttack&&character.attacks?.[entry.costAttack]?character.attacks[entry.costAttack]:attack;
+  const cost=entry?.showCost===false?null:number(character,costAttack?.cost);if(cost!=null)metric(out,'스테미나소모량',fmtNumber(cost),entry?.costAttack?'costAttack.cost':'cost');
   const cmin=number(character,attack.charge?.costMin),cmax=number(character,attack.charge?.fullCost??attack.charge?.costMax);
   if(cmin!=null)metric(out,'최소스테미나소모량',fmtNumber(cmin),'charge.costMin');
   if(cmax!=null)metric(out,'최대스테미나소모량',fmtNumber(cmax),'charge.fullCost');
   const cd=number(character,attack.cd);if(cd!=null)metric(out,'쿨다운',fmtMs(cd),'cd');
   const range=number(character,attack.range);if(range!=null)metric(out,'사거리',fmtNumber(range),'range');
-  const delay=number(character,attack.attackDelay??attack.timing?.delay);if(delay!=null)metric(out,'선딜레이',fmtMs(delay),'attackDelay');
+  const attackDelay=attack.attackDelayGroup?number(character,attack.attackDelay):null;if(attackDelay!=null)metric(out,'공격 딜레이',fmtMs(attackDelay),'attackDelay');
   const chargeDuration=number(character,attack.charge?.duration);if(chargeDuration!=null)metric(out,'차징시간',fmtMs(chargeDuration),'charge.duration');
   const modules=Array.isArray(attack.modules)?attack.modules:[];
   for(let i=0;i<modules.length;i++){
     const m=modules[i];if(!m||typeof m!=='object')continue;const t=m.type||'';
-    if(t==='status.apply'){
+    if(t==='damage.target-max-health-ratio'){
+      const extra=number(character,m.ratio);if(extra!=null)metric(out,'대상최대체력비례피해',fmtPercent(extra),`modules.${i}.ratio`);
+    }else if(t==='damage.target-health-ratio-multiplier'){
+      const threshold=number(character,m.threshold),multiplier=number(character,m.multiplier);if(threshold!=null)metric(out,'체력조건기준',fmtPercent(threshold),`modules.${i}.threshold`);if(multiplier!=null)metric(out,'체력조건피해증가량',fmtPercent(multiplier-1),`modules.${i}.multiplier`);
+    }else if(t==='status.apply'){
       const status=STATUS_LABELS[m.status]||String(m.status||'상태이상');const dur=number(character,m.duration);if(dur!=null)metric(out,`${status}_지속시간`,fmtMs(dur),`modules.${i}.duration`);
       const factor=number(character,m.data?.factor);if(factor!=null)metric(out,`${status}_세기`,fmtPercent(1-factor),`modules.${i}.data.factor`);
       const mult=number(character,m.data?.staminaRegenMultiplier);if(mult!=null)metric(out,`${status}_세기`,fmtPercent(1-mult),`modules.${i}.data.staminaRegenMultiplier`);
@@ -125,6 +143,19 @@ function attackMetrics(character,attackKey){
       const dur=number(character,m.duration??m.field?.duration),fr=number(character,m.range??m.field?.range),intv=number(character,m.interval??m.field?.interval);if(dur!=null)metric(out,'장판지속시간',fmtMs(dur),`modules.${i}.duration`);if(fr!=null)metric(out,'장판범위',fmtNumber(fr),`modules.${i}.range`);if(intv!=null)metric(out,'장판간격',fmtMs(intv),`modules.${i}.interval`);
     }else if(t==='buff.time-add'){
       const add=number(character,m.addDuration),max=number(character,m.maxDuration);if(add!=null)metric(out,'버프추가지속시간',fmtMs(add),`modules.${i}.addDuration`);if(max!=null)metric(out,'버프최대지속시간',fmtMs(max),`modules.${i}.maxDuration`);for(let j=0;j<(m.stages||[]).length;j++){const st=m.stages[j],val=number(character,st?.value);if(val!=null){const stat=STAT_LABELS[st.stat]||String(st.stat||`단계${j+1}`);metric(out,`${stat}_버프세기`,fmtPercent(val),`modules.${i}.stages.${j}.value`)}}
+    }
+  }
+  const related=[
+    ['linkedAttack','연결공격'],
+    ['secondaryAttack','보조공격'],
+    ['healAttack','회복공격'],
+    ['fieldAttack','필드공격']
+  ];
+  for(const [prop,prefix] of related){
+    const ref=entry?.[prop],a=ref&&character.attacks?.[ref];if(!a)continue;
+    const dmg=attackDamage(character,a);if(dmg!=null)metric(out,`${prefix}_피해량`,fmtNumber(dmg),`${prop}.damageRatio`);
+    if(prop==='healAttack'){
+      const restore=firstModule(a,'resource.restore');const amount=number(character,restore?.amount);if(amount!=null)metric(out,'회복량',fmtNumber(amount),`${prop}.resource.restore.amount`);
     }
   }
   return [...out.values()];
@@ -165,7 +196,7 @@ function buildCatalog(bundle){
         value:profileValue(bundle,character,x),
         tone:x==='칭호'?'title-gradient':((x==='난이도_별'&&isSpecialDifficulty(bundle.rules,number(character,character.stats?.difficulty)))?'difficulty-special':'')
       }))},
-      ...tooltipEntries(character).map(e=>({key:e.field,label:e.display,metrics:attackMetrics(character,e.attackKey)}))
+      ...tooltipEntries(character).map(e=>({key:e.field,label:e.display,metrics:e.attackKey?attackMetrics(character,e.attackKey,e.entry):[]}))
     ]
   }));
   return chars;
