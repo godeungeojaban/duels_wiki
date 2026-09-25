@@ -21,7 +21,7 @@ from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
-APP_VERSION = "3.78"
+APP_VERSION = "3.79"
 DEFAULT_OWNER = "godeungeojaban"
 DEFAULT_REPO = "duels_wiki"
 DEFAULT_BRANCH = "main"
@@ -327,11 +327,26 @@ def blank_content():
     }
 
 
-def _local_document_path(local_id: str) -> Path:
-    local_id = str(local_id or "").strip()
-    if not re.fullmatch(r"[A-Za-z0-9_-]{1,80}", local_id):
-        raise RuntimeError("올바르지 않은 로컬 문서 ID입니다.")
-    return LOCAL_DOCUMENTS_DIR / f"{local_id}.json"
+def _local_filename(title: str) -> str:
+    name = safe_slug(str(title or "").strip()) or "로컬 문서"
+    return f"{name}.json"
+
+
+def _find_local_document_file(local_id: str) -> tuple[Path | None, dict | None]:
+    target_id = str(local_id or "").strip()
+    if not target_id:
+        return None, None
+    for path in LOCAL_DOCUMENTS_DIR.glob("*.json"):
+        try:
+            data = json.loads(path.read_text("utf-8"))
+            if not isinstance(data, dict):
+                continue
+            meta = data.get("_local") if isinstance(data.get("_local"), dict) else {}
+            if str(meta.get("id") or "") == target_id:
+                return path, data
+        except Exception:
+            continue
+    return None, None
 
 
 def _normalize_local_document_payload(document: dict, local_id: str | None = None, source: dict | None = None) -> dict:
@@ -340,19 +355,19 @@ def _normalize_local_document_payload(document: dict, local_id: str | None = Non
     title = str(document.get("title") or "로컬 문서").strip() or "로컬 문서"
     content = document.get("content") if isinstance(document.get("content"), dict) else blank_content()
     now = now_iso()
-    lid = local_id or uuid.uuid4().hex
     old_local = document.get("_local") if isinstance(document.get("_local"), dict) else {}
+    lid = local_id or str(old_local.get("id") or "").strip() or uuid.uuid4().hex
     merged_source = source if isinstance(source, dict) else old_local.get("source") if isinstance(old_local.get("source"), dict) else {}
     return {
         "id": str(document.get("id") or f"local_{uuid.uuid4().hex}"),
         "kind": "local-document",
         "title": title,
-        "slug": safe_slug(title) or "local-document",
+        "slug": safe_slug(title) or "로컬 문서",
         "content": content,
         "createdAt": str(document.get("createdAt") or now),
         "updatedAt": now,
         "_local": {
-            "version": 1,
+            "version": 2,
             "id": lid,
             "source": merged_source,
         },
@@ -369,7 +384,6 @@ def list_local_documents() -> list:
                 continue
             meta = data.get("_local") if isinstance(data.get("_local"), dict) else {}
             lid = str(meta.get("id") or path.stem)
-            # Accept hand-copied wiki JSON files too; normalize on first save.
             rows.append({
                 "id": lid,
                 "title": str(data.get("title") or path.stem),
@@ -385,30 +399,24 @@ def list_local_documents() -> list:
 
 def load_local_document(local_id: str) -> dict:
     ensure_dirs()
-    # Normal files use <id>.json. For manually copied files, fall back to scanning _local.id / stem.
-    try:
-        direct = _local_document_path(local_id)
-        if direct.exists():
-            data = json.loads(direct.read_text("utf-8"))
-            return data
-    except RuntimeError:
-        pass
+    path, data = _find_local_document_file(local_id)
+    if path is not None and isinstance(data, dict):
+        return data
+    # Hand-copied files without _local metadata remain openable by their filename stem.
     for path in LOCAL_DOCUMENTS_DIR.glob("*.json"):
+        if path.stem != str(local_id):
+            continue
         try:
             data = json.loads(path.read_text("utf-8"))
-            meta = data.get("_local") if isinstance(data, dict) and isinstance(data.get("_local"), dict) else {}
-            if str(meta.get("id") or path.stem) == str(local_id):
+            if isinstance(data, dict):
                 return data
         except Exception:
-            continue
+            break
     raise RuntimeError("로컬 문서를 찾을 수 없습니다.")
 
 
 def save_local_document(document: dict, local_id: str | None = None, source: dict | None = None) -> dict:
     ensure_dirs()
-    # Saving the same GitHub document again updates its existing local copy instead of
-    # silently creating duplicate snapshots. Users can still create a separate copy by
-    # editing/saving another local JSON file.
     if not local_id and isinstance(source, dict) and source.get("path"):
         source_path = str(source.get("path"))
         for row in list_local_documents():
@@ -416,34 +424,44 @@ def save_local_document(document: dict, local_id: str | None = None, source: dic
             if str(row_source.get("path") or "") == source_path:
                 local_id = str(row.get("id") or "") or None
                 break
+
+    old_path = None
+    existing = None
     if local_id:
-        existing = None
-        try:
-            existing = load_local_document(local_id)
-        except Exception:
-            existing = None
+        old_path, existing = _find_local_document_file(local_id)
         if existing and isinstance(existing, dict):
-            # Preserve creation metadata and source unless explicitly supplied.
             document = {**existing, **document, "content": document.get("content", existing.get("content"))}
+
     normalized = _normalize_local_document_payload(document, local_id=local_id, source=source)
-    lid = normalized["_local"]["id"]
-    target = _local_document_path(lid)
-    target.write_text(json.dumps(normalized, ensure_ascii=False, indent=2), "utf-8")
+    target = LOCAL_DOCUMENTS_DIR / _local_filename(normalized["title"])
+
+    if target.exists() and (old_path is None or target.resolve() != old_path.resolve()):
+        try:
+            other = json.loads(target.read_text("utf-8"))
+        except Exception:
+            other = {}
+        other_meta = other.get("_local") if isinstance(other, dict) and isinstance(other.get("_local"), dict) else {}
+        if str(other_meta.get("id") or "") != str(normalized["_local"]["id"]):
+            raise RuntimeError("같은 문서명의 로컬 JSON이 이미 존재합니다.")
+
+    tmp = target.with_suffix(target.suffix + ".tmp")
+    tmp.write_text(json.dumps(normalized, ensure_ascii=False, indent=2), "utf-8")
+    tmp.replace(target)
+    if old_path is not None and old_path.exists() and old_path.resolve() != target.resolve():
+        old_path.unlink(missing_ok=True)
     return normalized
 
 
 def delete_local_document(local_id: str) -> None:
     ensure_dirs()
-    # Resolve manual-file case before deleting.
+    path, _ = _find_local_document_file(local_id)
+    if path is not None:
+        path.unlink(missing_ok=True)
+        return
     for path in LOCAL_DOCUMENTS_DIR.glob("*.json"):
-        try:
-            data = json.loads(path.read_text("utf-8"))
-            meta = data.get("_local") if isinstance(data, dict) and isinstance(data.get("_local"), dict) else {}
-            if str(meta.get("id") or path.stem) == str(local_id):
-                path.unlink(missing_ok=True)
-                return
-        except Exception:
-            continue
+        if path.stem == str(local_id):
+            path.unlink(missing_ok=True)
+            return
     raise RuntimeError("로컬 문서를 찾을 수 없습니다.")
 
 
@@ -523,6 +541,28 @@ def build_index(cfg: dict):
     return {"categories": out}
 
 
+def _assert_unique_document_slug(cfg: dict, slug: str, *, ignore_path: str | None = None) -> None:
+    """Reject a document filename that already exists anywhere in the wiki tree."""
+    if not slug:
+        return
+    wanted = f"{slug}.json"
+    for cat in wiki_categories(cfg):
+        cat_slug = str(cat.get("slug") or "").strip()
+        if not cat_slug:
+            continue
+        try:
+            entries = gh_list_dir(cfg, f"{cfg['data_root']}/{cat_slug}")
+        except Exception:
+            continue
+        for ent in entries:
+            if ent.get("type") != "file" or ent.get("name") != wanted:
+                continue
+            path = f"{cfg['data_root']}/{cat_slug}/{wanted}"
+            if ignore_path and path == ignore_path:
+                continue
+            raise RuntimeError("같은 문서명이 이미 존재합니다. 문서 제목은 위키 전체에서 중복될 수 없습니다.")
+
+
 def create_document(cfg: dict, category: str, title: str, content: dict):
     cats = wiki_categories(cfg)
     c = next((x for x in cats if x.get("slug") == category), None)
@@ -531,8 +571,7 @@ def create_document(cfg: dict, category: str, title: str, content: dict):
     slug = safe_slug(title)
     if not slug or slug in {"정보", "_info"}:
         raise RuntimeError("사용할 수 없는 문서 제목입니다.")
-    if get_doc(cfg, category, slug)[0]:
-        raise RuntimeError("같은 이름의 문서가 이미 존재합니다.")
+    _assert_unique_document_slug(cfg, slug)
     doc = {
         "id": f"doc_{uuid.uuid4().hex}", "kind": "document", "title": title, "slug": slug,
         "categoryId": c["id"], "categorySlug": category, "content": content,
@@ -570,6 +609,7 @@ def update_document(cfg: dict, category: str, doc_slug: str | None, title: str, 
     next_slug = safe_slug(next_title)
     if not next_slug or next_slug in {"정보", "_info"}:
         raise RuntimeError("사용할 수 없는 문서 제목입니다.")
+    _assert_unique_document_slug(cfg, next_slug, ignore_path=old_path)
     new_path = f"{cfg['data_root']}/{next_category}/{next_slug}.json"
     doc.update({
         "title": next_title, "slug": next_slug, "categoryId": c["id"], "categorySlug": next_category,

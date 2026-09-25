@@ -306,8 +306,10 @@ async function openLocalDocument(localId){
 async function showLocalDocumentsModal(){
   try{
     const r=await api('/api/local-documents');const docs=r.documents||[];
-    openModal(`<div class="local-doc-modal"><h2>로컬 문서</h2><p class="muted">GitHub Token 없이도 이 PC에 JSON으로 저장된 문서를 열고 편집할 수 있습니다.</p><div class="local-doc-list">${docs.length?docs.map(d=>`<div class="local-doc-row" data-local-id="${escapeHtml(d.id)}"><div class="local-doc-info"><strong>${escapeHtml(d.title)}</strong><span>${escapeHtml(d.filename||`${d.id}.json`)}</span></div><div class="local-doc-actions"><button data-local-open>열기</button><button data-local-delete class="danger-soft">삭제</button></div></div>`).join(''):'<div class="local-doc-empty">저장된 로컬 문서가 없습니다.</div>'}</div><div class="modal-actions"><button id="closeLocalDocs">닫기</button></div></div>`);
+    openModal(`<div class="local-doc-modal"><h2>로컬 문서</h2><p class="muted">GitHub Token 없이도 JSON 문서를 열어 편집하고 에디터 옆 local-documents/ 폴더에 저장할 수 있습니다.</p><div class="local-doc-import"><button type="button" id="openExternalLocalJson">Windows 파일 탐색기에서 JSON 열기</button><input id="externalLocalJsonFile" type="file" accept=".json,application/json" class="hidden"></div><div class="local-doc-list">${docs.length?docs.map(d=>`<div class="local-doc-row" data-local-id="${escapeHtml(d.id)}"><div class="local-doc-info"><strong>${escapeHtml(d.title)}</strong><span>${escapeHtml(d.filename||`${d.title||d.id}.json`)}</span></div><div class="local-doc-actions"><button data-local-open>열기</button><button data-local-delete class="danger-soft">삭제</button></div></div>`).join(''):'<div class="local-doc-empty">저장된 로컬 문서가 없습니다.</div>'}</div><div class="modal-actions"><button id="closeLocalDocs">닫기</button></div></div>`);
     $('#closeLocalDocs').onclick=closeModal;
+    $('#openExternalLocalJson').onclick=()=>$('#externalLocalJsonFile').click();
+    $('#externalLocalJsonFile').onchange=async e=>{const f=e.target.files?.[0];if(!f)return;try{const text=await f.text();let data=JSON.parse(text);if(data&&typeof data==='object'&&data.document&&typeof data.document==='object')data=data.document;if(!data||typeof data!=='object'||!data.content||typeof data.content!=='object')throw new Error('Duels Wiki 문서 JSON 구조가 올바르지 않습니다.');const title=String(data.title||f.name.replace(/\.json$/i,'')||'로컬 문서').trim()||'로컬 문서';data={...data,title,kind:'local-document'};closeModal();state.current=data;state.currentLocalId=null;state.localMode=true;startLocalEdit(data,null)}catch(err){alert(err.message)}e.target.value=''};
     $$('[data-local-open]',$('#modal')).forEach(b=>b.onclick=()=>openLocalDocument(b.closest('[data-local-id]').dataset.localId));
     $$('[data-local-delete]',$('#modal')).forEach(b=>b.onclick=async()=>{const row=b.closest('[data-local-id]'),id=row.dataset.localId;if(!confirm('이 로컬 JSON 문서를 삭제할까요?'))return;try{await api(`/api/local-document?id=${encodeURIComponent(id)}`,{method:'DELETE'});row.remove();showStatus('로컬 문서를 삭제했습니다.')}catch(e){alert(e.message)}});
   }catch(e){showStatus(e.message,true)}
@@ -319,7 +321,7 @@ function startLocalEdit(doc,localId){
   $('#editPage').innerHTML=`<div class="editor-card local-editor-card"><div class="edit-meta"><span class="local-edit-label">로컬 JSON 문서</span></div><div class="title-block"><div id="docTitle" class="title-block-title inline-title-editable" contenteditable="true"></div><div id="introEditor" class="editable rich" contenteditable="true"></div></div><div id="sectionTree"></div><div id="footnoteBlockHost"></div><div class="savebar"><button id="localEditCancel">취소</button><button id="saveBtn" class="primary">로컬 저장</button></div></div>`;
   const title=$('#docTitle');title.innerHTML=displayTitleHtml(editingContent.titleHtml,doc.title||'로컬 문서');bindInlineFootnoteTarget(title,()=>editingContent.titleHtml=storageInlineHtml(title));
   const intro=$('#introEditor');intro.innerHTML=viewHtml(editingContent.introHtml,{expandInlineImages:false});bindEditable(intro);intro.addEventListener('input',()=>editingContent.introHtml=storageHtml(intro));
-  renderSectionTree();refreshFootnoteBlock();showToolbar();$('#saveBtn').onclick=()=>saveLocalCurrent(localId);$('#localEditCancel').onclick=()=>renderLocalDocument(state.current,localId);
+  renderSectionTree();refreshFootnoteBlock();showToolbar();$('#saveBtn').onclick=()=>saveLocalCurrent(localId);$('#localEditCancel').onclick=()=>{if(localId)renderLocalDocument(state.current,localId);else{state.editing=false;hideToolbar();showLocalDocumentsModal()}};
 }
 
 async function saveLocalCurrent(localId){
@@ -330,7 +332,7 @@ async function saveLocalCurrent(localId){
     const title=plainTitleFromEditable($('#docTitle'))||state.current?.title||'로컬 문서';
     const source=state.current?._local?.source||{};
     const r=await api('/api/local-document',{method:'POST',body:JSON.stringify({id:localId,source,document:{...state.current,title,content:editingContent}})});
-    state.current=r.document;showStatus('로컬 JSON 문서를 저장했습니다.');renderLocalDocument(r.document,localId);
+    state.current=r.document;const savedLocalId=String(r.document?._local?.id||localId||'');state.currentLocalId=savedLocalId;showStatus('로컬 JSON 문서를 저장했습니다.');renderLocalDocument(r.document,savedLocalId);
   }catch(e){showStatus(e.message,true)}
 }
 
@@ -1362,7 +1364,7 @@ $('#newDocumentBtn').onclick=async()=>{
   externalInput.onchange=async e=>{const f=e.target.files?.[0];if(!f)return;try{await parseExternalJson(f)}catch(err){externalLocalDocument=null;externalInfo.textContent='선택된 JSON 파일이 없습니다.';alert(err.message)}e.target.value=''};
   mode.onchange=syncMode;syncMode();
   $('#cancelNewDoc').onclick=closeModal;
-  $('#createNewDoc').onclick=async()=>{const button=$('#createNewDoc');try{const cat=$('#newDocCat').value,nextTitle=title.value.trim();if(mode.value==='local'&&!externalLocalDocument){throw new Error('Windows 파일 탐색기에서 업로드할 로컬 JSON 문서를 선택해주세요.')}if(!nextTitle){title.focus();return}button.disabled=true;button.textContent='생성 중…';let content={type:'wiki-sections-v3',introHtml:'<p></p>',sections:[{id:uid('sec'),title:'개요',contentHtml:'<p></p>',children:[]}]};if(mode.value==='local')content=normalizeContent(externalLocalDocument.content);const r=await api('/api/document/create',{method:'POST',body:JSON.stringify({category:cat,title:nextTitle,content})});closeModal();await refreshIndex();showStatus(mode.value==='local'?'로컬 JSON 문서를 GitHub 저장소에 업로드했습니다.':'문서를 생성했습니다.');navigate(cat,r.document.slug)}catch(e){button.disabled=false;button.textContent='생성';alert(e.message)}};
+  $('#createNewDoc').onclick=async()=>{const button=$('#createNewDoc');try{const cat=$('#newDocCat').value,nextTitle=title.value.trim();if(mode.value==='local'&&!externalLocalDocument){throw new Error('Windows 파일 탐색기에서 업로드할 로컬 JSON 문서를 선택해주세요.')}if(!nextTitle){title.focus();return}button.disabled=true;button.textContent='생성 중…';let content={type:'wiki-sections-v3',introHtml:'<p></p>',sections:[{id:uid('sec'),title:'개요',contentHtml:'<p></p>',children:[]}]};if(mode.value==='local'){content=normalizeContent(externalLocalDocument.content);content.titleHtml=escapeHtml(nextTitle)}const r=await api('/api/document/create',{method:'POST',body:JSON.stringify({category:cat,title:nextTitle,content})});closeModal();await refreshIndex();showStatus(mode.value==='local'?'로컬 JSON 문서를 GitHub 저장소에 업로드했습니다.':'문서를 생성했습니다.');navigate(cat,r.document.slug)}catch(e){button.disabled=false;button.textContent='생성';alert(e.message)}};
 };
 
 $('#localDocsBtn').onclick=showLocalDocumentsModal;
