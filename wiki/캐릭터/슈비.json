@@ -1,0 +1,98 @@
+{
+  "id": "doc_d310d4037fa04d00918f62c2913d2ea3",
+  "kind": "document",
+  "title": "슈비",
+  "slug": "슈비",
+  "categoryId": "cat_f824edf57b0f42ba9057117c93d52fd9",
+  "categorySlug": "캐릭터",
+  "content": {
+    "type": "wiki-sections-v3",
+    "introHtml": "<p></p><div data-duels-component=\"character-card\" class=\"duels-character-card\" contenteditable=\"false\" data-fade=\"none\" data-align=\"left\" data-duels-data=\"%7B%22color%22%3A%22%2300ffff%22%2C%22image%22%3A%22https%3A%2F%2Fraw.githubusercontent.com%2FLyangNem%2FDuels%2Fmain%2Fcharacter%2Ftau.png%22%2C%22text%22%3A%22%22%2C%22width%22%3A400%2C%22height%22%3A400%2C%22fade%22%3A%22none%22%2C%22align%22%3A%22left%22%7D\" style=\"--duels-card-color: #00ffff; --duels-card-width: 400px; --duels-card-height: 400px;\"><div class=\"duels-character-card-image\" style=\"background-image:url(&quot;https://raw.githubusercontent.com/LyangNem/Duels/main/character/tau.png&quot;)\"></div><div class=\"duels-character-card-shade\"></div><div class=\"duels-character-card-copy\"><div><br></div></div></div><div data-duels-component=\"description-box\" class=\"duels-description-box\" contenteditable=\"false\" data-duels-data=\"%7B%22title%22%3A%22%ED%83%80%EC%9A%B0%22%2C%22color%22%3A%22%2300ffff%22%2C%22body%22%3A%22%7B%7B%3Dduels(%5C%22%ED%83%80%EC%9A%B0%5C%22%2C%5C%22%ED%94%84%EB%A1%9C%ED%95%84%5C%22%2C%5C%22%EC%B9%AD%ED%98%B8%5C%22)%7D%7D%5Cn%22%2C%22bodyHtml%22%3A%22%7B%7B%3Dduels(%5C%22%ED%83%80%EC%9A%B0%5C%22%2C%5C%22%ED%94%84%EB%A1%9C%ED%95%84%5C%22%2C%5C%22%EC%B9%AD%ED%98%B8%5C%22)%7D%7D%3Cbr%3E%22%7D\" style=\"--duels-box-color: #00ffff;\"><div class=\"duels-description-box-title\">타우</div><div class=\"duels-description-box-body\">{{=duels(\"타우\",\"프로필\",\"칭호\")}}<br></div></div>",
+    "sections": [
+      {
+        "id": "sec_a3dc20e67a10480e842fab2c2461955f",
+        "title": "개요",
+        "contentHtml": "<div><span style=\"letter-spacing: -0.018em;\">여행길 스쿼드 소속 파워형 근거리 암살자 캐릭터.</span></div><p></p>",
+        "children": [],
+        "titleHtml": "개요"
+      },
+      {
+        "id": "sec_698c9e4d5bd04944a69ccae6bad1567f",
+        "title": "배경",
+        "contentHtml": "몰루다.<p></p>",
+        "children": [],
+        "titleHtml": "배경"
+      },
+      {
+        "id": "sec_16b399786785422da659b1bc777cccaa",
+        "title": "능력치",
+        "contentHtml": "<div data-duels-component=\"table\" class=\"duels-table-component\" contenteditable=\"false\" data-duels-data=\"%7B%22rows%22%3A4%2C%22cols%22%3A2%2C%22baseWidth%22%3A300%2C%22borderColor%22%3A%22%2300ffff%22%2C%22fitWidth%22%3Afalse%2C%22colWidths%22%3A%5B100%2C200%5D%2C%22cells%22%3A%5B%5B%7B%22html%22%3A%22%EC%8A%A4%ED%83%AF%22%2C%22color%22%3A%22%2300ffff%22%2C%22align%22%3A%22center%22%2C%22rowSpan%22%3A1%2C%22colSpan%22%3A1%7D%2C%7B%22html%22%3A%22%EC%88%98%EC%B9%98%22%2C%22color%22%3A%22%2300ffff%22%2C%22align%22%3A%22center%22%2C%22rowSpan%22%3A1%2C%22colSpan%22%3A1%7D%5D%2C%5B%7B%22html%22%3A%22%3Cspan%20style%3D%5C%22color%3A%20rgb(82%2C%20255%2C%20116)%3B%20letter-spacing%3A%20-0.288px%3B%5C%22%3E%EC%B2%B4%EB%A0%A5%3C%2Fspan%3E%22%2C%22color%22%3A%22%230d1520%22%2C%22align%22%3A%22center%22%2C%22rowSpan%22%3A1%2C%22colSpan%22%3A1%7D%2C%7B%22html%22%3A%22%7B%7B%3Dduels(%5C%22%ED%83%80%EC%9A%B0%5C%22%2C%5C%22%ED%94%84%EB%A1%9C%ED%95%84%5C%22%2C%5C%22%EC%B2%B4%EB%A0%A5%5C%22)%7D%7D%3Cbr%3E%22%2C%22color%22%3A%22%230d1520%22%2C%22align%22%3A%22center%22%2C%22rowSpan%22%3A1%2C%22colSpan%22%3A1%7D%5D%2C%5B%7B%22html%22%3A%22%3Cspan%20style%3D%5C%22color%3A%20rgb(242%2C%20181%2C%20240)%3B%20letter-spacing%3A%20-0.288px%3B%5C%22%3E%EC%9D%B4%EB%8F%99%20%EC%86%8D%EB%8F%84%3C%2Fspan%3E%22%2C%22color%22%3A%22%230d1520%22%2C%22align%22%3A%22center%22%2C%22rowSpan%22%3A1%2C%22colSpan%22%3A1%7D%2C%7B%22html%22%3A%22%7B%7B%3Dduels(%5C%22%ED%83%80%EC%9A%B0%5C%22%2C%5C%22%ED%94%84%EB%A1%9C%ED%95%84%5C%22%2C%5C%22%EC%9D%B4%EB%8F%99%EC%86%8D%EB%8F%84_%EB%8B%A8%EA%B3%84%5C%22)%7D%7D%3Cbr%3E%22%2C%22color%22%3A%22%230d1520%22%2C%22align%22%3A%22center%22%2C%22rowSpan%22%3A1%2C%22colSpan%22%3A1%7D%5D%2C%5B%7B%22html%22%3A%22%EB%82%9C%EC%9D%B4%EB%8F%84%22%2C%22color%22%3A%22%230d1520%22%2C%22align%22%3A%22center%22%2C%22rowSpan%22%3A1%2C%22colSpan%22%3A1%7D%2C%7B%22html%22%3A%22%7B%7B%3Dduels(%5C%22%ED%83%80%EC%9A%B0%5C%22%2C%5C%22%ED%94%84%EB%A1%9C%ED%95%84%5C%22%2C%5C%22%EB%82%9C%EC%9D%B4%EB%8F%84_%EB%B3%84%5C%22)%7D%7D%3Cbr%3E%22%2C%22color%22%3A%22%230d1520%22%2C%22align%22%3A%22center%22%2C%22rowSpan%22%3A1%2C%22colSpan%22%3A1%7D%5D%5D%7D\" style=\"--duels-table-base-width: 300px; --duels-table-border: #00ffff;\" data-actual-width=\"302\"><div class=\"duels-table-scroll\"><table class=\"duels-table\"><colgroup><col style=\"min-width:100px;width:100px\"><col style=\"min-width:200px;width:200px\"></colgroup><tbody><tr><td data-table-cell=\"\" data-r=\"0\" data-c=\"0\" style=\"background:#00ffff;min-width:100px;text-align:center\">스탯</td><td data-table-cell=\"\" data-r=\"0\" data-c=\"1\" style=\"background:#00ffff;min-width:200px;text-align:center\">수치</td></tr><tr><td data-table-cell=\"\" data-r=\"1\" data-c=\"0\" style=\"background:#0d1520;min-width:100px;text-align:center\"><span style=\"color: rgb(82, 255, 116); letter-spacing: -0.288px;\">체력</span></td><td data-table-cell=\"\" data-r=\"1\" data-c=\"1\" style=\"background:#0d1520;min-width:200px;text-align:center\">{{=duels(\"타우\",\"프로필\",\"체력\")}}<br></td></tr><tr><td data-table-cell=\"\" data-r=\"2\" data-c=\"0\" style=\"background:#0d1520;min-width:100px;text-align:center\"><span style=\"color: rgb(242, 181, 240); letter-spacing: -0.288px;\">이동 속도</span></td><td data-table-cell=\"\" data-r=\"2\" data-c=\"1\" style=\"background:#0d1520;min-width:200px;text-align:center\">{{=duels(\"타우\",\"프로필\",\"이동속도_단계\")}}<br></td></tr><tr><td data-table-cell=\"\" data-r=\"3\" data-c=\"0\" style=\"background:#0d1520;min-width:100px;text-align:center\">난이도</td><td data-table-cell=\"\" data-r=\"3\" data-c=\"1\" style=\"background:#0d1520;min-width:200px;text-align:center\">{{=duels(\"타우\",\"프로필\",\"난이도_별\")}}<br></td></tr></tbody></table></div></div><p></p>",
+        "children": [],
+        "titleHtml": "능력치"
+      },
+      {
+        "id": "sec_af689b8ad3814c71b279591367aaaf4e",
+        "title": "스킬셋",
+        "contentHtml": "",
+        "children": [
+          {
+            "id": "sec_6954576f67c646839f86afce8469a1ba",
+            "title": "[LMB] - 스파크 낫",
+            "contentHtml": "<div></div><div><span style=\"letter-spacing: -0.288px; background-color: rgb(9, 15, 21);\">낫을 휘둘러 피해를 주며, 적중한 적마다 스파크를 1 충전한다.</span></div><div><br></div><div>매우 심플한 구조의 일반 공격. 부채꼴 범위에 피해를 주고 고유 자원인 스파크를 획득한다.</div><div>하지만 이런 간단한 구조와 달리 타우의 일반 공격은 굉장히 좋은 성능을 자랑하는데, 타 근거리 캐릭터를 상대로 카이팅이 가능한 수준의 넓은 타격 범위와 후술할 추가 피해는 타우의 암살 안정성을 한층 높여주며, 타우의 성능은 곧 일반 공격의 성능에 좌우된다고 봐도 과언이 아니다.</div>",
+            "children": [
+              {
+                "id": "sec_b47be265ed564a37ab78479391f5d12a",
+                "title": "[LMB CRIT] - 과충전 스파크",
+                "contentHtml": "스파크가 3회 충전된 상태에서 일반 공격 적중 시 스파크를 모두 소모하여 최대 체력의 20%에 해당하는 추가 피해를 입히고 넉백시킨다.<div><br></div><div>타우의 아이덴티티이자 폭딜의 원천. 일반 공격을 3회 적중시키면 다음 일반 공격이 최대 체력의 20%에 해당하는 추가 피해를 주는 능력으로, 최대 체력 비례 피해라는 점 때문에 타우는 탱커 분쇄에 최적화되어있다.</div><div><br></div><div>또한 탱커가 아니더라도 최대 체력의 20%는 결코 적은 수치가 아니므로 과충전 스파크를 얼마나 빨리 순환시키느냐에 따라 타우의 성능이 천지차이로 갈린다.</div>",
+                "children": [],
+                "titleHtml": "[LMB CRIT] - 과충전 스파크"
+              }
+            ],
+            "titleHtml": "[LMB] - 스파크 낫"
+          },
+          {
+            "id": "sec_bd847cfbc39d41498a10d64d32c050c5",
+            "title": "[RMB] - 스파크 체인",
+            "contentHtml": "낫을 던져 적중한 위치로 이동하며 피해를 주고, 미적중 시 되돌아오는 낫에 맞은 적을 끌어오며 피해를 준다.<div><br></div><div>타우의 기동성을 책임지는 스킬. 기본적으로 리버스 그랩 스킬이지만, 각도를 잘 조절하면 그랩으로도 사용할 수 있다.</div><div><br></div><div>다만 타우는 일반 공격 범위가 넓은 대가로 체급이 타 근접 딜러에 비해 낮은 편이고, 이로 인해 근거리 체급 싸움에서 타우를 밟아버릴 수 있는 딜러가 많으니 사용에 주의해야 한다.</div>",
+            "children": [],
+            "titleHtml": "[RMB] - 스파크 체인"
+          },
+          {
+            "id": "sec_6ddd4db1a1cb4153b393b6d99505c25d",
+            "title": "[L-Shift] - 스파크 웨이브",
+            "contentHtml": "낫을 한 바퀴 돌려 원형 범위에 광역 피해를 주고 스파크를 최대치로 충전한다.<div><br></div><div>타우의 진정한 이니시에이팅 기술. 선딜레이 후 평타 사거리와 같은 크기의 원형 범위에 광역 피해를 주고 무력화 넉백을 적용한다.</div><div>적에게 날아가는 도중에 끔살이 가능하고 CC도 0.5초밖에 되지 않는 스파크 체인과 달리 비교적 먼 거리에서 안정적으로 하드CC를 넣을 수 있으며, 넉백이 있기에 카이팅에도 도움을 준다.</div><div><br></div><div>그리고 무엇보다 이 반격기가 높은 평가를 받는 이유는 바로 스파크 최대치 충전 효과다.</div><div>반격기 한 번으로 평타 3회 적중 조건을 아예 스킵해버리는 것은 물론, 기존에 스파크 충전이 되어 있다면 평-반격-평으로 순식간에 600+최대 체력의 40%에 해당하는 피해를 입힐 수 있다. 뿐만 아니라 이 효과는 아무런 조건 없이 발동되므로, 타우는 반격기를 허공에 날려도 다음 전투를 유리하게 시작할 수 있다.</div>",
+            "children": [],
+            "titleHtml": "[L-Shift] - 스파크 웨이브"
+          }
+        ],
+        "titleHtml": "스킬셋"
+      },
+      {
+        "id": "sec_1c8c3c8620bf4bad956df0728149f753",
+        "title": "평가",
+        "contentHtml": "<br>",
+        "children": [],
+        "titleHtml": "평가"
+      },
+      {
+        "id": "sec_6d80451200d04e55aa89ec6224f538a1",
+        "title": "상성",
+        "contentHtml": "<p></p>",
+        "children": [
+          {
+            "id": "sec_b62e58b6af4a4ccfa34ed5929b1fc6f0",
+            "title": "극단적인 상성",
+            "contentHtml": "샤이라즈<font color=\"#78909c\"> </font>: 모든 심리전을 성공해 모든 덫을 저회한다면 이길 수 있다.",
+            "children": [],
+            "titleHtml": "극단적인 상성"
+          }
+        ],
+        "titleHtml": "상성"
+      }
+    ],
+    "footnotes": [],
+    "titleHtml": "타우"
+  },
+  "createdAt": "2026-09-26T05:53:57+0900",
+  "updatedAt": "2026-09-26T05:53:57+0900"
+}
